@@ -1,0 +1,358 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { insertSwitchLogSchema, insertPostSchema, insertBrandSchema, insertCommentSchema, insertTargetSuggestionSchema } from "@shared/schema";
+import { z } from "zod";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // Auth routes
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { firebaseUid, phone, email, handle, region } = req.body;
+      
+      // Check if handle is available
+      const existingUser = await storage.getUserByHandle(handle);
+      if (existingUser) {
+        return res.status(400).json({ error: "Handle already taken" });
+      }
+
+      const user = await storage.createUser({
+        firebaseUid,
+        phone,
+        email,
+        handle,
+        region
+      });
+
+      res.json({ user: { id: user.id, handle: user.handle, points: user.points, level: user.level } });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({ error: "Registration failed" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { firebaseUid } = req.body;
+      
+      const user = await storage.getUserByFirebaseUid(firebaseUid);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Update last login
+      await storage.updateUser(user.id, { lastLoginAt: new Date() });
+
+      res.json({ user: { id: user.id, handle: user.handle, points: user.points, level: user.level, role: user.role } });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  // Switch logging
+  app.post("/api/switches", async (req, res) => {
+    try {
+      const validatedData = insertSwitchLogSchema.parse(req.body);
+      
+      // Handle brand creation if not exists
+      if (validatedData.fromBrandId && validatedData.toBrandId) {
+        const switchLog = await storage.createSwitchLog(validatedData);
+        
+        // Create post if public
+        if (validatedData.isPublic) {
+          await storage.createPost({
+            userId: validatedData.userId,
+            switchLogId: switchLog.id,
+            content: validatedData.reason || "Made a great switch!"
+          });
+        }
+        
+        res.json({ switchLog });
+      } else {
+        res.status(400).json({ error: "Brand IDs required" });
+      }
+    } catch (error) {
+      console.error("Switch logging error:", error);
+      res.status(400).json({ error: "Invalid switch data" });
+    }
+  });
+
+  // Feed
+  app.get("/api/feed", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const posts = await storage.getFeedPosts(limit);
+      res.json({ posts });
+    } catch (error) {
+      console.error("Feed error:", error);
+      res.status(500).json({ error: "Failed to load feed" });
+    }
+  });
+
+  // Leaderboard
+  app.get("/api/leaderboard", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const users = await storage.getLeaderboard(limit);
+      res.json({ leaderboard: users });
+    } catch (error) {
+      console.error("Leaderboard error:", error);
+      res.status(500).json({ error: "Failed to load leaderboard" });
+    }
+  });
+
+  // Trending
+  app.get("/api/trending", async (req, res) => {
+    try {
+      const trendingBrands = await storage.getTrendingBrands();
+      res.json({ trending: trendingBrands });
+    } catch (error) {
+      console.error("Trending error:", error);
+      res.status(500).json({ error: "Failed to load trending" });
+    }
+  });
+
+  // Brands
+  app.get("/api/brands/search", async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      if (!query) {
+        return res.status(400).json({ error: "Query parameter required" });
+      }
+      
+      const brands = await storage.searchBrands(query);
+      res.json({ brands });
+    } catch (error) {
+      console.error("Brand search error:", error);
+      res.status(500).json({ error: "Brand search failed" });
+    }
+  });
+
+  app.post("/api/brands", async (req, res) => {
+    try {
+      const validatedData = insertBrandSchema.parse(req.body);
+      const brand = await storage.createBrand(validatedData);
+      res.json({ brand });
+    } catch (error) {
+      console.error("Brand creation error:", error);
+      res.status(400).json({ error: "Invalid brand data" });
+    }
+  });
+
+  // Social interactions
+  app.post("/api/posts/:postId/like", async (req, res) => {
+    try {
+      const { postId } = req.params;
+      const { userId } = req.body;
+      
+      const liked = await storage.toggleLike(userId, postId);
+      res.json({ liked });
+    } catch (error) {
+      console.error("Like error:", error);
+      res.status(500).json({ error: "Failed to toggle like" });
+    }
+  });
+
+  app.post("/api/posts/:postId/comments", async (req, res) => {
+    try {
+      const { postId } = req.params;
+      const validatedData = insertCommentSchema.parse({ ...req.body, postId });
+      
+      const comment = await storage.addComment(validatedData);
+      res.json({ comment });
+    } catch (error) {
+      console.error("Comment error:", error);
+      res.status(400).json({ error: "Invalid comment data" });
+    }
+  });
+
+  app.get("/api/posts/:postId/comments", async (req, res) => {
+    try {
+      const { postId } = req.params;
+      const comments = await storage.getPostComments(postId);
+      res.json({ comments });
+    } catch (error) {
+      console.error("Comments fetch error:", error);
+      res.status(500).json({ error: "Failed to load comments" });
+    }
+  });
+
+  // Target suggestions
+  app.post("/api/suggestions", async (req, res) => {
+    try {
+      const validatedData = insertTargetSuggestionSchema.parse(req.body);
+      const suggestion = await storage.createTargetSuggestion(validatedData);
+      res.json({ suggestion });
+    } catch (error) {
+      console.error("Suggestion error:", error);
+      res.status(400).json({ error: "Invalid suggestion data" });
+    }
+  });
+
+  // Admin routes
+  app.get("/api/admin/suggestions", async (req, res) => {
+    try {
+      const status = req.query.status as string;
+      const suggestions = await storage.getTargetSuggestions(status);
+      res.json({ suggestions });
+    } catch (error) {
+      console.error("Admin suggestions error:", error);
+      res.status(500).json({ error: "Failed to load suggestions" });
+    }
+  });
+
+  app.patch("/api/admin/suggestions/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const suggestion = await storage.updateTargetSuggestion(id, updates);
+      res.json({ suggestion });
+    } catch (error) {
+      console.error("Suggestion update error:", error);
+      res.status(500).json({ error: "Failed to update suggestion" });
+    }
+  });
+
+  // User profile
+  app.get("/api/users/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await storage.getUser(id);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const switchLogs = await storage.getUserSwitchLogs(id);
+      
+      res.json({ 
+        user: { 
+          id: user.id, 
+          handle: user.handle, 
+          points: user.points, 
+          level: user.level,
+          switchCount: user.switchCount,
+          createdAt: user.createdAt
+        },
+        switches: switchLogs 
+      });
+    } catch (error) {
+      console.error("User profile error:", error);
+      res.status(500).json({ error: "Failed to load user profile" });
+    }
+  });
+
+  // Enhanced API routes for new features
+
+  // Get weekly leaderboard
+  app.get('/api/leaderboard/weekly', async (req, res) => {
+    try {
+      const leaderboard = await storage.getWeeklyLeaderboard();
+      res.json(leaderboard);
+    } catch (error) {
+      console.error('Error fetching weekly leaderboard:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Get monthly leaderboard  
+  app.get('/api/leaderboard/monthly', async (req, res) => {
+    try {
+      const leaderboard = await storage.getMonthlyLeaderboard();
+      res.json(leaderboard);
+    } catch (error) {
+      console.error('Error fetching monthly leaderboard:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Enhanced reactions API
+  app.post('/api/posts/:id/reactions', async (req, res) => {
+    try {
+      const { type, userId } = req.body;
+      if (!type || !userId) {
+        return res.status(400).json({ error: 'Type and userId are required' });
+      }
+
+      const reaction = await storage.addReaction({
+        postId: req.params.id,
+        type,
+        userId
+      });
+      res.json(reaction);
+    } catch (error) {
+      console.error('Error adding reaction:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Get reactions for a post
+  app.get('/api/posts/:id/reactions', async (req, res) => {
+    try {
+      const reactions = await storage.getPostReactions(req.params.id);
+      res.json(reactions);
+    } catch (error) {
+      console.error('Error getting reactions:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Trending data endpoints
+  app.get('/api/brands/trending', async (req, res) => {
+    try {
+      const brands = await storage.getTrendingBrands();
+      res.json(brands);
+    } catch (error) {
+      console.error('Error fetching trending brands:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/categories/trending', async (req, res) => {
+    try {
+      const categories = await storage.getTrendingCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error('Error fetching trending categories:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Moderation endpoints
+  app.get('/api/moderation/reports', async (req, res) => {
+    try {
+      const status = req.query.status as string;
+      const reports = await storage.getModerationReports(status);
+      res.json(reports);
+    } catch (error) {
+      console.error('Error fetching moderation reports:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/moderation/reports', async (req, res) => {
+    try {
+      const report = await storage.createModerationReport(req.body);
+      res.json(report);
+    } catch (error) {
+      console.error('Error creating moderation report:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.put('/api/moderation/reports/:id', async (req, res) => {
+    try {
+      const report = await storage.updateModerationReport(req.params.id, req.body);
+      res.json(report);
+    } catch (error) {
+      console.error('Error updating moderation report:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}

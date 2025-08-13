@@ -14,6 +14,7 @@ import LogSwitch from "@/pages/LogSwitch";
 import AdminPanel from "@/pages/AdminPanel";
 import ModeratorPanel from "@/pages/ModeratorPanel";
 import EnhancedHome from "@/pages/EnhancedHome";
+import EnhancedLogin from "@/pages/EnhancedLogin";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -44,7 +45,8 @@ function AppRouter() {
     <div className="min-h-screen">
       {user && <Navigation />}
       <Switch>
-        <Route path="/login" component={Login} />
+        <Route path="/login" component={EnhancedLogin} />
+        <Route path="/old-login" component={Login} />
         <Route path="/register" component={Register} />
         
         {/* Protected Routes */}

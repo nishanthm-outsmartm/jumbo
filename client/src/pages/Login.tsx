@@ -1,20 +1,33 @@
 import React, { useState } from 'react';
-import { signInWithPhoneNumber, RecaptchaVerifier, ConfirmationResult } from 'firebase/auth';
+import { 
+  signInWithPhoneNumber, 
+  RecaptchaVerifier, 
+  ConfirmationResult,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup
+} from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLocation } from 'wouter';
-import { Zap, Phone, Shield } from 'lucide-react';
+import { Zap, Phone, Shield, Mail, Chrome } from 'lucide-react';
 
 export default function Login() {
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'phone' | 'verification'>('phone');
+  const [authMethod, setAuthMethod] = useState<'phone' | 'email' | 'google'>('email');
+  const [isSignUp, setIsSignUp] = useState(false);
   const { login } = useAuth();
   const [, navigate] = useLocation();
 
@@ -41,6 +54,69 @@ export default function Login() {
       setStep('verification');
     } catch (error) {
       console.error('Error sending OTP:', error);
+      alert('Phone authentication is not enabled in Firebase. Please use email login or contact admin.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      let userCredential;
+      if (isSignUp) {
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      } else {
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+      }
+      
+      const user = userCredential.user;
+      
+      // Try to login or redirect to registration
+      try {
+        await login(user.uid);
+        navigate('/');
+      } catch (error) {
+        // User not registered, redirect to registration
+        navigate('/register');
+      }
+    } catch (error: any) {
+      console.error('Email auth error:', error);
+      if (error.code === 'auth/user-not-found' && !isSignUp) {
+        alert('No account found. Please sign up first.');
+        setIsSignUp(true);
+      } else if (error.code === 'auth/email-already-in-use') {
+        alert('Account already exists. Please sign in.');
+        setIsSignUp(false);
+      } else {
+        alert(error.message || 'Authentication failed');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleAuth = async () => {
+    setLoading(true);
+
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      // Try to login or redirect to registration
+      try {
+        await login(user.uid);
+        navigate('/');
+      } catch (error) {
+        // User not registered, redirect to registration
+        navigate('/register');
+      }
+    } catch (error: any) {
+      console.error('Google auth error:', error);
+      alert(error.message || 'Google authentication failed');
     } finally {
       setLoading(false);
     }

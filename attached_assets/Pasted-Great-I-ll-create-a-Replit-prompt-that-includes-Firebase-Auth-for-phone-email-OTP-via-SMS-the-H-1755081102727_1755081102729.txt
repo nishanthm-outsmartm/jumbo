@@ -1,0 +1,659 @@
+Great — I’ll create a Replit prompt that includes Firebase Auth for phone/email OTP (via SMS), the Handles-only system with Public Alias support, built-in Silent Strike logging, AI-powered news and product intel, and full moderator/strategist workflows.
+I’ll let you know as soon as it’s ready for your review.
+JumboJolt Monorepo Starter (v1.2)
+JumboJolt is a privacy-first platform that empowers Indian consumers to switch from select foreign products to quality Indian alternatives (or more favorable brands). This starter kit scaffolds a production-ready monorepo for the JumboJolt application, implementing core features with a strong focus on anonymity, security, and modular design. The codebase is split into a frontend (React/Vite) and a backend (Node/Express) with a clear structure, shared types, and a unified development workflow. All personal data is protected by design, and members participate under pseudonyms by default.
+Monorepo Structure and Tech Stack
+The project is organized as a monorepo using npm/Yarn workspaces for a seamless dev experience. Key technologies include React + Vite + TypeScript (for a fast, mobile-first frontend), Node.js + Express + TypeScript (for a lightweight REST API), PostgreSQL + Prisma ORM (for a robust relational database), Firebase Auth (for OTP-based authentication), and Tailwind CSS (for utility-first UI styling). Essential developer tools (ESLint, Prettier, Jest testing) are integrated to ensure code quality.
+jumbojolt-monorepo/
+├── package.json          # Root workspace config (with dev script running both apps)
+├── frontend/             # React + Vite app (client-side)
+│   ├── index.html
+│   ├── vite.config.ts
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   └── src/
+│       ├── main.tsx                # App entry point
+│       ├── App.tsx                 # React Router setup and global layout
+│       ├── components/             # Reusable UI components
+│       ├── pages/                  # Page components for each route
+│       │   ├── Home.tsx            # Home dashboard (news, leaderboard, etc.)
+│       │   ├── Register.tsx        # Registration/Onboarding page
+│       │   ├── LogSwitch.tsx       # Form to log a product switch
+│       │   ├── Suggestions.tsx     # Target suggestion form/page
+│       │   ├── Groups.tsx          # Group dashboard page
+│       │   ├── AdminPanel.tsx      # Moderator/admin console
+│       │   └── ... (other pages like Profile, Blog, etc.)
+│       ├── context/                # Context providers (e.g., AuthContext)
+│       ├── services/               # Frontend services (API clients, Firebase config)
+│       └── styles/                 # Tailwind CSS entry (e.g., index.css importing Tailwind)
+├── backend/              # Node.js Express app (server-side)
+│   ├── src/
+│   │   ├── index.ts               # Entry (sets up Express app and listens on port)
+│   │   ├── routes/                # Express route definitions
+│   │   │   ├── auth.ts            # Routes for /auth (OTP verification, etc.)
+│   │   │   ├── switches.ts        # Routes for logging switches (/switches)
+│   │   │   ├── targets.ts         # Routes for retrieving switch targets (/targets)
+│   │   │   ├── suggestions.ts     # Routes for suggestions (/suggestions)
+│   │   │   ├── feed.ts            # Routes for home feed (/feed, /leaderboards, /trending)
+│   │   │   ├── groups.ts          # Routes for group data (/groups, /missions)
+│   │   │   ├── admin.ts           # Routes for admin actions (/news/approve, /blogs, etc.)
+│   │   │   └── ...additional routes as needed...
+│   │   ├── controllers/           # Controllers handling request logic (e.g., authController)
+│   │   ├── middleware/            # Auth middleware (e.g., Firebase token verification)
+│   │   ├── services/              # Business logic, e.g., AI integration, third-party APIs
+│   │   ├── models/                # Prisma client import and possibly additional model logic
+│   │   └── utils/                 # Utility functions (handle generation, etc.)
+│   ├── prisma/
+│   │   ├── schema.prisma          # Prisma data model definitions (Postgres)
+│   │   └── seed.ts                # Script to seed initial data
+│   ├── nodemon.json               # Nodemon config for dev reloading
+│   ├── package.json               # Backend-specific deps and scripts
+│   └── tsconfig.json              # TypeScript config for backend
+└── .env                    # Environment variables (not committed, for DB, Firebase keys, etc.)
+
+Development Scripts: The root package.json defines a concurrent dev script to run both the client and server for a smooth developer experience. For example:
+// package.json (root)
+"scripts": {
+  "frontend": "npm run dev -w frontend",
+  "backend": "npm run dev -w backend",
+  "dev": "concurrently \"npm run frontend\" \"npm run backend\""
+}
+
+Running npm run dev (or yarn dev) in the root will launch the React app and Express server together. By default, the React/Vite dev server runs at http://localhost:5173 and the API at http://localhost:3000 (configurable). Hot-reloading is enabled on both sides (using Vite’s dev server and Nodemon for the backend).
+Frontend stack: Created with Vite’s React TypeScript template for performance. Tailwind CSS is installed and configured (using the official Vite plugin) to allow utility-first styling. We use React Router for client-side routing (pages like Home, Profile, etc.). The frontend uses Firebase’s SDK for authentication (handling OTP UI flows) and calls the backend API for data operations. State management can be handled with React Context or lightweight libraries as needed (for instance, an AuthContext to provide the current user handle and auth token globally).
+Backend stack: An Express server in TypeScript provides a RESTful API. We chose Prisma as the ORM for type-safe database access with PostgreSQL. Prisma’s integration with Express makes database queries simple and safe without writing SQL manually. The backend uses Firebase Admin SDK to verify auth tokens from Firebase and enforce authentication on protected routes. For asynchronous and external tasks (like sending messages or invoking AI APIs), the backend can use background service functions or integrate with tools like n8n via webhooks.
+Developer tooling: This starter includes basic configuration for ESLint and Prettier for consistent code style, and Jest + React Testing Library for unit/integration tests. This mirrors best practices from similar monorepo templates which include ESLint, Prettier, and testing setups out-of-the-box.
+Core Features and Implementation
+The following core features are scaffolded with placeholders and minimal implementations, ready to be extended:
+1. Registration & Anonymous Identity (OTP Auth)
+User onboarding is implemented via Firebase Authentication using OTP (One-Time Password) for phone or email verification. On the frontend, we use Firebase JS SDK’s phone auth flow (which requires setting up a Recaptcha verifier on the client). When a new user enters their phone number or email, Firebase sends them a verification code. After the user verifies the code, Firebase provides an ID token which we can use to identify the user.
+Firebase OTP Setup: The Firebase project must have Phone Number sign-in enabled in the Authentication settings (and Email/Link sign-in if email OTP is used). The web app includes Firebase configuration (API key, etc.) and the Recaptcha widget integration required for phone auth. By default, Firebase will handle sending the SMS and verifying the code, ensuring a secure auth flow. (For email, Firebase can send a magic link or verification code to the email.)
+
+
+Anonymous Handle Generation: Upon first sign-up, after verifying OTP, the app prompts the user to select a region/state and then assigns them an anonymous handle. The handle is auto-suggested as a combination of an adjective and animal (e.g., BraveKite). A list of ~20 adjectives and animals is seeded, and the backend picks a random unused pair for each new user. Handles are stored in a Handle table (or part of the User profile) and must be unique. The user’s real identity (phone/email) is stored separately in a private table, ensuring the handle cannot be easily traced back to personal info.
+
+
+Public Alias (Optional): During registration (or later in profile settings), a user may set an optional Public Alias for social sharing. This alias is not used internally; it’s intended for attribution on public platforms. Users can set different aliases per platform (one for WhatsApp, one for Twitter, etc.), or leave it blank to remain fully anonymous in public posts. These aliases are stored in a PublicAlias table linked to the user (platform name and alias). If no alias is provided for a platform, any public posts simply attribute the author as “Community Member” (or a generic label).
+
+
+Roles: By default, new users are regular members. The starter defines roles like Moderator and Strategist (and Admin) that can be manually assigned in the database. These roles govern access to certain routes and UI (e.g., moderators can approve content, strategists can create groups/missions). Role management UI is stubbed out in the AdminPanel.
+
+
+Backend Auth Flow: The Express server uses Firebase Admin to protect routes. There is an auth middleware that checks for a valid Firebase ID token in the request header (or session cookie) for protected endpoints. The POST /auth/otp route can be used to initiate or verify OTP if needed (though in practice Firebase’s client SDK handles most of it). For example, in a phone sign-in, the frontend might call Firebase directly to send OTP, and on success, call our backend POST /auth/verify-token (not explicitly listed) with the ID token to create a server-side session or to create the user record if first login. The scaffold includes hooks for this flow:
+auth.ts route: endpoints like /auth/otp (for email OTP login or fallback) and /auth/verify to finalize login by creating the user entry in our DB on first sign-in, assigning handle, etc.
+
+
+The user’s region selection is passed during registration and stored in the user profile. Region data (states/regions list) is seeded and available for a dropdown.
+
+
+2. Logging a Switch (Silent vs Public)
+Once authenticated, members can log a product switch – essentially recording that they have switched from a foreign brand to an Indian (or preferred) alternative. The frontend provides a form (accessible via a “Log a Switch” page or modal) with fields:
+From (Foreign Brand): The name of the brand or product being dropped.
+
+
+To (New Brand): The Indian or favorable brand chosen as replacement.
+
+
+Category: The product category (e.g., “Beverage”, “Electronics”) for classification.
+
+
+Evidence (optional): The user can attach a photo or link as proof (e.g., a picture of the new product). The app uses Firebase Storage for image uploads. In the scaffold, this may be stubbed or simulated (e.g., storing a URL string or using a Cloudinary demo account for simplicity).
+
+
+Share Publicly toggle: A checkbox or toggle that is off by default (“Silent Strike” mode). If off, the switch is logged privately. If on, the action may be shared to public feeds (see below) without revealing personal identity (using only alias or generic name).
+
+
+Backend: The POST /switches endpoint accepts the switch log data. It creates a new SwitchLog record with references to the from Brand and to Brand (these brands can be cross-referenced in a Brand table, seeded with known brands). It also records the user (by internal ID or handle), the timestamp, and a boolean public flag. By default, public is false (silent). If public is true, the backend may trigger additional logic, such as preparing a sanitized “achievement” or social post. For example, upon a public switch, the server can generate a message like “BraveKite switched from BrandX to BrandY!” and either store it for display in a public feed or send it to an integration that posts to social media.
+No personal info is included in a SwitchLog – only the anonymous handle or user ID reference. A user can later decide to share a past switch publicly (we could include an update route to mark a log as public, which then triggers sharing).
+Public Sharing Workflow: If a user opts to share a switch publicly, the frontend might prompt them to confirm using their Public Alias for attribution. The app never shares the anonymous handle or any PII externally. Instead, if an alias for the platform is on file, that alias is used; otherwise, it will attribute to “Community Member.” The POST /share/achievement endpoint is designed to handle this: it takes a switch ID and returns a safe shareable payload (text snippet or image) that the user can post on social networks. This ensures the content is vetted (no sensitive data) and in the correct format for sharing. For example, it might return a short caption and an image URL for a banner like “🎉 I switched from BrandX to BrandY! #JumboJolt”. (The actual posting to social media can be manual by the user or automated via integration if the user linked their account, which is beyond MVP scope.)
+All switches, whether silent or public, count toward the movement’s internal stats. The difference is only in visibility. This dual-mode approach (“Silent Strike” vs “Jumbo Public”) allows coordinated impact without pressuring users to reveal identity, while still enabling a public-facing movement.
+3. Home Dashboard & News Feed
+The Home Page is the central dashboard every member sees after login. It provides curated information and stats to keep users engaged and informed:
+Curated News Feed: A list of news items relevant to the movement’s mission – e.g., articles about Indian industry, foreign product controversies, success stories of local brands, etc. This feed is curated by AI and moderators. An automated process (or editor) pulls articles from predefined NewsSource RSS feeds. Each article is summarized using an AI summarizer (e.g., GPT-based) into a short paragraph. A moderator then reviews these summaries and approves the ones that are relevant and factual. Approved items are stored as NewsItem (with fields: title, source URL, AI-generated summary, and maybe an image thumbnail). The home page displays these news snippets (with links to the original source). This keeps content fresh while minimizing misinformation (due to the human curation step). The backend provides GET /feed/home which returns the list of approved news items (and other feed data below), likely limiting to the latest N items.
+
+
+Weekly Leaderboards: Friendly competition is fostered via leaderboards. The home dashboard shows top switchers in various categories:
+
+
+National Top 10: The handles of the top members with the most switches logged (Silent Strike leaderboard). Since handles are anonymous, this is privacy-safe. This data comes from aggregating SwitchLog counts per user.
+
+
+Regional Leaders: If the user’s state/region has its own competition, a leaderboard of top switchers in that region is shown.
+
+
+Group Leaders: For any groups the user is part of (see Groups below), their group’s top contributors can be highlighted.
+
+
+The GET /leaderboards endpoint computes these stats. To avoid exposing too much, only handles and switch counts are returned (and possibly only for the top ranks). Because handles are pseudonymous, even this internal competition doesn’t reveal identities.
+
+
+Trending Switches/Terms: The home page also features a “Trending” section showing the most talked-about brands or categories for the week. For example, if many switches away from “BrandX” happened this week, “BrandX” might trend, or if a category like “Soft Drinks” saw a spike in switching, that category trends. This can be represented as a list of terms (brand or category names) with an indicator (e.g., up arrow for rising trend). The backend collects this by analyzing recent SwitchLogs (e.g., count by brand, time window) and returns via GET /trending. This helps members see where momentum is building.
+
+
+Featured Missions: Strategists can define “missions” or campaigns – for example, a monthly focus like “August Mission: #TacoTakedown – switch off TacoBell tacos in favor of local eateries.” The home page will highlight a few Featured Missions with a call to action. Missions come from the GroupMission or a general mission table, and have details like description, duration, target goals, etc. The scaffold sets up a way to mark certain missions as featured (e.g., a flag or by scheduling). This content is fetched as part of home feed or via a separate GET /missions?featured=true. A mission card might show the mission name, description, and progress (like X participants so far).
+
+
+Strategist Blogs/Explainers: To educate members, Strategist blog posts are shown on the home or a separate blog page. These are longer-form articles (in BlogPost table) written by strategists or moderators, explaining issues (e.g., why switch from a certain product) or sharing success stories. The README’s seed data mentions 5 blog drafts – the scaffold includes a simple blog system: moderators can create and publish blogs via the admin panel (POST /blogs to create). The home page might show the latest one or a teaser to visit the Blogs section.
+
+
+Overall, the Home dashboard gives a snapshot of movement activity (stats and news) while motivating further participation via missions and recognition.
+4. Switch Target Suggestions (Community Input + AI Enrichment)
+The platform encourages members to contribute ideas for new “Switch Targets.” A switch target is a recommendation to boycott or replace a specific foreign product with a better alternative. Users can propose these via a Suggestions feature:
+On the frontend, the Suggestions page lets a member fill a form: target product/brand name, rationale (why it should be switched), and if they know, a suggested Indian or friendly alternative. They submit this to the backend for review.
+
+
+The backend endpoint POST /suggestions accepts user suggestions. When a suggestion is received, the system performs AI enrichment before storing it for moderator review. This involves analyzing the suggestion and fetching additional intel:
+
+
+Determining the target brand’s parent company, country of origin, and market share (if data available).
+
+
+Finding possible alternative products or brands (if the user didn’t specify an alternative, the AI could suggest a few).
+
+
+Summarizing the rationale or adding context (e.g., “BrandX is 80% foreign-owned, switching could benefit local producers.”)
+
+
+This could be done by calling an external AI service or knowledge API. In our scaffold, we include a placeholder service (e.g., a function enrichSuggestion(suggestion) in services/aiService.ts). This function might call an OpenAI API or use a rules engine; for now, it can return stubbed data for development. The integration with AI can be orchestrated via n8n or Zapier as well – for example, posting the suggestion to an n8n workflow which queries an API (like a company info API or OpenAI) and returns enriched info. The POST /intel/run endpoint is provided for this purpose: it can be triggered by the moderator to run AI enrichment on pending suggestions (or triggered automatically on submission). The enriched data is then stored in related tables like ProductIntel (for details about the product/brand) and AltProposal (for suggested alternatives).
+
+
+Moderator Review: All suggestions (with their AI-added context) sit in a TargetSuggestion table marked as pending. Moderators can view these in the Moderator Panel UI. Each entry will show the member’s anonymous handle, the suggestion details, and the AI-provided info to help decision-making. The moderator can approve or reject each suggestion:
+
+
+If approved, the suggestion is converted into a formal SwitchTarget entry. This means it becomes one of the official recommended switches that all members will see. For example, if someone suggested switching “BrandX Soap” to “LocalY Soap” and it’s approved, it now appears in the app’s list of target switches (possibly featured in missions or in a targets list).
+
+
+If rejected, it’s either discarded or perhaps kept for record (AuditEvent logged with reason).
+
+
+SwitchTarget list: The GET /targets endpoint returns all active approved targets, possibly filtered by category or region. Members can browse this list to find ideas of what to switch next. Each target entry includes info like foreign brand name, the recommended Indian alternative, category, and maybe a short description (the rationale). This helps seed the movement with concrete suggestions. The seed data can initialize ~10 targets across ~5 categories as examples.
+
+
+By involving the community in proposing targets, JumboJolt stays dynamic and inclusive. The AI enrichment ensures that suggestions are well-researched and saves moderators time by providing quick facts and viable alternatives up front.
+5. Groups & Missions (Community Subdivisions)
+Groups provide a way to organize members by interests, region, or campaign themes. Strategists (or admins) create these groups to focus efforts and discussions. There are a few types of groups envisioned:
+Regional Groups: e.g., a group for each state or city to coordinate local silent strikes. (Members might be auto-added to their state group based on their profile region.)
+
+
+Category/Issue Groups: e.g., a group focusing on “Plastic Waste Reduction” or “Boycott Soft Drinks” which would attract members passionate about that issue.
+
+
+Mission-specific Groups: e.g., a time-bound campaign like “Taco Takedown” (to stop buying from a specific chain for a period).
+
+
+The scaffold seeds a few example groups (say 3 groups, including one national group and two interest groups). Each group has:
+A unique code or name, a description, and type (region/interest/etc.).
+
+
+A list of members (the relation of users to groups, possibly a join table if many-to-many). For region groups, membership can be automatic based on user’s region (the app can link user’s region to a group).
+
+
+A Group Dashboard: Each group has its own mini-feed and stats. The Group page in the frontend shows:
+
+
+Group description and an overview of its focus.
+
+
+Group-specific news or posts (curated by the group’s strategist or moderator). This is similar to the main news feed but filtered or custom for the group.
+
+
+Active Missions: Each group can have missions assigned. For example, a “Plastic Waste” group might have a mission to switch from a certain plastic product for a month.
+
+
+Member list or count: possibly showing top contributors in that group (leaderboard within group).
+
+
+Chat/Updates: Not real-time chat in this scaffold, but perhaps a list of updates or comments from group members (if enabled). For now, this could be a simple comment system (with Comment model) where members can post tips or questions in the group page. Moderators can remove inappropriate content (with Reaction or moderation actions tracked in AuditEvent).
+
+
+Group Missions: Missions are goals or challenges set within a group context. The GroupMission model holds these. A mission might target a specific product switch or an action (like “Get 100 people to switch off BrandX in September”). Missions have a target metric and a progress tracker. The front-end might show progress bars or counts (how many participants or switches so far). Members can explicitly join a mission (or simply contributing by logging a switch that falls under that mission’s criteria). The admin UI allows creating missions (POST /missions) and assigning them to groups or marking them as featured.
+
+
+Notifications/Integration: When a member joins a group, the app could invite them to join corresponding WhatsApp/Telegram channels (for regional coordination). The integration details are covered later, but essentially, after registration or group join, the frontend may present links like “Join the ${GroupName} WhatsApp group” or auto-send an invite link via the WhatsApp API. Group updates could be broadcast through these external channels as well for better engagement.
+
+
+The Groups feature adds a community aspect where like-minded members can focus on particular challenges. Strategists oversee these groups to drive strategy (hence the role name), by posting updates, creating missions, and guiding discussions, all while regular members mostly log their switches and possibly chat in external channels.
+6. Content Management & Admin Panel
+To maintain quality and focus, moderators and admins have special tools to manage content and users. The scaffold includes a rudimentary Admin Panel (accessible to users with the appropriate role, e.g., via /admin route in frontend protected by role check) that surfaces the following capabilities:
+News Approval: A view to show incoming news summaries (fetched by the system or submitted by members, if that feature exists). Each NewsItem entry can be approved or rejected. The POST /news/:id/approve endpoint is used to mark an item as approved (which makes it visible on the home feed for everyone) or to reject (which can either delete it or mark as not approved). Only moderators/admins can call this. The UI might show the title, source, summary, and a link to original, so the mod can quickly verify credibility before approving.
+
+
+Blog Publishing: Strategists and moderators can write and publish blog posts through a simple interface. The Admin Panel provides a form for a new BlogPost (title, content, maybe image). On submit, it calls POST /blogs (restricted to mod role) to save and publish the post. Blogs then appear on the home or a blogs page for users. The scaffold could use a basic rich text editor or just plain text for content for now.
+
+
+Switch Target Management: Moderators see the list of pending TargetSuggestion entries (with AI-enriched data as described). They use the interface to approve or reject each. Approvals create new SwitchTarget records (possibly via an internal service or calling POST /targets internally). The Admin Panel also allows mods to edit existing SwitchTargets (e.g., update the recommended alternative or description) and toggle their visibility (in case a target is no longer relevant, they can deactivate it).
+
+
+Group and Mission Management: Strategists (or admins) can create new Groups and Missions via the admin UI. For Groups, they specify name, type, description and create it (persist via POST /groups – not listed explicitly in routes but would exist). They can also manage group membership (though mostly membership is automatic or open). For Missions, they choose the group (or mark it as a global mission), set the mission goal and description, and timeframe. These are saved via POST /missions. The Admin Panel would list current missions, allow marking some as featured (to appear on home), and closing missions that are completed.
+
+
+User Management & Audit: Admins (highest privilege) have access to sensitive data. They can view the User records if needed (this includes PII like phone/email). This is kept strictly in the Admin area, not visible to mods who are not full admins. Admins can search users by phone/email or handle, see their details, and perform actions like role change, or deactivating an account. All such actions are logged in AuditEvent for security (e.g., “Admin X viewed PII of User Y on 2025-08-13”). The scaffold includes an AuditEvent model and logs calls in the relevant admin routes.
+
+
+Analytics Dashboard: As a nice-to-have, the admin panel could display some overall metrics (total switches, growth, etc.). This might use aggregated queries on SwitchLog or others. It’s not core to MVP, but the structure allows adding it (e.g., an /admin/stats route to fetch summary numbers).
+
+
+Integrations Management: Admins might need to configure API keys for WhatsApp, Telegram, etc. In a real app, this could be done via environment variables or a secure settings store rather than through the UI. The starter expects these keys to be provided via config files or env. The Admin Panel can at least display whether connections to these services are active (for example, a status check if the WhatsApp API credentials are working).
+
+
+The Admin/Moderator tools ensure the platform content remains high-quality and that any public-facing information is carefully vetted. By partitioning roles (strategists focus on planning and content, moderators on approvals and community quality, admins on oversight and user management), JumboJolt can scale moderation responsibilities.
+Data Model Overview (Prisma Schema)
+The data model is defined in Prisma (see schema.prisma), which will generate a fully typed client for use in the Express app. Key entities include:
+User – Stores the user's private info and settings. Fields: id, personal identifiers (phone, email), region (state or area, as a foreign key to a Region table or enum), and role (enum: MEMBER, MODERATOR, STRATEGIST, ADMIN). Sensitive PII like phone/email is kept here only. Minimal info is exposed elsewhere. Also might include createdAt, lastLogin timestamps, etc.
+
+
+Handle – The anonymous username for the user. Could be a separate model (id, userId, name) or a field on User if one-to-one. Having it separate allows changing handle or using multiple handles, but in this design each user has one handle. This is the name displayed internally (leaderboards, etc.). It’s unique across the platform.
+
+
+PublicAlias – A separate model linking a user to a public alias for a specific platform. Fields: id, userId, platform (e.g., "WhatsApp", "Twitter", "Facebook", etc.), and aliasName. Each user can have multiple aliases (one per platform). Used when generating content for social sharing.
+
+
+SwitchLog – Records each switch event. Fields: id, reference to userId (who made the switch), fromBrandId and toBrandId (foreign keys to Brand model for the products involved), categoryId (e.g., link to a Category table or enum), evidenceURL (if an image or link was provided), public (boolean flag if this switch is opted to be public), createdAt. This table could grow large, so plan indexes on userId, brand, etc., for analytics queries.
+
+
+SwitchTarget – Represents an approved target product to switch from and its recommended alternative to. Fields: id, fromBrandId, toBrandId, categoryId, description (text rationale), active (boolean if this target is currently active or featured). Populated by moderators based on suggestions or strategy. These are shown to users as suggestions for switching. It may also include who (which strategist) proposed/approved it and a createdAt.
+
+
+TargetSuggestion – A member-submitted suggestion for a new SwitchTarget. Fields: id, userId (who suggested), fromBrandName (the brand to boycott, stored as text if not an existing Brand), toBrandName (suggested alternative, or null if none given), categoryId or name, rationale (text), plus fields to hold AI-enriched info: e.g., intelJson (JSON blob with data like ownership, etc.), or a relation to specific ProductIntel and AltProposal entries:
+
+
+ProductIntel (if separate) might store info about a brand or product (like brandName, company, ownershipCountry, marketShare, etc.).
+
+
+AltProposal could store an alternative product suggestion (like altBrandName, company, reason why this is a good alternative).
+ Each suggestion thus can have attached intel records. The suggestion also has a status (status enum: PENDING, APPROVED, REJECTED). Approved suggestions result in a SwitchTarget as above.
+
+
+Brand & Company – Reference data about brands and companies. Brand fields: id, name (unique), maybe companyId (who owns it), categoryId, originCountry, isIndian (boolean if Indian-owned or friendly). Company fields: id, name, country, and perhaps a favorability score or classification (to mark “favourable firms/countries” per project mission). These tables help in analytics and in enriching suggestions (we can quickly see if a brand is foreign or Indian). Seed data can include 10+ brands (5 categories) with their ownership info.
+
+
+Category – simple lookup for product categories (id, name). Brands and switches reference this.
+
+
+NewsSource & NewsItem – NewsSource: stores RSS feed URLs or site info that we pull news from (fields: id, name, rssUrl, etc., plus maybe region if some sources are regional). NewsItem: stores curated news entries: id, title, url, summary (AI-generated summary text), sourceId, imageUrl (thumbnail if any), createdAt, and approved (boolean or approval date). Initially, NewsItems might be created by a backend cron or script parsing RSS feeds and summarizing via AI. Moderators then set approved=true via the admin UI for items to show up.
+
+
+BlogPost – Strategist-written articles. Fields: id, authorId (link to User, must be strategist or mod), title, content (could be markdown or HTML text), createdAt, published (bool). These appear in the app’s blog section.
+
+
+Group – Represents a community group. Fields: id, name, type (ENUM: REGION, INTEREST, MISSION, etc.), description, maybe region (for region groups), createdBy (a strategist who manages it), createdAt. There could be a join table GroupMember linking Users to Groups (if users can join multiple groups). Alternatively, for region groups, the membership can be derived from user region. But we support generic group membership with an explicit join model for flexibility.
+
+
+GroupMission – A mission or campaign associated with a group. Fields: id, groupId, title, description, targetCount (goal, e.g., “100 switches”), startDate, endDate, isFeatured (bool), createdAt. We might also track currentCount or derive it from counting relevant SwitchLogs (e.g., count of switches of certain brands after startDate by group members).
+
+
+GroupFeed / Post – If group-specific posts or updates are needed: a model for posts in a group (could reuse BlogPost or separate). For now, group feed can be composed of NewsItems and blog posts filtered by group context, so an explicit model may not be needed, but we can include a GroupUpdate model for any custom announcements (fields: id, groupId, content, authorId, createdAt).
+
+
+Comment – Allows users to comment on blog posts or group updates. Fields: id, authorId, content, postId or related entity ID, createdAt. Comments are only visible internally and tied to handles.
+
+
+Reaction – To capture likes/upvotes on posts or comments. Fields: id, userId, targetType (BLOG or COMMENT or etc.), targetId, type (LIKE, etc.). This is an optional engagement feature.
+
+
+AuditEvent – Logs critical actions for security. Fields: id, adminId (who performed action), action (string/enum like "VIEWED_PII", "CHANGED_ROLE", "APPROVED_SUGGESTION"), targetType and targetId (what record was affected, if applicable), timestamp. This provides an audit trail especially for admin operations on sensitive data.
+
+
+All relationships are set with referential integrity. For instance, SwitchLog.userId references User, SwitchLog.fromBrandId references Brand, Brand.companyId references Company, etc. We use foreign keys such that deleting a Company can cascade to Brands (or more likely we won’t delete those). Prisma’s migrations will create the necessary tables and constraints. The schema is kept modular for clarity (for instance, separating user private data from public data models) to support our privacy-by-design approach.
+API Routes and Endpoints
+The backend API follows REST principles. Here’s a summary of available endpoints (with methods and descriptions):
+POST /auth/otp – Initiate OTP authentication. Request: phone or email. Response: OTP sent (through Firebase). This could also handle email magic link. (In practice, the frontend might call Firebase directly; this endpoint is optional or for fallback server-side trigger.)
+
+
+POST /auth/verify – Verify the OTP code and authenticate the user. Request: OTP code (and identifier). Response: JWT or session creation, and user profile data (handle, etc.). If new user, this will also create the User record and assign a handle. (This route uses Firebase Admin to verify the code or token.)
+
+
+GET /me – Get the current user's profile. Auth required. Returns basic profile info: handle, region, stats (number of switches made, badges, etc.), and their PublicAliases (but not phone/email or sensitive PII unless admin). This is used to display profile or allow editing alias, etc.
+
+
+GET /targets – Fetch the list of approved SwitchTargets for display. Can be filtered (e.g., ?category=Electronics). Returns an array of targets with from-brand, to-brand names, category, and description. This helps users choose what to switch next.
+
+
+POST /switches – Log a new SwitchLog entry (user making a switch). Auth required. Request: JSON with fromBrand, toBrand (could be IDs or names), category, evidenceURL (if any), and public flag. The server will create the log record. If brand names are provided and not found in Brand table, it could auto-create a Brand entry or return an error prompting a valid selection (depending on implementation). In our seed, common brands are pre-populated, and ideally the frontend provides a dropdown or autocomplete for brand names. Response: success confirmation and perhaps the created log ID. (If public was true, the server might also queue an integration action for sharing.)
+
+
+GET /feed/home – Fetch data for the home dashboard. Auth required. This is a composite endpoint that returns multiple sections: e.g., { news: [...], featuredMissions: [...], latestSwitches: [...], stats: {...} }. It can include a few recent public switches (for a “Latest public switches” ticker), top-level stats (total switches made so far, etc.), and any other summary needed. Alternatively, separate endpoints (like /news, /missions) can be called, but a single feed endpoint is convenient.
+
+
+GET /leaderboards – Get leaderboard data (could also be part of feed). Returns top N handles globally, and optionally region or group specific leaders if query params are given or based on the user’s context. E.g., it might return { global: [{handle, count}, ...], regional: [{handle, count}, ...] }. No personal info, only handles and counts are exposed.
+
+
+GET /trending – Get trending terms (brands/categories). Returns a list of names and a score or rank. The backend calculates this from recent activity. This could be part of feed as well.
+
+
+GET /blogs – Get published blog posts (for blog listing page). Could allow filtering by author or group if needed. Returns array of blog metadata (id, title, summary snippet, author alias, date).
+
+
+GET /blogs/:id – (Not explicitly listed, but presumably needed) Get full content of a specific blog post by ID.
+
+
+POST /suggestions – Submit a new TargetSuggestion. Auth required. Request: JSON with fromBrandName, toBrandName (optional alternative), category, and rationale text. The server creates a TargetSuggestion entry (status=PENDING) and immediately triggers the AI enrichment process (either inline or via background job). Response: success acknowledgement. The enrichment results might be saved shortly after; they are not necessarily returned here to the user. The user will see their suggestion in a “My Suggestions” list.
+
+
+GET /suggestions/my – Get the current user’s submitted suggestions. Returns list of suggestions with their status (so user knows if their idea was approved or not).
+
+
+POST /intel/run – Trigger AI enrichment for a suggestion or run product intelligence tasks. Auth: Strategist/Mod only (or could be an automated system hook). Request: could include a suggestion ID or a brand name to research. Response: the enriched data or a status. In development, this can be used to simulate the AI pipeline (for example, a mod clicks “Enrich” on a suggestion, which calls this endpoint and updates that suggestion’s intel fields). In production, this might be automated or replaced by background processing, but we include it for testing the concept.
+
+
+POST /share/achievement – Prepare a shareable achievement for a user milestone or switch. Auth required. For example, when a user hits a badge or logs a switch publicly, the frontend can call this to get a shareable graphic or text. Response: a payload with no PII, e.g., a pre-signed URL of an image with their achievement or just a message. (The actual image generation could be done via a service or omitted in MVP.)
+
+
+Group-related routes: (Not explicitly listed, but implied by features)
+
+
+GET /groups – List all groups or those relevant to user (public groups or ones they belong to). Might include basic info and member counts.
+
+
+GET /groups/:id – Get detailed info for a specific group (description, feed, missions, etc., possibly combining several queries).
+
+
+POST /groups – Create a new group. Auth: Strategist/Admin.
+
+
+POST /groups/:id/join – Endpoint for a user to join a group (if not auto-managed by region).
+
+
+GET /missions – List missions (optionally filter by group or featured).
+
+
+POST /missions – Create a new mission (Strategist only).
+
+
+POST /missions/:id/complete – Mark mission as completed or update progress (could also be automatic based on switches).
+
+
+Admin/Moderator routes:
+
+
+POST /news/:id/approve – Approve a news item after review. Auth: Moderator. The ID could reference a NewsItem that was auto-fetched. (Similarly, there could be a DELETE /news/:id or a general update endpoint if needed to edit the summary.)
+
+
+POST /blogs – Create a new blog post. Auth: Strategist or Moderator.
+
+
+PUT /blogs/:id – Edit an existing blog.
+
+
+POST /suggestions/:id/approve – (Not listed but needed) Approve a target suggestion. This would create a SwitchTarget and mark suggestion as approved. Auth: Moderator.
+
+
+DELETE /suggestions/:id – Reject a suggestion (or could be POST /suggestions/:id/reject). Auth: Moderator.
+
+
+GET /admin/users – (If implemented) List/search users. Auth: Admin only.
+
+
+GET /admin/users/:id – View user detail (with PII). Auth: Admin.
+
+
+POST /admin/users/:id/role – Change user role. Auth: Admin.
+
+
+... (plus any other admin operations like viewing logs, etc.)
+
+
+Every route that modifies data or accesses sensitive info is protected via JWT (Firebase Auth) and role-based checks. The API returns standard HTTP responses (200 for success, 4xx for client errors like validation or auth failure, 5xx for server errors). Consistent RESTful patterns are used for clarity.
+Privacy by Design: Anonymity & Data Security
+Privacy is a core principle of JumboJolt. The system is designed such that personally identifiable information (PII) is kept to an absolute minimum and siloed:
+The User table containing real names (if collected), phone numbers, emails is accessible only to admins and never exposed through normal APIs. Regular API responses and lists use only the anonymous handle or alias.
+
+
+Each member is primarily identified publicly by their anonymous handle (or not at all). On leaderboards and internal feeds, you’ll see handles like BraveKite instead of personal names. Handles themselves are pseudonyms with no direct link to identity.
+
+
+For any content that is shared publicly outside the platform (social media posts, public website widgets), no user handles or PII are used, only generic attribution or user-approved alias. For example, a public tweet might say “Community Member from Maharashtra switched from X to Y” rather than giving a handle, unless the user explicitly provided a Twitter alias to use.
+
+
+Default = Private: All user actions default to private mode (“Silent Strike”). Users must opt-in each time to share something publicly. This opt-in is granular (per switch or per achievement), ensuring no accidental public exposure.
+
+
+Data Separation: We follow the principle of separation of personal data and activity data. The SwitchLog records contain a user reference, but anyone querying switches cannot join back to personal data without admin privileges. This means even if the database were compromised or a rogue mod tries to export switch data, they get only handles and IDs, not real identities. Similarly, when analyzing trends or showing group membership, the app uses anonymous identifiers.
+
+
+Minimal PII collection: We only collect what’s necessary – phone or email for auth (and maybe name if needed for internal admin reference or contact). No addresses, no excessive demographic data. Region is collected to facilitate regional stats but it’s at state-level granularity, which is broad enough to avoid pinpointing individuals.
+
+
+Secured Access: All API calls require proper authentication. Firebase ID tokens are used to identify users; on each request, the backend verifies the token’s signature and checks the user’s roles. Sensitive operations (like viewing user info or approving content) require appropriate roles. These checks are enforced in middleware for consistent security.
+
+
+Audit Trail: The presence of an AuditEvent log means any access to sensitive data can be recorded. For example, if an admin views a user’s phone number or exports a list of users, an audit event is logged. This discourages misuse of admin privileges and can be reviewed.
+
+
+External sharing caution: When integrating with external APIs (WhatsApp, Telegram, etc.), we avoid sending personal data. For instance, if we broadcast a WhatsApp message to a group, it uses the group’s ID provided by the user (they joined the official group, so no personal number is directly targeted by our system outside the group). Similarly, any automated tweets or Facebook posts are generic announcements, not personal data.
+
+
+Encryption and Security: Passwords aren’t used (OTP login only), so no password storage. Phone/email verification codes are handled by Firebase (which uses secure methods). We will enforce HTTPS for any deployment to protect data in transit. The Postgres database can be configured with encryption at rest if needed, and credentials for DB and APIs are stored in environment variables (never hard-coded).
+
+
+By structuring data and features this way, JumboJolt ensures members can participate without fear of exposure. They can contribute to the movement anonymously unless they explicitly decide to take part in the public campaign aspect. This dual approach (public vs private) is implemented in every feature toggle and data flow.
+Anonymous Handle vs Public Alias
+It’s important to distinguish Anonymous Handles from Public Aliases in JumboJolt:
+Anonymous Handle (Private, Internal): This is the default name for a user within the community. It’s generated during registration (e.g., BraveKite57). The handle is used on internal leaderboards, group posts, and any place where members see each other’s contributions. It’s anonymous in that it doesn’t reveal the person’s real identity or even a consistent username they use elsewhere. Handles are unique across the platform and act as each member’s persona in the “Silent Strike” private sphere. For example, if Rahul joins and gets handle BraveKite, everyone in the app will know the contributions of BraveKite, but only admins could ever link that to Rahul’s actual phone number internally. Handles give users recognition and community presence while preserving anonymity.
+
+
+Public Alias (Public, External-facing): An alias is an optional nickname specifically for external sharing. Many users might choose not to have any public alias (staying totally anonymous outside). But if a user wants to proudly promote the movement on their social media, they might set an alias for that platform. For instance, Rahul might not mind being known as “RahulK” on Twitter in relation to this movement – he can set his Twitter PublicAlias to “RahulK”. Then, if he shares a switch on Twitter via our integration, the post might say “RahulK from JumboJolt switched from X to Y.” On the other hand, if he didn’t set a Twitter alias, the post would simply say “A Community Member switched from X to Y” with no personal identifier.
+
+ Public aliases can differ per platform to give the user control. A user could be “EcoWarrior” on Facebook but “TechSwitchHero” on Twitter, for example. This is purely for presentation on those platforms and is stored in our DB for reference. These aliases do not grant any access; they are not used as login or anything, and the user doesn’t have to prove the alias is truly theirs (it’s more like a display name). It’s mainly a way to credit them if they want credit in public narratives.
+
+
+In summary, Handle = internal pseudonym, Alias = external display name. They are kept separate to ensure a user’s handle (which might accumulate reputation in the community) isn’t automatically tied to their real world identity. The user has full control over whether to link the two via an alias or keep them entirely separate.
+Integrations & Automation (WhatsApp, Telegram, Social Media, AI)
+JumboJolt is envisioned to work in concert with popular communication channels to maximize its reach and coordination. This starter lays the groundwork for those integrations:
+WhatsApp Cloud API: The plan is to leverage WhatsApp for broadcasting announcements and possibly region-based group chats. In the app, after registration, users are prompted to join the official WhatsApp Community (using an invite link or QR code). We also maintain smaller WhatsApp groups for specific missions or regions. Using WhatsApp’s Cloud API, the backend can send messages to these groups programmatically (e.g., a weekly summary or urgent call-to-action). The integration would require a Meta app setup with the WhatsApp Business API. In our config, we reserve environment variables for WhatsApp API credentials (like WHATSAPP_PHONE_ID, WHATSAPP_ACCESS_TOKEN). A service module (e.g., services/whatsappService.ts) can contain functions like sendWhatsAppMessage(groupId, message) which calls the Cloud API endpoints. Initially, this might be a stub that logs the action (since actual WhatsApp API calls require a verified business account). When ready, an admin can plug in valid credentials and the functions will work. With this, moderators could trigger broadcasting of a message via the admin panel (like “Mission accomplished! 500 switches made this week 🎉”).
+
+
+Telegram Bot API: Similarly, Telegram channels are used to mirror announcements. A Telegram Bot can be created and added to channels for broadcasting. We’d store the TELEGRAM_BOT_TOKEN and channel IDs in env config. A telegramService module handles sending messages through the bot (via Telegram HTTP API). This can be used by the platform to send automated updates. For instance, when a new mission starts, a message “New Mission launched: ...” can go out to relevant Telegram channels. Users who prefer Telegram can subscribe there. In the app UI, after sign-up, we can show a link to join the Telegram channel as well.
+
+
+Facebook & X (Twitter) API: For the public-facing side, content should also go to Facebook groups or Twitter feeds to raise awareness. The scaffold anticipates integration with these:
+
+
+For Facebook, the likely use-case is auto-posting into a Facebook Page or Group administered by JumboJolt. We’d use the Graph API for posts. Config needed: a Facebook Page access token or app token.
+
+
+For X (Twitter), we could use the Twitter API (v2) to tweet updates or user achievements (with permission). Config: API keys and tokens for Twitter.
+
+
+These are advanced integrations that require careful handling of rate limits and content format, so for now, the code might just have placeholders. Alternatively, we can use Zapier or n8n: e.g., when a moderator flags a piece of content as “publish to social”, we send a webhook or create a database entry, and an n8n workflow picks it up and handles cross-posting to all channels. This low-code approach offloads the complexity. The README explains that n8n/Zapier can monitor certain API endpoints or DB changes to propagate content across platforms automatically.
+
+
+Automation (n8n/Zapier): As noted, tools like n8n (an open-source automation tool) or Zapier can be integrated. For example:
+
+
+An n8n workflow could periodically fetch RSS feeds, summarize articles with an AI API, and push them into our NewsItem table (pending approval). This reduces the need to build a custom cron job for news.
+
+
+Another workflow could listen for new SwitchLogs in the database (via a webhook or polling) and if public=true, automatically generate a nice Canva template image or a social post to our accounts.
+
+
+We can configure triggers so that one action (like approving a suggestion) triggers multi-channel notifications: a Telegram message to mods “New target approved” or a Twitter post if it’s something to brag about publicly.
+
+
+The monorepo doesn’t include n8n itself, but we design the system to be automation-friendly. For instance, by having clean endpoints and using the database as a source of truth, external tools can hook in without dirty hacks.
+
+
+AI Summarizer (News): The AI summarization of news uses an external AI API (OpenAI GPT-4 or similar). We plan a function summarizeArticle(url) which fetches an article’s text (or uses an RSS summary if available) and then calls the AI API to get a concise summary. The result is stored in NewsItem.summary. The cost and performance of this mean it should be done server-side asynchronously (and with caching perhaps). The README instructs that to enable this, one would need to provide an API key for the AI service (e.g., OPENAI_API_KEY) and perhaps set up the n8n workflow or a cron job. In development mode, this can simply return a placeholder like “Summary of [article title]”.
+
+
+AI Product Intel (Suggestions): As described in the suggestions feature, the AI integration can also help get product intel. This might involve hitting a few APIs: e.g., a knowledge graph API for company info, plus using AI to parse unstructured info. One approach: feed the prompt “Find the owner and origin country of [BrandX]. Suggest an Indian alternative to [BrandX] if possible.” to an AI and parse the response. This is experimental, so the scaffold marks where such a call would occur (in intelService.ts or similar). For now, we might simulate this with some hardcoded responses for known brands (seed data). The important part is that our architecture isolates these calls (so they can be improved or toggled off) and does not rely on them for core functionality (i.e., if AI fails, the suggestion still goes to mods, just without extra info).
+
+
+Email/SMS Notifications: Not explicitly in the prompt, but as part of integrations, the platform might send email or SMS notifications for certain events (if users opt in, since we have their phone/email from auth). For example, a weekly summary email or an SMS to confirm their first switch logged. Since Firebase can handle OTP SMS, for other SMS or email, we could integrate services like SendGrid or Twilio. The scaffold can include a placeholder for sending an email (with SMTP or a service) after certain actions (like a welcome email post-registration). Again, such features are optional and privacy-respecting (only sent to the user’s own contact, and only if they agreed).
+
+
+In all, the integrations are set up in a modular way (each in its own service file with clear interfaces). All sensitive API keys are stored in environment variables, which are documented and needed during setup. These features ensure that while the core platform is the web app, it seamlessly extends into the communication channels where users already congregate, thereby amplifying the movement without breaking privacy rules (e.g., using broadcast groups and not revealing member info).
+Setup and Running Locally
+To get started with this monorepo on your local machine, follow these steps:
+Prerequisites: Ensure you have Node.js (>= 18) and a package manager (Yarn or npm that supports workspaces). Also, you need PostgreSQL installed (or use Docker for a quick DB). Optionally, have the Firebase CLI if you want to use local emulators for auth.
+
+
+Clone the Repository: (If this were in a Git repo)
+
+ git clone https://github.com/your-org/jumbojolt-starter.git
+cd jumbojolt-starter
+
+
+Install Dependencies:
+ Run npm install (or yarn install) at the root. This will install both frontend and backend dependencies thanks to the workspace setup.
+
+
+Configure Environment Variables:
+ Create a file named .env in the root (you can copy .env.example if provided). Set up the following variables:
+
+
+Database URL: e.g., DATABASE_URL="postgresql://postgres:password@localhost:5432/jumbojolt" (adjust user/password/host as needed for your Postgres instance). This is used by Prisma.
+
+
+Firebase Config: The frontend needs Firebase web config and the backend needs some Firebase credentials:
+
+
+VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID, etc. for the frontend (the Vite prefix is used so that they are exposed to the client). These come from your Firebase project settings. Create a Firebase project via console, add a Web App, and you’ll get this config snippet.
+
+
+For backend Firebase admin, set FIREBASE_ADMIN_SA_KEY or similar if using a service account JSON (you can also initialize admin with the same web API key in development if rules are open, but service account is needed to verify ID tokens securely).
+
+
+Firebase Auth Settings: In the Firebase console, enable Phone Authentication and Email link Authentication (if using) as described earlier. Add http://localhost:5173 (or your dev server host) to authorized domains in Firebase Auth settings, since Firebase by default might block OTP on unknown domains.
+
+
+Misc Keys: If you intend to test integrations, also provide WHATSAPP_TOKEN, TELEGRAM_BOT_TOKEN, etc., and any AI API keys (OpenAI) you plan to use. These can be left blank or dummy in dev if not testing those parts.
+
+
+Tailwind config: (No env needed, but ensure NODE_ENV is not production during dev so Tailwind doesn’t purge dev classes).
+
+
+The .env file is accessed by both apps: the backend via dotenv and the frontend via Vite env handling. (Note: Vite requires variables to start with VITE_ to be exposed to the browser.)
+
+
+Database Setup:
+ Make sure your Postgres is running. Then run Prisma migrations to create tables:
+
+ npx prisma migrate dev --name init-schema
+ This will apply the schema to your database. Prisma should prompt to create the DB if it doesn’t exist. You can also open prisma/schema.prisma to review the models and adjust if needed before migrating.
+
+
+Seed Data:
+ We have a script backend/prisma/seed.ts that inserts some initial data (brands, categories, example targets, dummy users, etc.). Run it with:
+
+ npx prisma db seed
+ (Ensure the migrate step was done first.) This populates the lookup tables and gives some starter content to see in the UI. The seed includes:
+
+
+A set of Brand entries (e.g., 10 brands across 5 categories, with some marked as foreign vs Indian).
+
+
+A few Company entries (with country info).
+
+
+A handful of SwitchTarget examples (like foreign brand -> Indian brand).
+
+
+Some news sources and one or two sample NewsItems (you can later run a script or use the admin panel to add more).
+
+
+A few default handles (the adjective-animal combinations).
+
+
+If desired, a test user account (though with OTP auth, you’ll create one by logging in via phone).
+
+
+A few groups and missions (e.g., a national group and a sample mission).
+
+
+Blog post drafts by a strategist user.
+
+
+(The seed script ensures no PII is included – e.g., test user phone is something like +10000000000 which works if added as a test phone in Firebase Auth for dev.)
+
+
+Run the Development Servers:
+ Use the combined script to launch both frontend and backend concurrently:
+
+ npm run dev
+ This will start the backend (e.g., on port 3000) and the Vite dev server for the frontend (port 5173). You should see output for both. Once running:
+
+
+Open http://localhost:5173 in your browser. This will load the React app. It should automatically proxy API calls to the backend (we configure Vite dev server proxy for /api to localhost:3000 or similar).
+
+
+The landing page might be a login/register screen. Go ahead and enter a phone number to test (if using emulator or if you added a test number in Firebase Auth, use that). Complete the OTP verification. You should then be guided through handle selection and region selection.
+
+
+After onboarding, you’ll see the Home dashboard with seeded content (if any). Try logging a switch or browsing targets to ensure things are wired up.
+
+
+The dev servers support hot reloading. Edit a React component, save, and the page will refresh with changes. For backend, with Nodemon, it will restart on file changes.
+
+
+Using Admin/Mod Features:
+ To access admin functions (like approving suggestions), you'll need to mark your user as a moderator/admin in the database. For example, after registering, go into the database and change your User’s role field to "ADMIN". Then refresh – the frontend should now reveal an “Admin Panel” section. Alternatively, the seed might have created a default admin user; you can log in as that if provided. Inside the Admin Panel, you can test approving a suggestion or posting a blog. These actions should reflect in the normal user views (e.g., an approved suggestion will then appear in /targets list).
+
+
+Running Tests:
+ If you want to run the test suites (assuming we included some sample tests), use:
+
+ npm run test
+ This could run both frontend and backend tests via a script (or run npm run test -w frontend and npm run test -w backend separately). The tests might include basic route tests (using Supertest to hit an example endpoint) and React component tests for a sample component. This ensures the scaffolding is working and can be built upon with confidence.
+
+
+Building for Production:
+ Each app can be built: npm run build -w frontend will produce a dist/ folder with static files for the UI, and npm run build -w backend (with appropriate script) can transpile the TypeScript to JS (e.g., using tsc or a bundler). You can then serve the backend (which serves the APIs and could also serve the static frontend if configured accordingly). For simplicity, you might serve the frontend via a CDN or static host (Netlify/Vercel) and deploy the backend on a server or container. Ensure to set NODE_ENV=production and the correct env vars in those environments.
+
+
+Firebase setup note: If testing phone auth locally, Firebase might block sending SMS to localhost origins. You may need to use the Firebase Emulator Suite for Auth or add a domain in Firebase config as allowed (e.g., set up a custom domain or use 127.0.0.1 trick). Alternatively, for quick dev, in Firebase console under Authentication -> Phone, you can add test phone numbers with a pre-defined OTP code that will bypass actual SMS. This way you can simulate the OTP flow without actually sending SMS (useful for development).
+Ensuring Privacy & Security in Development
+When running locally or deploying, take care to uphold the privacy principles:
+Never commit real phone numbers, API keys, or user data to source control. Use the .env for secrets.
+
+
+Use HTTPS in production for all endpoints (Vite dev server is HTTP by default, which is fine on localhost).
+
+
+Test the flows where data might be exposed. E.g., verify that when a user shares a switch, the payload from /share/achievement contains no sensitive data (just generic text).
+
+
+Use Prisma’s data validation and the Express validators on inputs to avoid SQL injection or bad data. e.g., ensure phone numbers are properly formatted, etc.
+
+
+The seeded admin user (if any) has a default password/OTP for convenience; change or remove that in real deployments.
+
+
+Monitor the AuditEvent logs (if enabled) to ensure no suspicious admin activity.
+
+
+Conclusion and Next Steps
+This JumboJolt starter kit provides a comprehensive foundation to build on. We focused on a modular architecture that separates concerns (frontend vs backend, private vs public data) and included key features as placeholders ready for implementation. With this scaffolding:
+Developers can implement the remaining business logic and refine the UI/UX knowing the structure is in place.
+
+
+The community can be onboarded gradually, starting with the seeded data and then scaling up as in the project plan (MVP -> iterations).
+
+
+Privacy is built-in from day one, so even as features like leaderboards and social sharing expand, the users' anonymity remains protected.
+
+
+Next Steps:
+Expand the UI for a polished look: create nice Tailwind components for cards, leaderboards, forms, etc., possibly using a component library or custom designs from the brand kit.
+
+
+Implement real integration calls: connect the WhatsApp and Telegram service functions to real APIs once keys are obtained; same for social media and AI services.
+
+
+Rigorously test the OTP auth flow on staging with real devices, and set up Firebase Security Rules if using Firestore/Storage to ensure only allowed access (for example, images uploaded to Firebase Storage should have rules such that only the uploader or admins can read them, unless they are meant to be public).
+
+
+Optimize performance: e.g., add caching for leaderboards and trending calculations (perhaps using in-memory cache or a Redis if needed) to handle large numbers of switches.
+
+
+Add multi-language support if targeting diverse demographics (especially for SMS or content translation).
+
+
+Conduct a security review for any potential PII leaks and fix accordingly (for instance, double-check any third-party logging to ensure we don't accidentally log phone numbers, etc.).
+
+
+
+
+
+
+

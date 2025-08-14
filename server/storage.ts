@@ -8,6 +8,7 @@ import {
   reactions,
   targetSuggestions,
   newsItems,
+  newsArticles,
   leaderboardSnapshots,
   moderationReports,
   feedbackQuestions,
@@ -38,7 +39,9 @@ import {
   type Mission,
   type InsertMission,
   type UserMission,
-  type InsertUserMission
+  type InsertUserMission,
+  type NewsArticle,
+  type InsertNewsArticle
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, count } from "drizzle-orm";
@@ -116,6 +119,12 @@ export interface IStorage {
   getAllUsers(filters?: { role?: string; active?: boolean }): Promise<any[]>;
   getUserDetails(id: string): Promise<any>;
   updateUserRole(id: string, role: string): Promise<User>;
+  
+  // News article methods
+  createNewsArticle(newsArticle: InsertNewsArticle): Promise<NewsArticle>;
+  getNewsArticles(): Promise<NewsArticle[]>;
+  updateNewsArticle(id: string, updates: Partial<NewsArticle>): Promise<NewsArticle>;
+  deleteNewsArticle(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -648,6 +657,28 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user;
+  }
+
+  // News article methods
+  async createNewsArticle(insertNewsArticle: InsertNewsArticle): Promise<NewsArticle> {
+    const [article] = await db.insert(newsArticles).values(insertNewsArticle).returning();
+    return article;
+  }
+
+  async getNewsArticles(): Promise<NewsArticle[]> {
+    return db.select().from(newsArticles).orderBy(desc(newsArticles.publishedAt));
+  }
+
+  async updateNewsArticle(id: string, updates: Partial<NewsArticle>): Promise<NewsArticle> {
+    const [article] = await db.update(newsArticles)
+      .set(updates)
+      .where(eq(newsArticles.id, id))
+      .returning();
+    return article;
+  }
+
+  async deleteNewsArticle(id: string): Promise<void> {
+    await db.delete(newsArticles).where(eq(newsArticles.id, id));
   }
 }
 

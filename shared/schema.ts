@@ -233,7 +233,8 @@ export const missions = pgTable("missions", {
   title: varchar("title").notNull(),
   description: text("description"),
   targetCategory: switchCategoryEnum("target_category"),
-  targetBrandIds: text("target_brand_ids").array(), // Array of brand IDs to switch to
+  fromBrandIds: text("from_brand_ids").array(), // Array of brand IDs to switch from
+  toBrandIds: text("to_brand_ids").array(), // Array of brand IDs to switch to
   pointsReward: integer("points_reward").default(50),
   startDate: timestamp("start_date").defaultNow(),
   endDate: timestamp("end_date"),
@@ -250,6 +251,22 @@ export const userMissions = pgTable("user_missions", {
   status: varchar("status").default('STARTED'), // STARTED, COMPLETED, FAILED
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow()
+});
+
+// News articles posted by moderators
+export const newsArticles = pgTable("news_articles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  imageUrls: text("image_urls").array(), // Array of image URLs
+  suggestedFromBrandIds: text("suggested_from_brand_ids").array(),
+  suggestedToBrandIds: text("suggested_to_brand_ids").array(),
+  commentsEnabled: boolean("comments_enabled").default(true),
+  isPublished: boolean("is_published").default(true),
+  publishedAt: timestamp("published_at").defaultNow(),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
 });
 
 // Relations
@@ -370,6 +387,13 @@ export const insertUserMissionSchema = createInsertSchema(userMissions).omit({
   createdAt: true
 });
 
+export const insertNewsArticleSchema = createInsertSchema(newsArticles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  publishedAt: true
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -396,3 +420,5 @@ export type Mission = typeof missions.$inferSelect;
 export type InsertMission = z.infer<typeof insertMissionSchema>;
 export type UserMission = typeof userMissions.$inferSelect;
 export type InsertUserMission = z.infer<typeof insertUserMissionSchema>;
+export type NewsArticle = typeof newsArticles.$inferSelect;
+export type InsertNewsArticle = z.infer<typeof insertNewsArticleSchema>;

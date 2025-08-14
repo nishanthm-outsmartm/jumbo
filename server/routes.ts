@@ -526,6 +526,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // News article routes
+  app.post('/api/moderation/news', async (req, res) => {
+    try {
+      const newsArticle = await storage.createNewsArticle(req.body);
+      res.json(newsArticle);
+    } catch (error) {
+      console.error('Error creating news article:', error);
+      res.status(500).json({ error: 'Failed to create news article' });
+    }
+  });
+
+  app.get('/api/moderation/news', async (req, res) => {
+    try {
+      const newsArticles = await storage.getNewsArticles();
+      res.json(newsArticles);
+    } catch (error) {
+      console.error('Error fetching news articles:', error);
+      res.status(500).json({ error: 'Failed to fetch news articles' });
+    }
+  });
+
+  app.put('/api/moderation/news/:id', async (req, res) => {
+    try {
+      const newsArticle = await storage.updateNewsArticle(req.params.id, req.body);
+      res.json(newsArticle);
+    } catch (error) {
+      console.error('Error updating news article:', error);
+      res.status(500).json({ error: 'Failed to update news article' });
+    }
+  });
+
+  app.delete('/api/moderation/news/:id', async (req, res) => {
+    try {
+      await storage.deleteNewsArticle(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting news article:', error);
+      res.status(500).json({ error: 'Failed to delete news article' });
+    }
+  });
+
   // Post creation with image support
   app.post('/api/moderation/posts', async (req, res) => {
     try {

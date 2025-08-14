@@ -1,5 +1,5 @@
-Great — I’ll create a Replit prompt that includes Firebase Auth for phone/email OTP (via SMS), the Handles-only system with Public Alias support, built-in Silent Strike logging, AI-powered news and product intel, and full moderator/strategist workflows.
-I’ll let you know as soon as it’s ready for your review.
+
+
 JumboJolt Monorepo Starter (v1.2)
 JumboJolt is a privacy-first platform that empowers Indian consumers to switch from select foreign products to quality Indian alternatives (or more favorable brands). This starter kit scaffolds a production-ready monorepo for the JumboJolt application, implementing core features with a strong focus on anonymity, security, and modular design. The codebase is split into a frontend (React/Vite) and a backend (Node/Express) with a clear structure, shared types, and a unified development workflow. All personal data is protected by design, and members participate under pseudonyms by default.
 Monorepo Structure and Tech Stack

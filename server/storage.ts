@@ -10,6 +10,10 @@ import {
   newsItems,
   leaderboardSnapshots,
   moderationReports,
+  feedbackQuestions,
+  feedbackResponses,
+  missions,
+  userMissions,
   type User, 
   type InsertUser,
   type SwitchLog,
@@ -26,7 +30,15 @@ import {
   type InsertReaction,
   type LeaderboardSnapshot,
   type ModerationReport,
-  type InsertModerationReport
+  type InsertModerationReport,
+  type FeedbackQuestion,
+  type InsertFeedbackQuestion,
+  type FeedbackResponse,
+  type InsertFeedbackResponse,
+  type Mission,
+  type InsertMission,
+  type UserMission,
+  type InsertUserMission
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, count } from "drizzle-orm";
@@ -80,6 +92,30 @@ export interface IStorage {
   getModerationReports(status?: string): Promise<any[]>;
   createModerationReport(report: InsertModerationReport): Promise<ModerationReport>;
   updateModerationReport(id: string, updates: Partial<ModerationReport>): Promise<ModerationReport>;
+  
+  // Switch log approval methods
+  getPendingSwitchLogs(): Promise<any[]>;
+  approveSwitchLog(id: string, moderatorId: string, notes?: string): Promise<SwitchLog>;
+  rejectSwitchLog(id: string, moderatorId: string, notes: string): Promise<SwitchLog>;
+  
+  // Feedback question methods
+  createFeedbackQuestion(question: InsertFeedbackQuestion): Promise<FeedbackQuestion>;
+  getFeedbackQuestions(activeOnly?: boolean): Promise<FeedbackQuestion[]>;
+  updateFeedbackQuestion(id: string, updates: Partial<FeedbackQuestion>): Promise<FeedbackQuestion>;
+  deleteFeedbackQuestion(id: string): Promise<void>;
+  getFeedbackResponses(questionId: string): Promise<any[]>;
+  
+  // Mission methods
+  createMission(mission: InsertMission): Promise<Mission>;
+  getMissions(activeOnly?: boolean): Promise<Mission[]>;
+  updateMission(id: string, updates: Partial<Mission>): Promise<Mission>;
+  deleteMission(id: string): Promise<void>;
+  getUserMissions(userId: string): Promise<any[]>;
+  
+  // Member management methods
+  getAllUsers(filters?: { role?: string; active?: boolean }): Promise<any[]>;
+  getUserDetails(id: string): Promise<any>;
+  updateUserRole(id: string, role: string): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -431,6 +467,187 @@ export class DatabaseStorage implements IStorage {
       .where(eq(moderationReports.id, id))
       .returning();
     return report;
+  }
+
+  // Switch log approval methods
+  async getPendingSwitchLogs(): Promise<any[]> {
+    return db.select({
+      switchLog: switchLogs,
+      user: {
+        id: users.id,
+        handle: users.handle,
+        points: users.points,
+        level: users.level
+      },
+      fromBrand: {
+        id: brands.id,
+        name: brands.name,
+        country: brands.country,
+        isIndian: brands.isIndian
+      },
+      toBrand: {
+        id: brands.id,
+        name: brands.name,
+        country: brands.country,
+        isIndian: brands.isIndian
+      }
+    })
+      .from(switchLogs)
+      .leftJoin(users, eq(switchLogs.userId, users.id))
+      .leftJoin(brands, eq(switchLogs.fromBrandId, brands.id))
+      .leftJoin(brands as any, eq(switchLogs.toBrandId, brands.id))
+      .where(eq(switchLogs.status, 'PENDING'))
+      .orderBy(desc(switchLogs.createdAt));
+  }
+
+  async approveSwitchLog(id: string, moderatorId: string, notes?: string): Promise<SwitchLog> {
+    const [switchLog] = await db.update(switchLogs)
+      .set({
+        status: 'APPROVED',
+        moderatorId,
+        moderatorNotes: notes,
+        approvedAt: new Date()
+      })
+      .where(eq(switchLogs.id, id))
+      .returning();
+    return switchLog;
+  }
+
+  async rejectSwitchLog(id: string, moderatorId: string, notes: string): Promise<SwitchLog> {
+    const [switchLog] = await db.update(switchLogs)
+      .set({
+        status: 'REJECTED',
+        moderatorId,
+        moderatorNotes: notes
+      })
+      .where(eq(switchLogs.id, id))
+      .returning();
+    return switchLog;
+  }
+
+  // Feedback question methods
+  async createFeedbackQuestion(insertQuestion: InsertFeedbackQuestion): Promise<FeedbackQuestion> {
+    const [question] = await db.insert(feedbackQuestions).values(insertQuestion).returning();
+    return question;
+  }
+
+  async getFeedbackQuestions(activeOnly: boolean = false): Promise<FeedbackQuestion[]> {
+    const query = db.select().from(feedbackQuestions);
+    
+    if (activeOnly) {
+      return query.where(eq(feedbackQuestions.isActive, true))
+        .orderBy(desc(feedbackQuestions.createdAt));
+    }
+    
+    return query.orderBy(desc(feedbackQuestions.createdAt));
+  }
+
+  async updateFeedbackQuestion(id: string, updates: Partial<FeedbackQuestion>): Promise<FeedbackQuestion> {
+    const [question] = await db.update(feedbackQuestions)
+      .set(updates)
+      .where(eq(feedbackQuestions.id, id))
+      .returning();
+    return question;
+  }
+
+  async deleteFeedbackQuestion(id: string): Promise<void> {
+    await db.delete(feedbackQuestions).where(eq(feedbackQuestions.id, id));
+  }
+
+  async getFeedbackResponses(questionId: string): Promise<any[]> {
+    return db.select({
+      response: feedbackResponses,
+      user: {
+        id: users.id,
+        handle: users.handle
+      }
+    })
+      .from(feedbackResponses)
+      .leftJoin(users, eq(feedbackResponses.userId, users.id))
+      .where(eq(feedbackResponses.questionId, questionId))
+      .orderBy(desc(feedbackResponses.createdAt));
+  }
+
+  // Mission methods
+  async createMission(insertMission: InsertMission): Promise<Mission> {
+    const [mission] = await db.insert(missions).values(insertMission).returning();
+    return mission;
+  }
+
+  async getMissions(activeOnly: boolean = false): Promise<Mission[]> {
+    const query = db.select().from(missions);
+    
+    if (activeOnly) {
+      return query.where(eq(missions.isActive, true))
+        .orderBy(desc(missions.createdAt));
+    }
+    
+    return query.orderBy(desc(missions.createdAt));
+  }
+
+  async updateMission(id: string, updates: Partial<Mission>): Promise<Mission> {
+    const [mission] = await db.update(missions)
+      .set(updates)
+      .where(eq(missions.id, id))
+      .returning();
+    return mission;
+  }
+
+  async deleteMission(id: string): Promise<void> {
+    await db.delete(missions).where(eq(missions.id, id));
+  }
+
+  async getUserMissions(userId: string): Promise<any[]> {
+    return db.select({
+      userMission: userMissions,
+      mission: missions
+    })
+      .from(userMissions)
+      .leftJoin(missions, eq(userMissions.missionId, missions.id))
+      .where(eq(userMissions.userId, userId))
+      .orderBy(desc(userMissions.createdAt));
+  }
+
+  // Member management methods
+  async getAllUsers(filters?: { role?: string; active?: boolean }): Promise<any[]> {
+    const baseQuery = db.select({
+      user: users,
+      switchCount: sql`count(${switchLogs.id})::int`.as('totalSwitches'),
+      recentActivity: sql`count(case when ${switchLogs.createdAt} > NOW() - interval '30 days' then 1 end)::int`.as('recentSwitches')
+    })
+      .from(users)
+      .leftJoin(switchLogs, eq(users.id, switchLogs.userId))
+      .groupBy(users.id);
+
+    if (filters?.role) {
+      return baseQuery.where(eq(users.role, filters.role as any))
+        .orderBy(desc(users.createdAt));
+    }
+
+    return baseQuery.orderBy(desc(users.createdAt));
+  }
+
+  async getUserDetails(id: string): Promise<any> {
+    const [userDetails] = await db.select({
+      user: users,
+      totalSwitches: sql`count(${switchLogs.id})::int`.as('totalSwitches'),
+      totalPosts: sql`count(${posts.id})::int`.as('totalPosts')
+    })
+      .from(users)
+      .leftJoin(switchLogs, eq(users.id, switchLogs.userId))
+      .leftJoin(posts, eq(users.id, posts.userId))
+      .where(eq(users.id, id))
+      .groupBy(users.id);
+
+    return userDetails;
+  }
+
+  async updateUserRole(id: string, role: string): Promise<User> {
+    const [user] = await db.update(users)
+      .set({ role: role as any })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
   }
 }
 

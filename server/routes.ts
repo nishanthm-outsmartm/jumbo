@@ -1,7 +1,15 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertSwitchLogSchema, insertPostSchema, insertBrandSchema, insertCommentSchema, insertTargetSuggestionSchema } from "@shared/schema";
+import { 
+  insertSwitchLogSchema, 
+  insertPostSchema, 
+  insertBrandSchema, 
+  insertCommentSchema, 
+  insertTargetSuggestionSchema,
+  insertFeedbackQuestionSchema,
+  insertMissionSchema
+} from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -350,6 +358,183 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating moderation report:', error);
       res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Switch log approval routes
+  app.get('/api/moderation/switch-logs/pending', async (req, res) => {
+    try {
+      const pendingLogs = await storage.getPendingSwitchLogs();
+      res.json(pendingLogs);
+    } catch (error) {
+      console.error('Error fetching pending switch logs:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.put('/api/moderation/switch-logs/:id/approve', async (req, res) => {
+    try {
+      const { moderatorId, notes } = req.body;
+      const switchLog = await storage.approveSwitchLog(req.params.id, moderatorId, notes);
+      res.json(switchLog);
+    } catch (error) {
+      console.error('Error approving switch log:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.put('/api/moderation/switch-logs/:id/reject', async (req, res) => {
+    try {
+      const { moderatorId, notes } = req.body;
+      const switchLog = await storage.rejectSwitchLog(req.params.id, moderatorId, notes);
+      res.json(switchLog);
+    } catch (error) {
+      console.error('Error rejecting switch log:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Feedback question routes
+  app.post('/api/moderation/feedback-questions', async (req, res) => {
+    try {
+      const validatedData = insertFeedbackQuestionSchema.parse(req.body);
+      const question = await storage.createFeedbackQuestion(validatedData);
+      res.json(question);
+    } catch (error) {
+      console.error('Error creating feedback question:', error);
+      res.status(400).json({ error: 'Invalid question data' });
+    }
+  });
+
+  app.get('/api/moderation/feedback-questions', async (req, res) => {
+    try {
+      const activeOnly = req.query.active === 'true';
+      const questions = await storage.getFeedbackQuestions(activeOnly);
+      res.json(questions);
+    } catch (error) {
+      console.error('Error fetching feedback questions:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.put('/api/moderation/feedback-questions/:id', async (req, res) => {
+    try {
+      const question = await storage.updateFeedbackQuestion(req.params.id, req.body);
+      res.json(question);
+    } catch (error) {
+      console.error('Error updating feedback question:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.delete('/api/moderation/feedback-questions/:id', async (req, res) => {
+    try {
+      await storage.deleteFeedbackQuestion(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting feedback question:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/moderation/feedback-questions/:id/responses', async (req, res) => {
+    try {
+      const responses = await storage.getFeedbackResponses(req.params.id);
+      res.json(responses);
+    } catch (error) {
+      console.error('Error fetching feedback responses:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Mission routes
+  app.post('/api/moderation/missions', async (req, res) => {
+    try {
+      const validatedData = insertMissionSchema.parse(req.body);
+      const mission = await storage.createMission(validatedData);
+      res.json(mission);
+    } catch (error) {
+      console.error('Error creating mission:', error);
+      res.status(400).json({ error: 'Invalid mission data' });
+    }
+  });
+
+  app.get('/api/moderation/missions', async (req, res) => {
+    try {
+      const activeOnly = req.query.active === 'true';
+      const missions = await storage.getMissions(activeOnly);
+      res.json(missions);
+    } catch (error) {
+      console.error('Error fetching missions:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.put('/api/moderation/missions/:id', async (req, res) => {
+    try {
+      const mission = await storage.updateMission(req.params.id, req.body);
+      res.json(mission);
+    } catch (error) {
+      console.error('Error updating mission:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.delete('/api/moderation/missions/:id', async (req, res) => {
+    try {
+      await storage.deleteMission(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting mission:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Member management routes
+  app.get('/api/moderation/users', async (req, res) => {
+    try {
+      const filters = {
+        role: req.query.role as string,
+        active: req.query.active === 'true'
+      };
+      const users = await storage.getAllUsers(filters);
+      res.json(users);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/moderation/users/:id', async (req, res) => {
+    try {
+      const userDetails = await storage.getUserDetails(req.params.id);
+      res.json(userDetails);
+    } catch (error) {
+      console.error('Error fetching user details:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.put('/api/moderation/users/:id/role', async (req, res) => {
+    try {
+      const { role } = req.body;
+      const user = await storage.updateUserRole(req.params.id, role);
+      res.json(user);
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Post creation with image support
+  app.post('/api/moderation/posts', async (req, res) => {
+    try {
+      const validatedData = insertPostSchema.parse(req.body);
+      const post = await storage.createPost(validatedData);
+      res.json(post);
+    } catch (error) {
+      console.error('Error creating post:', error);
+      res.status(400).json({ error: 'Invalid post data' });
     }
   });
 

@@ -25,6 +25,7 @@ export const switchCategoryEnum = pgEnum('switch_category', [
   'BOOKS_MEDIA',
   'OTHER'
 ]);
+export const switchLogStatus = pgEnum('switch_log_status', ['PENDING', 'APPROVED', 'REJECTED']);
 
 // Users table
 export const users = pgTable("users", {
@@ -73,6 +74,10 @@ export const switchLogs = pgTable("switch_logs", {
   reason: text("reason"),
   evidenceUrl: varchar("evidence_url"),
   isPublic: boolean("is_public").default(false),
+  status: switchLogStatus("status").default('PENDING'),
+  moderatorId: varchar("moderator_id").references(() => users.id),
+  moderatorNotes: text("moderator_notes"),
+  approvedAt: timestamp("approved_at"),
   points: integer("points").default(25),
   createdAt: timestamp("created_at").defaultNow()
 });
@@ -199,6 +204,54 @@ export const userAchievements = pgTable("user_achievements", {
   earnedAt: timestamp("earned_at").defaultNow()
 });
 
+// Feedback questions for moderators to create
+export const feedbackQuestions = pgTable("feedback_questions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  type: varchar("type").default('multiple_choice'), // multiple_choice, text, rating
+  options: jsonb("options"), // for multiple choice questions
+  isActive: boolean("is_active").default(true),
+  startDate: timestamp("start_date").defaultNow(),
+  endDate: timestamp("end_date"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+// Feedback responses from users
+export const feedbackResponses = pgTable("feedback_responses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  questionId: varchar("question_id").references(() => feedbackQuestions.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  response: text("response"),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+// Missions/targets set by moderators
+export const missions = pgTable("missions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  targetCategory: switchCategoryEnum("target_category"),
+  targetBrandIds: text("target_brand_ids").array(), // Array of brand IDs to switch to
+  pointsReward: integer("points_reward").default(50),
+  startDate: timestamp("start_date").defaultNow(),
+  endDate: timestamp("end_date"),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+// User mission participation
+export const userMissions = pgTable("user_missions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  missionId: varchar("mission_id").references(() => missions.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  status: varchar("status").default('STARTED'), // STARTED, COMPLETED, FAILED
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   switchLogs: many(switchLogs),
@@ -297,6 +350,26 @@ export const insertModerationReportSchema = createInsertSchema(moderationReports
   resolvedAt: true
 });
 
+export const insertFeedbackQuestionSchema = createInsertSchema(feedbackQuestions).omit({
+  id: true,
+  createdAt: true
+});
+
+export const insertFeedbackResponseSchema = createInsertSchema(feedbackResponses).omit({
+  id: true,
+  createdAt: true
+});
+
+export const insertMissionSchema = createInsertSchema(missions).omit({
+  id: true,
+  createdAt: true
+});
+
+export const insertUserMissionSchema = createInsertSchema(userMissions).omit({
+  id: true,
+  createdAt: true
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -315,3 +388,11 @@ export type InsertReaction = z.infer<typeof insertReactionSchema>;
 export type LeaderboardSnapshot = typeof leaderboardSnapshots.$inferSelect;
 export type ModerationReport = typeof moderationReports.$inferSelect;
 export type InsertModerationReport = z.infer<typeof insertModerationReportSchema>;
+export type FeedbackQuestion = typeof feedbackQuestions.$inferSelect;
+export type InsertFeedbackQuestion = z.infer<typeof insertFeedbackQuestionSchema>;
+export type FeedbackResponse = typeof feedbackResponses.$inferSelect;
+export type InsertFeedbackResponse = z.infer<typeof insertFeedbackResponseSchema>;
+export type Mission = typeof missions.$inferSelect;
+export type InsertMission = z.infer<typeof insertMissionSchema>;
+export type UserMission = typeof userMissions.$inferSelect;
+export type InsertUserMission = z.infer<typeof insertUserMissionSchema>;

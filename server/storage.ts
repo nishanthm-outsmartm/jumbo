@@ -41,7 +41,13 @@ import {
   type UserMission,
   type InsertUserMission,
   type NewsArticle,
-  type InsertNewsArticle
+  type InsertNewsArticle,
+  messages,
+  moderatorPosts,
+  type Message,
+  type InsertMessage,
+  type ModeratorPost,
+  type InsertModeratorPost
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, count } from "drizzle-orm";
@@ -125,6 +131,16 @@ export interface IStorage {
   getNewsArticles(): Promise<NewsArticle[]>;
   updateNewsArticle(id: string, updates: Partial<NewsArticle>): Promise<NewsArticle>;
   deleteNewsArticle(id: string): Promise<void>;
+  
+  // Messages
+  sendMessage(message: InsertMessage): Promise<Message>;
+  getMessagesForUser(userId: string): Promise<Message[]>;
+  getUnreadMessages(userId: string): Promise<Message[]>;
+  markMessageAsRead(messageId: string): Promise<void>;
+  
+  // Moderator posts
+  createModeratorPost(post: InsertModeratorPost): Promise<ModeratorPost>;
+  getAllModeratorPosts(): Promise<ModeratorPost[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -679,6 +695,46 @@ export class DatabaseStorage implements IStorage {
 
   async deleteNewsArticle(id: string): Promise<void> {
     await db.delete(newsArticles).where(eq(newsArticles.id, id));
+  }
+
+  // Messages
+  async sendMessage(insertMessage: InsertMessage): Promise<Message> {
+    const [message] = await db.insert(messages).values(insertMessage).returning();
+    return message;
+  }
+
+  async getMessagesForUser(userId: string): Promise<Message[]> {
+    const result = await db.select()
+      .from(messages)
+      .where(sql`${messages.fromUserId} = ${userId} OR ${messages.toUserId} = ${userId}`)
+      .orderBy(desc(messages.createdAt));
+    return result as Message[];
+  }
+
+  async getUnreadMessages(userId: string): Promise<Message[]> {
+    const result = await db.select()
+      .from(messages)
+      .where(and(eq(messages.toUserId, userId), eq(messages.isRead, false)))
+      .orderBy(desc(messages.createdAt));
+    return result as Message[];
+  }
+
+  async markMessageAsRead(messageId: string): Promise<void> {
+    await db.update(messages)
+      .set({ isRead: true })
+      .where(eq(messages.id, messageId));
+  }
+
+  // Moderator posts
+  async createModeratorPost(insertPost: InsertModeratorPost): Promise<ModeratorPost> {
+    const [post] = await db.insert(moderatorPosts).values(insertPost).returning();
+    return post;
+  }
+
+  async getAllModeratorPosts(): Promise<ModeratorPost[]> {
+    return db.select()
+      .from(moderatorPosts)
+      .orderBy(desc(moderatorPosts.isPinned), desc(moderatorPosts.createdAt));
   }
 }
 

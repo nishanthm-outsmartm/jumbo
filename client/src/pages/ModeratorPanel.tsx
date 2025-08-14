@@ -302,14 +302,14 @@ export default function ModeratorPanel() {
     }
   }, [activeSection]);
 
-  if (!user || user.role !== 'ADMIN') {
+  if (!user || (user.role !== 'ADMIN' && user.role !== 'MODERATOR' && user.role !== 'STRATEGIST')) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Card className="max-w-md">
           <CardContent className="text-center py-12">
             <Shield className="w-16 h-16 mx-auto text-red-600 mb-4" />
             <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-            <p className="text-muted-foreground">You need admin privileges to access this panel.</p>
+            <p className="text-muted-foreground">You need moderator privileges to access this panel.</p>
           </CardContent>
         </Card>
       </div>

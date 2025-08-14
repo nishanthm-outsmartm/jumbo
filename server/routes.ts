@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { 
   insertSwitchLogSchema, 
@@ -579,6 +580,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced brand search with ability to add new brands
+  app.get('/api/brands/search', async (req, res) => {
+    try {
+      const { query } = req.query;
+      if (!query || typeof query !== 'string') {
+        return res.json([]);
+      }
+      const brands = await storage.searchBrands(query);
+      res.json(brands);
+    } catch (error) {
+      console.error('Error searching brands:', error);
+      res.status(500).json({ error: 'Failed to search brands' });
+    }
+  });
+
+  // Messages system
+  app.post('/api/messages', async (req, res) => {
+    try {
+      const message = await storage.sendMessage(req.body);
+      res.json(message);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      res.status(500).json({ error: 'Failed to send message' });
+    }
+  });
+
+  app.get('/api/messages/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const messages = await storage.getMessagesForUser(userId);
+      res.json(messages);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+  });
+
+  app.get('/api/messages/:userId/unread', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const messages = await storage.getUnreadMessages(userId);
+      res.json(messages);
+    } catch (error) {
+      console.error('Error fetching unread messages:', error);
+      res.status(500).json({ error: 'Failed to fetch unread messages' });
+    }
+  });
+
+  app.put('/api/messages/:messageId/read', async (req, res) => {
+    try {
+      const { messageId } = req.params;
+      await storage.markMessageAsRead(messageId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+      res.status(500).json({ error: 'Failed to mark message as read' });
+    }
+  });
+
+  // Moderator posts
+  app.post('/api/moderator-posts', async (req, res) => {
+    try {
+      const post = await storage.createModeratorPost(req.body);
+      res.json(post);
+    } catch (error) {
+      console.error('Error creating moderator post:', error);
+      res.status(500).json({ error: 'Failed to create post' });
+    }
+  });
+
+  app.get('/api/moderator-posts', async (req, res) => {
+    try {
+      const posts = await storage.getAllModeratorPosts();
+      res.json(posts);
+    } catch (error) {
+      console.error('Error fetching moderator posts:', error);
+      res.status(500).json({ error: 'Failed to fetch posts' });
+    }
+  });
+
   const httpServer = createServer(app);
+  
+  // Add WebSocket server for real-time updates
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  wss.on('connection', (ws) => {
+    console.log('WebSocket client connected');
+    
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        console.log('Received WebSocket message:', data);
+        
+        // Echo message back to all clients for real-time updates
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+              type: 'update',
+              data: data,
+              timestamp: new Date().toISOString()
+            }));
+          }
+        });
+      } catch (error) {
+        console.error('WebSocket message parsing error:', error);
+      }
+    });
+    
+    ws.on('close', () => {
+      console.log('WebSocket client disconnected');
+    });
+    
+    // Send initial connection confirmation
+    ws.send(JSON.stringify({
+      type: 'connected',
+      message: 'Real-time updates enabled',
+      timestamp: new Date().toISOString()
+    }));
+  });
+  
   return httpServer;
 }

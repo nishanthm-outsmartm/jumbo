@@ -269,6 +269,36 @@ export const newsArticles = pgTable("news_articles", {
   updatedAt: timestamp("updated_at").defaultNow()
 });
 
+// Private messages between members and moderators
+export const messages = pgTable("messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fromUserId: varchar("from_user_id").references(() => users.id, { onDelete: 'cascade' }),
+  toUserId: varchar("to_user_id").references(() => users.id, { onDelete: 'cascade' }),
+  subject: varchar("subject").notNull(),
+  content: text("content").notNull(),
+  isRead: boolean("is_read").default(false),
+  attachmentUrls: text("attachment_urls").array(),
+  replyToId: varchar("reply_to_id").references(() => messages.id),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+// Enhanced posts with target alternatives and URLs
+export const moderatorPosts = pgTable("moderator_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  targetBrandIds: text("target_brand_ids").array(), // Brands to switch from
+  alternativeBrandIds: text("alternative_brand_ids").array(), // Suggested alternatives
+  imageUrls: text("image_urls").array(),
+  externalUrls: text("external_urls").array(), // Reference links
+  category: switchCategoryEnum("category"),
+  isPinned: boolean("is_pinned").default(false),
+  commentsEnabled: boolean("comments_enabled").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   switchLogs: many(switchLogs),
@@ -394,6 +424,17 @@ export const insertNewsArticleSchema = createInsertSchema(newsArticles).omit({
   publishedAt: true
 });
 
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true
+});
+
+export const insertModeratorPostSchema = createInsertSchema(moderatorPosts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -422,3 +463,7 @@ export type UserMission = typeof userMissions.$inferSelect;
 export type InsertUserMission = z.infer<typeof insertUserMissionSchema>;
 export type NewsArticle = typeof newsArticles.$inferSelect;
 export type InsertNewsArticle = z.infer<typeof insertNewsArticleSchema>;
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type ModeratorPost = typeof moderatorPosts.$inferSelect;
+export type InsertModeratorPost = z.infer<typeof insertModeratorPostSchema>;

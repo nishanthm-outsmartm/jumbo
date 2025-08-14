@@ -52,7 +52,7 @@ import {
   Wifi,
   WifiOff
 } from 'lucide-react';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
 import { apiRequest } from '@/lib/queryClient';
 import { BrandSelector } from '@/components/BrandSelector';
@@ -164,28 +164,21 @@ export default function EnhancedModeratorPanel() {
   });
 
   // Queries
-  const { data: missions = [] } = useQuery({
+  const { data: missions = [] } = useQuery<Mission[]>({
     queryKey: ['/api/moderation/missions'],
-    queryFn: () => apiRequest('/api/moderation/missions'),
   });
 
-  const { data: moderatorPosts = [] } = useQuery({
+  const { data: moderatorPosts = [] } = useQuery<Post[]>({
     queryKey: ['/api/moderation/posts'],
-    queryFn: () => apiRequest('/api/moderation/posts'),
   });
 
-  const { data: analytics } = useQuery({
+  const { data: analytics } = useQuery<any>({
     queryKey: ['/api/moderation/analytics'],
-    queryFn: () => apiRequest('/api/moderation/analytics'),
   });
 
   // Create post mutation
   const createPostMutation = useMutation({
-    mutationFn: (postData: any) => apiRequest('/api/moderation/posts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(postData)
-    }),
+    mutationFn: (postData: any) => apiRequest('POST', '/api/moderation/posts', postData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/moderation/posts'] });
       setNewPostData({

@@ -215,25 +215,11 @@ export class DatabaseStorage implements IStorage {
           level: users.level,
           points: users.points
         },
-        switchLog: switchLogs,
-        fromBrand: {
-          id: brands.id,
-          name: brands.name,
-          country: brands.country,
-          isIndian: brands.isIndian
-        },
-        toBrand: {
-          id: brands.id,
-          name: brands.name,
-          country: brands.country,
-          isIndian: brands.isIndian
-        }
+        switchLog: switchLogs
       })
       .from(posts)
       .leftJoin(users, eq(posts.userId, users.id))
       .leftJoin(switchLogs, eq(posts.switchLogId, switchLogs.id))
-      .leftJoin(brands, eq(switchLogs.fromBrandId, brands.id))
-      .leftJoin(brands as any, eq(switchLogs.toBrandId, brands.id))
       .orderBy(desc(posts.createdAt))
       .limit(limit);
 
@@ -306,7 +292,7 @@ export class DatabaseStorage implements IStorage {
     // Update comment count on post
     await db.update(posts)
       .set({ commentsCount: sql`${posts.commentsCount} + 1` })
-      .where(eq(posts.id, insertComment.postId));
+      .where(eq(posts.id, insertComment.postId!));
     
     return comment;
   }
@@ -376,8 +362,8 @@ export class DatabaseStorage implements IStorage {
     // Remove existing reaction of this type by this user for this post
     await db.delete(reactions)
       .where(and(
-        eq(reactions.userId, insertReaction.userId),
-        eq(reactions.postId, insertReaction.postId),
+        eq(reactions.userId, insertReaction.userId!),
+        eq(reactions.postId, insertReaction.postId!),
         eq(reactions.type, insertReaction.type)
       ));
 
@@ -704,19 +690,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMessagesForUser(userId: string): Promise<Message[]> {
-    const result = await db.select()
+    return db.select()
       .from(messages)
       .where(sql`${messages.fromUserId} = ${userId} OR ${messages.toUserId} = ${userId}`)
       .orderBy(desc(messages.createdAt));
-    return result as Message[];
   }
 
   async getUnreadMessages(userId: string): Promise<Message[]> {
-    const result = await db.select()
+    return db.select()
       .from(messages)
       .where(and(eq(messages.toUserId, userId), eq(messages.isRead, false)))
       .orderBy(desc(messages.createdAt));
-    return result as Message[];
   }
 
   async markMessageAsRead(messageId: string): Promise<void> {

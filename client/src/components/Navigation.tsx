@@ -39,13 +39,13 @@ export function Navigation() {
           <div className="hidden md:flex space-x-8">
             {navItems.map((item) => (
               <Link key={item.path} href={item.path}>
-                <a className={`font-medium transition-colors ${
+                <span className={`font-medium transition-colors cursor-pointer ${
                   location === item.path 
                     ? 'text-blue-900' 
                     : 'text-gray-500 hover:text-blue-900'
                 }`}>
                   {item.label}
-                </a>
+                </span>
               </Link>
             ))}
           </div>
@@ -75,16 +75,16 @@ export function Navigation() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>
-                    <Link href="/profile">Profile</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Link href="/settings">Settings</Link>
-                  </DropdownMenuItem>
+                  <Link href="/profile">
+                    <DropdownMenuItem>Profile</DropdownMenuItem>
+                  </Link>
+                  <Link href="/settings">
+                    <DropdownMenuItem>Settings</DropdownMenuItem>
+                  </Link>
                   {user.role === 'ADMIN' && (
-                    <DropdownMenuItem>
-                      <Link href="/admin">Admin Panel</Link>
-                    </DropdownMenuItem>
+                    <Link href="/admin">
+                      <DropdownMenuItem>Admin Panel</DropdownMenuItem>
+                    </Link>
                   )}
                   <DropdownMenuItem onClick={logout}>
                     Logout
@@ -101,19 +101,19 @@ export function Navigation() {
         <div className="grid grid-cols-5 py-2">
           {navItems.map((item) => (
             <Link key={item.path} href={item.path}>
-              <a className={`flex flex-col items-center py-2 transition-colors ${
+              <div className={`flex flex-col items-center py-2 transition-colors cursor-pointer ${
                 location === item.path ? 'text-orange-500' : 'text-gray-400'
               }`}>
                 <i className={`fas fa-${item.icon} text-xl mb-1`} />
                 <span className="text-xs font-medium">{item.label}</span>
-              </a>
+              </div>
             </Link>
           ))}
           <Link href="/profile">
-            <a className="flex flex-col items-center py-2 text-gray-400">
+            <div className="flex flex-col items-center py-2 text-gray-400 cursor-pointer">
               <i className="fas fa-user text-xl mb-1" />
               <span className="text-xs font-medium">Profile</span>
-            </a>
+            </div>
           </Link>
         </div>
       </div>

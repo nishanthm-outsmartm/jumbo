@@ -6,6 +6,25 @@ JumboJolt is a privacy-first social platform that empowers Indian consumers to s
 
 Preferred communication style: Simple, everyday language.
 
+# Recent Changes
+
+## Bug Fixes (August 14, 2025)
+- Fixed critical server crash in `/api/feed` endpoint caused by incorrect database table aliasing in `getFeedPosts` method
+- Resolved TypeScript type errors in `EnhancedModeratorPanel.tsx` by updating import path from `@/lib/auth` to `@/context/AuthContext`
+- Fixed API request usage in moderator panel by correcting `apiRequest` function calls and adding proper type annotations
+- Resolved DOM nesting warnings in Navigation component by replacing nested anchor tags with proper Link/span combinations
+- Fixed syntax errors in storage.ts methods by adding missing closing braces to `getMessagesForUser` and `getUnreadMessages` methods
+- Corrected database query type errors by fixing nullable field handling in reaction and comment operations
+- Improved navigation accessibility by removing nested `<a>` tags that caused React validation warnings
+- Enhanced error handling and logging for better debugging capabilities
+
+## Application Status
+- All main API endpoints now working correctly: `/api/feed`, `/api/leaderboard`, `/api/trending`, `/api/auth/login`
+- Database operations functioning properly with proper type safety
+- Frontend navigation rendering without React warnings
+- Authentication flow working with Firebase integration
+- TypeScript compilation successful with minimal remaining diagnostics
+
 # System Architecture
 
 ## Frontend Architecture

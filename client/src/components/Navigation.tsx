@@ -16,6 +16,7 @@ export function Navigation() {
 
   const navItems = [
     { path: '/', label: 'Home', icon: 'home' },
+    { path: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
     { path: '/log-switch', label: 'Log Switch', icon: 'exchange-alt' },
     { path: '/leaderboard', label: 'Leaderboard', icon: 'trophy' },
     { path: '/community', label: 'Community', icon: 'users' },

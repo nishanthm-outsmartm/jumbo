@@ -15,6 +15,7 @@ import AdminPanel from "@/pages/AdminPanel";
 import ModeratorPanel from "@/pages/ModeratorPanel";
 import EnhancedHome from "@/pages/EnhancedHome";
 import EnhancedLogin from "@/pages/EnhancedLogin";
+import EnhancedMemberDashboard from "@/pages/EnhancedMemberDashboard";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -71,6 +72,12 @@ function AppRouter() {
         <Route path="/moderator">
           <ProtectedRoute>
             <ModeratorPanel />
+          </ProtectedRoute>
+        </Route>
+        
+        <Route path="/dashboard">
+          <ProtectedRoute>
+            <EnhancedMemberDashboard />
           </ProtectedRoute>
         </Route>
         

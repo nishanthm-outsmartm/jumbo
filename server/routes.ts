@@ -660,6 +660,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Categories API
+  app.get('/api/categories', async (req, res) => {
+    try {
+      const categories = await storage.getAllCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/categories', async (req, res) => {
+    try {
+      const category = await storage.createCategory(req.body);
+      res.json(category);
+    } catch (error) {
+      console.error('Error creating category:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Tags API
+  app.get('/api/tags', async (req, res) => {
+    try {
+      const tags = await storage.getAllTags();
+      res.json(tags);
+    } catch (error) {
+      console.error('Error fetching tags:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/tags/popular', async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const tags = await storage.getPopularTags(limit);
+      res.json(tags);
+    } catch (error) {
+      console.error('Error fetching popular tags:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/tags', async (req, res) => {
+    try {
+      const tag = await storage.createTag(req.body);
+      res.json(tag);
+    } catch (error) {
+      console.error('Error creating tag:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Communities API
+  app.get('/api/communities', async (req, res) => {
+    try {
+      const communities = await storage.getAllCommunities();
+      res.json(communities);
+    } catch (error) {
+      console.error('Error fetching communities:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/communities', async (req, res) => {
+    try {
+      const community = await storage.createCommunity(req.body);
+      res.json(community);
+    } catch (error) {
+      console.error('Error creating community:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Feedback submissions API
+  app.get('/api/feedback-submissions', async (req, res) => {
+    try {
+      const submissions = await storage.getAllFeedbackSubmissions();
+      res.json(submissions);
+    } catch (error) {
+      console.error('Error fetching feedback submissions:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/feedback-submissions', async (req, res) => {
+    try {
+      const submission = await storage.createFeedbackSubmission(req.body);
+      res.json(submission);
+    } catch (error) {
+      console.error('Error creating feedback submission:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Enhanced moderation routes for switch log approvals
+  app.put('/api/moderation/switch-logs/:id/approve', async (req, res) => {
+    try {
+      const { moderatorId, moderatorNotes } = req.body;
+      const switchLog = await storage.approveSwitchLog(req.params.id, moderatorId, moderatorNotes);
+      res.json(switchLog);
+    } catch (error) {
+      console.error('Error approving switch log:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.put('/api/moderation/switch-logs/:id/reject', async (req, res) => {
+    try {
+      const { moderatorId, moderatorNotes } = req.body;
+      const switchLog = await storage.rejectSwitchLog(req.params.id, moderatorId, moderatorNotes);
+      res.json(switchLog);
+    } catch (error) {
+      console.error('Error rejecting switch log:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Enhanced feedback submission routes for moderation
+  app.get('/api/moderation/feedback-submissions', async (req, res) => {
+    try {
+      const submissions = await storage.getPendingFeedbackSubmissions();
+      res.json(submissions);
+    } catch (error) {
+      console.error('Error fetching feedback submissions:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.put('/api/moderation/feedback-submissions/:id/approve', async (req, res) => {
+    try {
+      const { moderatorId, moderatorNotes } = req.body;
+      const submission = await storage.approveFeedbackSubmission(req.params.id, moderatorId, moderatorNotes);
+      res.json(submission);
+    } catch (error) {
+      console.error('Error approving feedback submission:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.put('/api/moderation/feedback-submissions/:id/reject', async (req, res) => {
+    try {
+      const { moderatorId, moderatorNotes } = req.body;
+      const submission = await storage.rejectFeedbackSubmission(req.params.id, moderatorId, moderatorNotes);
+      res.json(submission);
+    } catch (error) {
+      console.error('Error rejecting feedback submission:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Add WebSocket server for real-time updates

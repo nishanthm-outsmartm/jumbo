@@ -7,7 +7,8 @@ import {
   boolean, 
   timestamp, 
   jsonb,
-  pgEnum 
+  pgEnum,
+  decimal
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -26,6 +27,9 @@ export const switchCategoryEnum = pgEnum('switch_category', [
   'OTHER'
 ]);
 export const switchLogStatus = pgEnum('switch_log_status', ['PENDING', 'APPROVED', 'REJECTED']);
+export const impactEnum = pgEnum('impact', ['LOW', 'MEDIUM', 'HIGH', 'VERY_HIGH']);
+export const missionStatusEnum = pgEnum('mission_status', ['DRAFT', 'ACTIVE', 'COMPLETED', 'EXPIRED']);
+export const communityVisibilityEnum = pgEnum('community_visibility', ['PUBLIC', 'PRIVATE', 'INVITE_ONLY']);
 
 // Users table
 export const users = pgTable("users", {
@@ -52,6 +56,50 @@ export const publicAliases = pgTable("public_aliases", {
   createdAt: timestamp("created_at").defaultNow()
 });
 
+// Categories table for enhanced filtering
+export const categories = pgTable("categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull().unique(),
+  description: text("description"),
+  color: varchar("color").default("#3B82F6"), // Hex color for UI
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+// Tags table for content categorization  
+export const tags = pgTable("tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull().unique(),
+  description: text("description"),
+  color: varchar("color").default("#10B981"), // Hex color for UI
+  usageCount: integer("usage_count").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+// Communities table for member groups
+export const communities = pgTable("communities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  coverImageUrl: varchar("cover_image_url"),
+  visibility: communityVisibilityEnum("visibility").default('PUBLIC'),
+  memberCount: integer("member_count").default(0),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+// Community memberships
+export const communityMembers = pgTable("community_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  communityId: varchar("community_id").references(() => communities.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  role: varchar("role").default('MEMBER'), // MEMBER, MODERATOR, ADMIN
+  joinedAt: timestamp("joined_at").defaultNow()
+});
+
 // Brands table
 export const brands = pgTable("brands", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -61,6 +109,7 @@ export const brands = pgTable("brands", {
   isIndian: boolean("is_indian").default(false),
   category: switchCategoryEnum("category"),
   logoUrl: varchar("logo_url"),
+  tags: text("tags").array(), // Array of tag IDs
   createdAt: timestamp("created_at").defaultNow()
 });
 
@@ -71,6 +120,8 @@ export const switchLogs = pgTable("switch_logs", {
   fromBrandId: varchar("from_brand_id").references(() => brands.id),
   toBrandId: varchar("to_brand_id").references(() => brands.id),
   category: switchCategoryEnum("category"),
+  categoryId: varchar("category_id").references(() => categories.id),
+  tags: text("tags").array(), // Array of tag IDs
   reason: text("reason"),
   evidenceUrl: varchar("evidence_url"),
   isPublic: boolean("is_public").default(false),
@@ -79,6 +130,7 @@ export const switchLogs = pgTable("switch_logs", {
   moderatorNotes: text("moderator_notes"),
   approvedAt: timestamp("approved_at"),
   points: integer("points").default(25),
+  communityId: varchar("community_id").references(() => communities.id), // For community-specific posts
   createdAt: timestamp("created_at").defaultNow()
 });
 
@@ -127,9 +179,15 @@ export const posts = pgTable("posts", {
   switchLogId: varchar("switch_log_id").references(() => switchLogs.id, { onDelete: 'cascade' }),
   content: text("content"),
   imageUrl: varchar("image_url"),
+  categoryId: varchar("category_id").references(() => categories.id),
+  tags: text("tags").array(), // Array of tag IDs
+  communityId: varchar("community_id").references(() => communities.id), // For community-specific posts
   likesCount: integer("likes_count").default(0),
   commentsCount: integer("comments_count").default(0),
   sharesCount: integer("shares_count").default(0),
+  commentsEnabled: boolean("comments_enabled").default(true),
+  upvotesEnabled: boolean("upvotes_enabled").default(true),
+  downvotesEnabled: boolean("downvotes_enabled").default(true),
   createdAt: timestamp("created_at").defaultNow()
 });
 
@@ -233,11 +291,18 @@ export const missions = pgTable("missions", {
   title: varchar("title").notNull(),
   description: text("description"),
   targetCategory: switchCategoryEnum("target_category"),
+  categoryId: varchar("category_id").references(() => categories.id),
+  tags: text("tags").array(), // Array of tag IDs
   fromBrandIds: text("from_brand_ids").array(), // Array of brand IDs to switch from
   toBrandIds: text("to_brand_ids").array(), // Array of brand IDs to switch to
+  impact: impactEnum("impact").default('MEDIUM'),
+  financialValue: decimal("financial_value", { precision: 10, scale: 2 }),
+  imageUrls: text("image_urls").array(), // Multiple image uploads
   pointsReward: integer("points_reward").default(50),
   startDate: timestamp("start_date").defaultNow(),
   endDate: timestamp("end_date"),
+  status: missionStatusEnum("status").default('DRAFT'),
+  communityId: varchar("community_id").references(() => communities.id), // For community-specific missions
   isActive: boolean("is_active").default(true),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow()
@@ -292,11 +357,43 @@ export const moderatorPosts = pgTable("moderator_posts", {
   imageUrls: text("image_urls").array(),
   externalUrls: text("external_urls").array(), // Reference links
   category: switchCategoryEnum("category"),
+  categoryId: varchar("category_id").references(() => categories.id),
+  tags: text("tags").array(), // Array of tag IDs
+  communityId: varchar("community_id").references(() => communities.id), // For community-specific posts
   isPinned: boolean("is_pinned").default(false),
   commentsEnabled: boolean("comments_enabled").default(true),
+  upvotesEnabled: boolean("upvotes_enabled").default(true),
+  downvotesEnabled: boolean("downvotes_enabled").default(true),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow()
+});
+
+// Content tags association table for many-to-many relationships
+export const contentTags = pgTable("content_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentType: varchar("content_type").notNull(), // 'post', 'mission', 'switch_log', 'moderator_post'
+  contentId: varchar("content_id").notNull(),
+  tagId: varchar("tag_id").references(() => tags.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+// Feedback submissions (renamed from target suggestions)
+export const feedbackSubmissions = pgTable("feedback_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  fromBrandName: varchar("from_brand_name").notNull(),
+  toBrandName: varchar("to_brand_name"),
+  category: switchCategoryEnum("category"),
+  categoryId: varchar("category_id").references(() => categories.id),
+  tags: text("tags").array(),
+  rationale: text("rationale").notNull(),
+  status: varchar("status").default('PENDING'), // PENDING, APPROVED, REJECTED
+  moderatorId: varchar("moderator_id").references(() => users.id),
+  moderatorNotes: text("moderator_notes"),
+  reviewedAt: timestamp("reviewed_at"),
+  enrichmentData: jsonb("enrichment_data"),
+  createdAt: timestamp("created_at").defaultNow()
 });
 
 // Relations
@@ -307,21 +404,56 @@ export const usersRelations = relations(users, ({ many }) => ({
   comments: many(comments),
   reactions: many(reactions),
   publicAliases: many(publicAliases),
-  targetSuggestions: many(targetSuggestions),
+  feedbackSubmissions: many(feedbackSubmissions),
   userAchievements: many(userAchievements),
-  leaderboardSnapshots: many(leaderboardSnapshots)
+  leaderboardSnapshots: many(leaderboardSnapshots),
+  communityMemberships: many(communityMembers),
+  createdCommunities: many(communities),
+  missions: many(missions),
+  moderatorPosts: many(moderatorPosts)
+}));
+
+export const categoriesRelations = relations(categories, ({ many }) => ({
+  switchLogs: many(switchLogs),
+  posts: many(posts),
+  missions: many(missions),
+  moderatorPosts: many(moderatorPosts),
+  feedbackSubmissions: many(feedbackSubmissions)
+}));
+
+export const tagsRelations = relations(tags, ({ many }) => ({
+  contentTags: many(contentTags)
+}));
+
+export const communitiesRelations = relations(communities, ({ one, many }) => ({
+  creator: one(users, { fields: [communities.createdBy], references: [users.id] }),
+  members: many(communityMembers),
+  switchLogs: many(switchLogs),
+  posts: many(posts),
+  missions: many(missions),
+  moderatorPosts: many(moderatorPosts)
+}));
+
+export const communityMembersRelations = relations(communityMembers, ({ one }) => ({
+  community: one(communities, { fields: [communityMembers.communityId], references: [communities.id] }),
+  user: one(users, { fields: [communityMembers.userId], references: [users.id] })
 }));
 
 export const switchLogsRelations = relations(switchLogs, ({ one, many }) => ({
   user: one(users, { fields: [switchLogs.userId], references: [users.id] }),
   fromBrand: one(brands, { fields: [switchLogs.fromBrandId], references: [brands.id] }),
   toBrand: one(brands, { fields: [switchLogs.toBrandId], references: [brands.id] }),
+  category: one(categories, { fields: [switchLogs.categoryId], references: [categories.id] }),
+  community: one(communities, { fields: [switchLogs.communityId], references: [communities.id] }),
+  moderator: one(users, { fields: [switchLogs.moderatorId], references: [users.id] }),
   posts: many(posts)
 }));
 
 export const postsRelations = relations(posts, ({ one, many }) => ({
   user: one(users, { fields: [posts.userId], references: [users.id] }),
   switchLog: one(switchLogs, { fields: [posts.switchLogId], references: [switchLogs.id] }),
+  category: one(categories, { fields: [posts.categoryId], references: [categories.id] }),
+  community: one(communities, { fields: [posts.communityId], references: [communities.id] }),
   likes: many(likes),
   comments: many(comments),
   reactions: many(reactions)
@@ -349,6 +481,29 @@ export const leaderboardSnapshotsRelations = relations(leaderboardSnapshots, ({ 
 export const moderationReportsRelations = relations(moderationReports, ({ one }) => ({
   reporter: one(users, { fields: [moderationReports.reporterId], references: [users.id] }),
   moderator: one(users, { fields: [moderationReports.moderatorId], references: [users.id] })
+}));
+
+export const missionsRelations = relations(missions, ({ one, many }) => ({
+  creator: one(users, { fields: [missions.createdBy], references: [users.id] }),
+  category: one(categories, { fields: [missions.categoryId], references: [categories.id] }),
+  community: one(communities, { fields: [missions.communityId], references: [communities.id] }),
+  userMissions: many(userMissions)
+}));
+
+export const moderatorPostsRelations = relations(moderatorPosts, ({ one }) => ({
+  creator: one(users, { fields: [moderatorPosts.createdBy], references: [users.id] }),
+  category: one(categories, { fields: [moderatorPosts.categoryId], references: [categories.id] }),
+  community: one(communities, { fields: [moderatorPosts.communityId], references: [communities.id] })
+}));
+
+export const feedbackSubmissionsRelations = relations(feedbackSubmissions, ({ one }) => ({
+  user: one(users, { fields: [feedbackSubmissions.userId], references: [users.id] }),
+  category: one(categories, { fields: [feedbackSubmissions.categoryId], references: [categories.id] }),
+  moderator: one(users, { fields: [feedbackSubmissions.moderatorId], references: [users.id] })
+}));
+
+export const contentTagsRelations = relations(contentTags, ({ one }) => ({
+  tag: one(tags, { fields: [contentTags.tagId], references: [tags.id] })
 }));
 
 // Insert schemas
@@ -435,6 +590,39 @@ export const insertModeratorPostSchema = createInsertSchema(moderatorPosts).omit
   updatedAt: true
 });
 
+export const insertCategorySchema = createInsertSchema(categories).omit({
+  id: true,
+  createdAt: true
+});
+
+export const insertTagSchema = createInsertSchema(tags).omit({
+  id: true,
+  createdAt: true
+});
+
+export const insertCommunitySchema = createInsertSchema(communities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  memberCount: true
+});
+
+export const insertCommunityMemberSchema = createInsertSchema(communityMembers).omit({
+  id: true,
+  joinedAt: true
+});
+
+export const insertContentTagSchema = createInsertSchema(contentTags).omit({
+  id: true,
+  createdAt: true
+});
+
+export const insertFeedbackSubmissionSchema = createInsertSchema(feedbackSubmissions).omit({
+  id: true,
+  createdAt: true,
+  reviewedAt: true
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -467,3 +655,17 @@ export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type ModeratorPost = typeof moderatorPosts.$inferSelect;
 export type InsertModeratorPost = z.infer<typeof insertModeratorPostSchema>;
+
+// New types for enhanced features
+export type Category = typeof categories.$inferSelect;
+export type InsertCategory = z.infer<typeof insertCategorySchema>;
+export type Tag = typeof tags.$inferSelect;
+export type InsertTag = z.infer<typeof insertTagSchema>;
+export type Community = typeof communities.$inferSelect;
+export type InsertCommunity = z.infer<typeof insertCommunitySchema>;
+export type CommunityMember = typeof communityMembers.$inferSelect;
+export type InsertCommunityMember = z.infer<typeof insertCommunityMemberSchema>;
+export type ContentTag = typeof contentTags.$inferSelect;
+export type InsertContentTag = z.infer<typeof insertContentTagSchema>;
+export type FeedbackSubmission = typeof feedbackSubmissions.$inferSelect;
+export type InsertFeedbackSubmission = z.infer<typeof insertFeedbackSubmissionSchema>;

@@ -15,6 +15,15 @@ import {
   feedbackResponses,
   missions,
   userMissions,
+  messages,
+  moderatorPosts,
+  // New enhanced tables
+  categories,
+  tags,
+  communities,
+  communityMembers,
+  contentTags,
+  feedbackSubmissions,
   type User, 
   type InsertUser,
   type SwitchLog,
@@ -42,12 +51,23 @@ import {
   type InsertUserMission,
   type NewsArticle,
   type InsertNewsArticle,
-  messages,
-  moderatorPosts,
   type Message,
   type InsertMessage,
   type ModeratorPost,
-  type InsertModeratorPost
+  type InsertModeratorPost,
+  // New enhanced types
+  type Category,
+  type InsertCategory,
+  type Tag,
+  type InsertTag,
+  type Community,
+  type InsertCommunity,
+  type CommunityMember,
+  type InsertCommunityMember,
+  type ContentTag,
+  type InsertContentTag,
+  type FeedbackSubmission,
+  type InsertFeedbackSubmission
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, count } from "drizzle-orm";
@@ -141,6 +161,42 @@ export interface IStorage {
   // Moderator posts
   createModeratorPost(post: InsertModeratorPost): Promise<ModeratorPost>;
   getAllModeratorPosts(): Promise<ModeratorPost[]>;
+
+  // Categories
+  createCategory(category: InsertCategory): Promise<Category>;
+  getAllCategories(): Promise<Category[]>;
+  getCategoryById(id: string): Promise<Category | undefined>;
+  updateCategory(id: string, updates: Partial<Category>): Promise<Category>;
+
+  // Tags
+  createTag(tag: InsertTag): Promise<Tag>;
+  getAllTags(): Promise<Tag[]>;
+  getTagById(id: string): Promise<Tag | undefined>;
+  updateTag(id: string, updates: Partial<Tag>): Promise<Tag>;
+  incrementTagUsage(tagId: string): Promise<void>;
+  getPopularTags(limit?: number): Promise<Tag[]>;
+
+  // Communities
+  createCommunity(community: InsertCommunity): Promise<Community>;
+  getAllCommunities(): Promise<Community[]>;
+  getCommunityById(id: string): Promise<Community | undefined>;
+  updateCommunity(id: string, updates: Partial<Community>): Promise<Community>;
+  addCommunityMember(member: InsertCommunityMember): Promise<CommunityMember>;
+  removeCommunityMember(communityId: string, userId: string): Promise<void>;
+  getCommunityMembers(communityId: string): Promise<CommunityMember[]>;
+  getUserCommunities(userId: string): Promise<Community[]>;
+
+  // Feedback submissions
+  createFeedbackSubmission(submission: InsertFeedbackSubmission): Promise<FeedbackSubmission>;
+  getAllFeedbackSubmissions(): Promise<FeedbackSubmission[]>;
+  getPendingFeedbackSubmissions(): Promise<FeedbackSubmission[]>;
+  approveFeedbackSubmission(id: string, moderatorId: string, moderatorNotes?: string): Promise<FeedbackSubmission>;
+  rejectFeedbackSubmission(id: string, moderatorId: string, moderatorNotes?: string): Promise<FeedbackSubmission>;
+
+  // Enhanced mission methods
+  getMissionsByCategory(categoryId: string): Promise<Mission[]>;
+  getMissionsByCommunity(communityId: string): Promise<Mission[]>;
+  updateMissionStatus(id: string, status: string): Promise<Mission>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -719,6 +775,232 @@ export class DatabaseStorage implements IStorage {
     return db.select()
       .from(moderatorPosts)
       .orderBy(desc(moderatorPosts.isPinned), desc(moderatorPosts.createdAt));
+  }
+
+  // Categories
+  async createCategory(insertCategory: InsertCategory): Promise<Category> {
+    const [category] = await db.insert(categories).values(insertCategory).returning();
+    return category;
+  }
+
+  async getAllCategories(): Promise<Category[]> {
+    return db.select().from(categories).where(eq(categories.isActive, true)).orderBy(categories.name);
+  }
+
+  async getCategoryById(id: string): Promise<Category | undefined> {
+    const [category] = await db.select().from(categories).where(eq(categories.id, id));
+    return category;
+  }
+
+  async updateCategory(id: string, updates: Partial<Category>): Promise<Category> {
+    const [category] = await db.update(categories)
+      .set(updates)
+      .where(eq(categories.id, id))
+      .returning();
+    return category;
+  }
+
+  // Tags
+  async createTag(insertTag: InsertTag): Promise<Tag> {
+    const [tag] = await db.insert(tags).values(insertTag).returning();
+    return tag;
+  }
+
+  async getAllTags(): Promise<Tag[]> {
+    return db.select().from(tags).where(eq(tags.isActive, true)).orderBy(desc(tags.usageCount), tags.name);
+  }
+
+  async getTagById(id: string): Promise<Tag | undefined> {
+    const [tag] = await db.select().from(tags).where(eq(tags.id, id));
+    return tag;
+  }
+
+  async updateTag(id: string, updates: Partial<Tag>): Promise<Tag> {
+    const [tag] = await db.update(tags)
+      .set(updates)
+      .where(eq(tags.id, id))
+      .returning();
+    return tag;
+  }
+
+  async incrementTagUsage(tagId: string): Promise<void> {
+    await db.update(tags)
+      .set({ usageCount: sql`${tags.usageCount} + 1` })
+      .where(eq(tags.id, tagId));
+  }
+
+  async getPopularTags(limit: number = 20): Promise<Tag[]> {
+    return db.select().from(tags)
+      .where(eq(tags.isActive, true))
+      .orderBy(desc(tags.usageCount))
+      .limit(limit);
+  }
+
+  // Communities
+  async createCommunity(insertCommunity: InsertCommunity): Promise<Community> {
+    const [community] = await db.insert(communities).values(insertCommunity).returning();
+    return community;
+  }
+
+  async getAllCommunities(): Promise<Community[]> {
+    return db.select().from(communities)
+      .where(eq(communities.isActive, true))
+      .orderBy(desc(communities.memberCount), communities.name);
+  }
+
+  async getCommunityById(id: string): Promise<Community | undefined> {
+    const [community] = await db.select().from(communities).where(eq(communities.id, id));
+    return community;
+  }
+
+  async updateCommunity(id: string, updates: Partial<Community>): Promise<Community> {
+    const [community] = await db.update(communities)
+      .set({ ...updates, updatedAt: sql`NOW()` })
+      .where(eq(communities.id, id))
+      .returning();
+    return community;
+  }
+
+  // Community members
+  async addCommunityMember(insertMember: InsertCommunityMember): Promise<CommunityMember> {
+    const [member] = await db.insert(communityMembers).values(insertMember).returning();
+    
+    // Update community member count
+    await db.update(communities)
+      .set({ memberCount: sql`${communities.memberCount} + 1` })
+      .where(eq(communities.id, insertMember.communityId!));
+    
+    return member;
+  }
+
+  async removeCommunityMember(communityId: string, userId: string): Promise<void> {
+    await db.delete(communityMembers)
+      .where(and(eq(communityMembers.communityId, communityId), eq(communityMembers.userId, userId)));
+    
+    // Update community member count
+    await db.update(communities)
+      .set({ memberCount: sql`${communities.memberCount} - 1` })
+      .where(eq(communities.id, communityId));
+  }
+
+  async getCommunityMembers(communityId: string): Promise<CommunityMember[]> {
+    return db.select().from(communityMembers)
+      .where(eq(communityMembers.communityId, communityId))
+      .orderBy(communityMembers.joinedAt);
+  }
+
+  async getUserCommunities(userId: string): Promise<Community[]> {
+    return db.select({ 
+      id: communities.id, 
+      name: communities.name, 
+      description: communities.description,
+      coverImageUrl: communities.coverImageUrl,
+      visibility: communities.visibility,
+      memberCount: communities.memberCount,
+      isActive: communities.isActive,
+      createdBy: communities.createdBy,
+      createdAt: communities.createdAt,
+      updatedAt: communities.updatedAt
+    })
+      .from(communities)
+      .innerJoin(communityMembers, eq(communities.id, communityMembers.communityId))
+      .where(eq(communityMembers.userId, userId));
+  }
+
+  // Feedback submissions (renamed from target suggestions)
+  async createFeedbackSubmission(insertSubmission: InsertFeedbackSubmission): Promise<FeedbackSubmission> {
+    const [submission] = await db.insert(feedbackSubmissions).values(insertSubmission).returning();
+    return submission;
+  }
+
+  async getAllFeedbackSubmissions(): Promise<FeedbackSubmission[]> {
+    return db.select().from(feedbackSubmissions)
+      .orderBy(desc(feedbackSubmissions.createdAt));
+  }
+
+  async getPendingFeedbackSubmissions(): Promise<FeedbackSubmission[]> {
+    return db.select().from(feedbackSubmissions)
+      .where(eq(feedbackSubmissions.status, 'PENDING'))
+      .orderBy(desc(feedbackSubmissions.createdAt));
+  }
+
+  async approveFeedbackSubmission(id: string, moderatorId: string, moderatorNotes?: string): Promise<FeedbackSubmission> {
+    const [submission] = await db.update(feedbackSubmissions)
+      .set({ 
+        status: 'APPROVED', 
+        moderatorId, 
+        moderatorNotes,
+        reviewedAt: sql`NOW()` 
+      })
+      .where(eq(feedbackSubmissions.id, id))
+      .returning();
+    return submission;
+  }
+
+  async rejectFeedbackSubmission(id: string, moderatorId: string, moderatorNotes?: string): Promise<FeedbackSubmission> {
+    const [submission] = await db.update(feedbackSubmissions)
+      .set({ 
+        status: 'REJECTED', 
+        moderatorId, 
+        moderatorNotes,
+        reviewedAt: sql`NOW()` 
+      })
+      .where(eq(feedbackSubmissions.id, id))
+      .returning();
+    return submission;
+  }
+
+  // Enhanced switch log methods with approval workflow
+  async getPendingSwitchLogs(): Promise<SwitchLog[]> {
+    return db.select().from(switchLogs)
+      .where(eq(switchLogs.status, 'PENDING'))
+      .orderBy(desc(switchLogs.createdAt));
+  }
+
+  async approveSwitchLog(id: string, moderatorId: string, moderatorNotes?: string): Promise<SwitchLog> {
+    const [switchLog] = await db.update(switchLogs)
+      .set({ 
+        status: 'APPROVED', 
+        moderatorId, 
+        moderatorNotes,
+        approvedAt: sql`NOW()` 
+      })
+      .where(eq(switchLogs.id, id))
+      .returning();
+    return switchLog;
+  }
+
+  async rejectSwitchLog(id: string, moderatorId: string, moderatorNotes?: string): Promise<SwitchLog> {
+    const [switchLog] = await db.update(switchLogs)
+      .set({ 
+        status: 'REJECTED', 
+        moderatorId, 
+        moderatorNotes 
+      })
+      .where(eq(switchLogs.id, id))
+      .returning();
+    return switchLog;
+  }
+
+  // Enhanced mission methods
+  async getMissionsByCategory(categoryId: string): Promise<Mission[]> {
+    return db.select().from(missions)
+      .where(and(eq(missions.categoryId, categoryId), eq(missions.isActive, true)))
+      .orderBy(desc(missions.createdAt));
+  }
+
+  async getMissionsByCommunity(communityId: string): Promise<Mission[]> {
+    return db.select().from(missions)
+      .where(and(eq(missions.communityId, communityId), eq(missions.isActive, true)))
+      .orderBy(desc(missions.createdAt));
+  }
+
+  async updateMissionStatus(id: string, status: string): Promise<Mission> {
+    const [mission] = await db.update(missions)
+      .set({ status: status as any })
+      .where(eq(missions.id, id))
+      .returning();
+    return mission;
   }
 }
 

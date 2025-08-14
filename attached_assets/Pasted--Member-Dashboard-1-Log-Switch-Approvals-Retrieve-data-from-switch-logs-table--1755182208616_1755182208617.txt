@@ -1,0 +1,112 @@
+## **Member Dashboard**
+
+### 1. Log Switch Approvals
+
+* Retrieve data from `switch_logs` table.
+* Add search and filter options.
+* Display the **approved moderator name** in the log info.
+
+### 2. General Enhancements
+
+* All pages:
+
+  * Add recommended metrics.
+  * Add search and filter options.
+* Add **Category** and **Tags** fields to all forms.
+
+### 3. Mission Form Updates
+
+* Add the following fields:
+
+  * **Impact** (text/enum)
+  * **Financial Value** (numeric/currency)
+  * **Image Upload** (multiple allowed)
+  * **Brands** dropdown (fetched from `brands` table).
+
+### 4. Moderator Features
+
+* Create posts (displayed on Home Screen for all users).
+* Member groups / community are created by moderator and members added to user group  by moderators ( based on their interests and movements ). It’s like a better group , community targets will only be visible to the community
+* Post Switch Log entries or Missions:
+
+  * To general feed or specific communities.
+* Enable/disable comments, upvotes, and downvotes on their posts.
+* Approve/reject **Switch Log submissions** from members.
+* View "Suggest Product" submissions (rename feature to **Feedback**).
+* **Access Restriction:** No access to Admin pages/features.
+
+### 5. Members Tab
+
+* Fix bug where data is not showing.
+* Display members as a **table** with search and filter options.
+
+---
+## *Member Dashboard*
+
+### 1. Log Switch Approvals
+
+* Retrieve data from switch_logs table.
+* Add search and filter options.
+* Display the *approved moderator name* in the log info.
+
+### 2. General Enhancements
+
+* All pages:
+
+  * Add recommended metrics.
+  * Add search and filter options.
+* Add *Category* and *Tags* fields to all forms.
+
+### 3. Mission Form Updates
+
+* Add the following fields:
+
+  * *Impact* (text/enum)
+  * *Financial Value* (numeric/currency)
+  * *Image Upload* (multiple allowed)
+  * *Brands* dropdown (fetched from brands table).
+
+### 4. Moderator Features
+
+* Create posts (displayed on Home Screen for all users).
+* Create communities.
+* Approve/reject user community join requests.
+* Post Switch Log entries or Missions:
+
+  * To general feed or specific communities.
+* Enable/disable comments, upvotes, and downvotes on their posts.
+* Approve/reject *Switch Log submissions* from members.
+* View "Suggest Product" submissions (rename feature to *Feedback*).
+* *Access Restriction:* No access to Admin pages/features.
+
+### 5. Members Tab
+
+* Fix bug where data is not showing.
+* Display members as a *table* with search and filter options.
+
+---
+
+## *Home Screen (All Users)*
+
+### 1. Content Display
+
+* Based on selected *Trending Categories* or *Tags*, show related posts.
+* Show popular tags based on *member log switch* data.
+
+### 2. New Log Switch Form
+
+* Remove *Silent Strike* field.
+* Members can create a new log:
+
+  * Independently.
+  * From Missions or Moderator Posts.
+* Form should auto-list *Brand details* based on source post/news.
+
+### 3. Suggest Product Form
+
+* Same structure as New Log Switch form.
+* Members must submit a reason for each *from → to* brand switch.
+* Submission goes to *moderators* for approval.
+
+---
+Based on the changes above, review and optimize the database schema to support the required functionality.

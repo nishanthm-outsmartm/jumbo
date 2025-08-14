@@ -20,7 +20,7 @@ import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -31,17 +31,17 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
+
   if (!user) {
-    return <Login />;
+    return <EnhancedLogin />;
   }
-  
+
   return <>{children}</>;
 }
 
 function AppRouter() {
   const { user } = useAuth();
-  
+
   return (
     <div className="min-h-screen">
       {user && <Navigation />}
@@ -49,44 +49,44 @@ function AppRouter() {
         <Route path="/login" component={EnhancedLogin} />
         <Route path="/old-login" component={Login} />
         <Route path="/register" component={Register} />
-        
+
         {/* Protected Routes */}
         <Route path="/">
           <ProtectedRoute>
             <Home />
           </ProtectedRoute>
         </Route>
-        
+
         <Route path="/log-switch">
           <ProtectedRoute>
             <LogSwitch />
           </ProtectedRoute>
         </Route>
-        
+
         <Route path="/admin">
           <ProtectedRoute>
             <AdminPanel />
           </ProtectedRoute>
         </Route>
-        
+
         <Route path="/moderator">
           <ProtectedRoute>
             <ModeratorPanel />
           </ProtectedRoute>
         </Route>
-        
+
         <Route path="/dashboard">
           <ProtectedRoute>
             <EnhancedMemberDashboard />
           </ProtectedRoute>
         </Route>
-        
+
         <Route path="/enhanced">
           <ProtectedRoute>
             <EnhancedHome />
           </ProtectedRoute>
         </Route>
-        
+
         {/* Fallback to 404 */}
         <Route component={NotFound} />
       </Switch>

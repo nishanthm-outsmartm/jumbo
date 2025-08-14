@@ -1,16 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Check, ChevronsUpDown, X, Plus } from 'lucide-react';
-import { apiRequest } from '@/lib/queryClient';
-import { cn } from '@/lib/utils';
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Check, ChevronsUpDown, X, Plus } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
 
 interface Brand {
   id: string;
@@ -33,59 +50,66 @@ export function BrandSelector({
   onBrandsChange,
   label,
   placeholder = "Search brands...",
-  maxSelections = 10
+  maxSelections = 10,
 }: BrandSelectorProps) {
   const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newBrandData, setNewBrandData] = useState({
-    name: '',
-    category: '',
+    name: "",
+    category: "",
     isIndian: true,
-    description: ''
+    description: "",
   });
 
   const queryClient = useQueryClient();
 
-  // Search brands query
-  const { data: searchResults = [] } = useQuery({
-    queryKey: ['/api/brands/search', searchQuery],
-    queryFn: () => apiRequest(`/api/brands/search?query=${encodeURIComponent(searchQuery)}`),
-    enabled: searchQuery.length > 0,
+  // Fetch all brands from the database
+  const { data: allBrands = [] } = useQuery({
+    queryKey: ["/api/brands/all"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/brands");
+      return response.json();
+    },
   });
 
   // Create brand mutation
   const createBrandMutation = useMutation({
-    mutationFn: (brandData: any) => apiRequest('/api/brands', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(brandData)
-    }),
-    onSuccess: (newBrand) => {
+    mutationFn: async (brandData: any) => {
+      const response = await apiRequest("POST", "/api/brands", brandData);
+      const data = await response.json();
+      return data as Brand;
+    },
+    onSuccess: (newBrand: Brand) => {
       // Add the new brand to selected brands
       if (selectedBrands.length < maxSelections) {
         onBrandsChange([...selectedBrands, newBrand]);
       }
       // Reset form
-      setNewBrandData({ name: '', category: '', isIndian: true, description: '' });
+      setNewBrandData({
+        name: "",
+        category: "",
+        isIndian: true,
+        description: "",
+      });
       setShowAddDialog(false);
-      setSearchQuery('');
+      setSearchQuery("");
       // Invalidate search cache
-      queryClient.invalidateQueries({ queryKey: ['/api/brands/search'] });
-    }
+      queryClient.invalidateQueries({ queryKey: ["/api/brands/search"] });
+    },
   });
 
   const handleSelectBrand = (brand: Brand) => {
-    const isAlreadySelected = selectedBrands.some(b => b.id === brand.id);
+    const isAlreadySelected = selectedBrands.some((b) => b.id === brand.id);
     if (!isAlreadySelected && selectedBrands.length < maxSelections) {
       onBrandsChange([...selectedBrands, brand]);
     }
     setOpen(false);
-    setSearchQuery('');
+    setSearchQuery("");
   };
 
   const handleRemoveBrand = (brandId: string) => {
-    onBrandsChange(selectedBrands.filter(b => b.id !== brandId));
+    onBrandsChange(selectedBrands.filter((b) => b.id !== brandId));
   };
 
   const handleCreateBrand = () => {
@@ -94,14 +118,23 @@ export function BrandSelector({
     }
   };
 
+  // Filter brands client-side
+  const filteredBrands = allBrands.filter((brand: Brand) =>
+    brand.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      
+
       {/* Selected brands */}
       <div className="flex flex-wrap gap-2 min-h-[40px] p-2 border rounded-md bg-background">
         {selectedBrands.map((brand) => (
-          <Badge key={brand.id} variant="secondary" className="flex items-center gap-1">
+          <Badge
+            key={brand.id}
+            variant="secondary"
+            className="flex items-center gap-1"
+          >
             {brand.name}
             <button
               onClick={() => handleRemoveBrand(brand.id)}
@@ -111,77 +144,64 @@ export function BrandSelector({
             </button>
           </Badge>
         ))}
-        
+
         {selectedBrands.length < maxSelections && (
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="h-6 border-dashed"
-              >
+              <Button variant="outline" size="sm" className="h-6 border-dashed">
                 <Plus className="h-3 w-3 mr-1" />
                 Add Brand
                 <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0">
-              <Command>
-                <CommandInput 
+              <div className="p-2">
+                <Input
                   placeholder={placeholder}
                   value={searchQuery}
-                  onValueChange={setSearchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="mb-2"
                 />
-                <CommandList>
-                  <CommandEmpty>
-                    <div className="p-4 text-center">
-                      <p className="text-sm text-muted-foreground mb-2">
-                        No brands found for "{searchQuery}"
-                      </p>
-                      <Button 
-                        size="sm" 
-                        onClick={() => {
-                          setNewBrandData(prev => ({ ...prev, name: searchQuery }));
-                          setShowAddDialog(true);
-                          setOpen(false);
-                        }}
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Create "{searchQuery}"
-                      </Button>
+                <ScrollArea className="h-48">
+                  {filteredBrands.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      No brands found.
                     </div>
-                  </CommandEmpty>
-                  <CommandGroup>
-                    {searchResults.map((brand: Brand) => {
-                      const isSelected = selectedBrands.some(b => b.id === brand.id);
+                  ) : (
+                    filteredBrands.map((brand: Brand) => {
+                      const isSelected = selectedBrands.some(
+                        (b) => b.id === brand.id
+                      );
                       return (
-                        <CommandItem
+                        <div
                           key={brand.id}
-                          onSelect={() => handleSelectBrand(brand)}
-                          disabled={isSelected}
                           className={cn(
-                            "flex items-center justify-between",
-                            isSelected && "opacity-50"
+                            "flex items-center justify-between px-2 py-1 cursor-pointer rounded hover:bg-accent",
+                            isSelected && "opacity-50 pointer-events-none"
                           )}
+                          onClick={() => handleSelectBrand(brand)}
                         >
                           <div className="flex flex-col">
                             <span className="font-medium">{brand.name}</span>
                             <span className="text-xs text-muted-foreground">
                               {brand.category}
                               {brand.isIndian && (
-                                <Badge variant="outline" className="ml-2 h-4 text-xs">
+                                <Badge
+                                  variant="outline"
+                                  className="ml-2 h-4 text-xs"
+                                >
                                   🇮🇳 Indian
                                 </Badge>
                               )}
                             </span>
                           </div>
                           {isSelected && <Check className="h-4 w-4" />}
-                        </CommandItem>
+                        </div>
                       );
-                    })}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
+                    })
+                  )}
+                </ScrollArea>
+              </div>
             </PopoverContent>
           </Popover>
         )}
@@ -199,7 +219,9 @@ export function BrandSelector({
               <Input
                 id="brandName"
                 value={newBrandData.name}
-                onChange={(e) => setNewBrandData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) =>
+                  setNewBrandData((prev) => ({ ...prev, name: e.target.value }))
+                }
                 placeholder="Enter brand name"
               />
             </div>
@@ -208,7 +230,12 @@ export function BrandSelector({
               <Input
                 id="brandCategory"
                 value={newBrandData.category}
-                onChange={(e) => setNewBrandData(prev => ({ ...prev, category: e.target.value }))}
+                onChange={(e) =>
+                  setNewBrandData((prev) => ({
+                    ...prev,
+                    category: e.target.value,
+                  }))
+                }
                 placeholder="e.g., Electronics, Food, Fashion"
               />
             </div>
@@ -217,7 +244,12 @@ export function BrandSelector({
               <Input
                 id="brandDescription"
                 value={newBrandData.description}
-                onChange={(e) => setNewBrandData(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) =>
+                  setNewBrandData((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
                 placeholder="Brief description of the brand"
               />
             </div>
@@ -226,7 +258,12 @@ export function BrandSelector({
                 type="checkbox"
                 id="isIndian"
                 checked={newBrandData.isIndian}
-                onChange={(e) => setNewBrandData(prev => ({ ...prev, isIndian: e.target.checked }))}
+                onChange={(e) =>
+                  setNewBrandData((prev) => ({
+                    ...prev,
+                    isIndian: e.target.checked,
+                  }))
+                }
                 className="rounded"
               />
               <Label htmlFor="isIndian">Indian Brand</Label>
@@ -236,11 +273,15 @@ export function BrandSelector({
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleCreateBrand}
-              disabled={!newBrandData.name || !newBrandData.category || createBrandMutation.isPending}
+              disabled={
+                !newBrandData.name ||
+                !newBrandData.category ||
+                createBrandMutation.isPending
+              }
             >
-              {createBrandMutation.isPending ? 'Creating...' : 'Create Brand'}
+              {createBrandMutation.isPending ? "Creating..." : "Create Brand"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,28 +1,42 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Progress } from '@/components/ui/progress';
-import { 
-  Shield, 
-  Users, 
-  TrendingUp, 
-  MessageSquare, 
-  Settings, 
-  Activity, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import {
+  Shield,
+  Users,
+  TrendingUp,
+  MessageSquare,
+  Settings,
+  Activity,
+  CheckCircle,
+  XCircle,
+  Clock,
   Eye,
   BarChart3,
   UserCheck,
@@ -50,14 +64,28 @@ import {
   Zap,
   Upload,
   Wifi,
-  WifiOff
-} from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { format } from 'date-fns';
-import { apiRequest } from '@/lib/queryClient';
-import { BrandSelector } from '@/components/BrandSelector';
-import { EnhancedMissionDialog } from '@/components/EnhancedMissionDialog';
-import { MessagingSystem } from '@/components/MessagingSystem';
+  WifiOff,
+  Newspaper,
+  Plus,
+} from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { format, set } from "date-fns";
+import { apiRequest } from "@/lib/queryClient";
+import { BrandSelector } from "@/components/BrandSelector";
+import { EnhancedMissionDialog } from "@/components/EnhancedMissionDialog";
+import { MessagingSystem } from "@/components/MessagingSystem";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { toast } from "@/hooks/use-toast";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 interface Brand {
   id: string;
@@ -72,11 +100,26 @@ interface Mission {
   title: string;
   description: string;
   category: string;
+  targetCategory: string;
   fromBrandIds: string[];
   toBrandIds: string[];
   pointsReward: number;
   startDate: string | null;
   endDate: string | null;
+  isActive: boolean;
+  createdBy: string;
+  createdAt: string;
+}
+interface EditMission {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  fromBrandIds: string[];
+  toBrandIds: string[];
+  pointsReward: number;
+  startDate: Date | null;
+  endDate: Date | null;
   isActive: boolean;
   createdBy: string;
   createdAt: string;
@@ -93,50 +136,87 @@ interface Post {
   createdAt: string;
   isActive: boolean;
 }
-
+const categoryEnum: Record<string, string> = {
+  FOOD_BEVERAGES: "Food & Beverages",
+  ELECTRONICS: "Electronics",
+  FASHION: "Fashion & Clothing",
+  BEAUTY: "Beauty & Personal Care",
+  HOME_GARDEN: "Home & Garden",
+  AUTOMOTIVE: "Automotive",
+  SPORTS: "Sports & Fitness",
+  BOOKS_MEDIA: "Books & Education",
+  OTHER: "Other",
+};
+const newsArticleSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  imageUrls: z.array(z.string().url()).optional(),
+  suggestedFromBrandIds: z.array(z.string()).optional(),
+  suggestedToBrandIds: z.array(z.string()).optional(),
+  commentsEnabled: z.boolean().default(true),
+  isPublished: z.boolean().default(true),
+  createdBy: z.string(),
+});
 export default function EnhancedModeratorPanel() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showMissionDialog, setShowMissionDialog] = useState(false);
+  const [showEditMissionDialog, setShowEditMissionDialog] = useState(false);
+  const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [showPostDialog, setShowPostDialog] = useState(false);
+  const [showDeleteMissionDialog, setShowDeleteMissionDialog] = useState(false);
+
   const [wsConnected, setWsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
-  
+
+  const newsForm = useForm({
+    resolver: zodResolver(newsArticleSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      imageUrls: [],
+      suggestedFromBrandIds: [],
+      suggestedToBrandIds: [],
+      commentsEnabled: true,
+      isPublished: true,
+      createdBy: user?.id || "",
+    },
+  });
   // WebSocket connection for real-time updates
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
+
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
-    
+
     ws.onopen = () => {
-      console.log('WebSocket connected for moderator panel');
+      // console.log("WebSocket connected for moderator panel");
       setWsConnected(true);
     };
-    
+
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.log('Real-time update received:', data);
-      
+      // console.log("Real-time update received:", data);
+
       // Invalidate relevant queries to refresh data
-      if (data.type === 'update') {
+      if (data.type === "update") {
         queryClient.invalidateQueries();
       }
     };
-    
+
     ws.onclose = () => {
-      console.log('WebSocket disconnected');
+      // console.log("WebSocket disconnected");
       setWsConnected(false);
     };
-    
+
     ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      // console.error("WebSocket error:", error);
       setWsConnected(false);
     };
-    
+
     return () => {
       ws.close();
     };
@@ -145,53 +225,112 @@ export default function EnhancedModeratorPanel() {
   // Send real-time updates
   const sendRealtimeUpdate = useCallback((type: string, data: any) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type,
-        data,
-        source: 'moderator_panel'
-      }));
+      wsRef.current.send(
+        JSON.stringify({
+          type,
+          data,
+          source: "moderator_panel",
+        })
+      );
     }
   }, []);
 
+  const handleSelectMission = (mission: Mission) => {
+    const missionData = {
+      ...mission,
+      // Keep the dates as strings to match the Mission interface
+      startDate: mission.startDate,
+      endDate: mission.endDate,
+    };
+
+    setSelectedMission(missionData);
+    setShowEditMissionDialog(true);
+  };
+
   // Post form state
   const [newPostData, setNewPostData] = useState({
-    title: '',
-    content: '',
-    imageUrl: '',
-    linkUrl: '',
-    targetAlternatives: '',
-    isActive: true
+    title: "",
+    content: "",
+    imageUrl: "",
+    linkUrl: "",
+    targetAlternatives: "",
+    isActive: true,
   });
+  const [selectedSuggestedFromBrands, setSelectedSuggestedFromBrands] =
+    useState<string[]>([]);
+  const [selectedSuggestedToBrands, setSelectedSuggestedToBrands] = useState<
+    string[]
+  >([]);
+  const [imageUrls, setImageUrls] = useState<string[]>([""]);
 
   // Queries
   const { data: missions = [] } = useQuery<Mission[]>({
-    queryKey: ['/api/moderation/missions'],
+    queryKey: ["/api/moderation/missions"],
   });
 
   const { data: moderatorPosts = [] } = useQuery<Post[]>({
-    queryKey: ['/api/moderation/posts'],
+    queryKey: ["/api/moderation/posts"],
   });
 
   const { data: analytics } = useQuery<any>({
-    queryKey: ['/api/moderation/analytics'],
+    queryKey: ["/api/moderation/analytics"],
+  });
+
+  const { data: newsArticles = [] } = useQuery<any[]>({
+    queryKey: ["/api/moderation/news"],
+    enabled: !!user,
+  });
+
+  const { data: brands = [] } = useQuery<Brand[]>({
+    queryKey: ["/api/brands"],
+    enabled: !!user,
+  });
+
+  const [showNewsDialog, setShowNewsDialog] = useState(false);
+
+  const createNewsArticleMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch("/api/moderation/news", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          imageUrls: imageUrls.filter((url) => url.trim()),
+          suggestedFromBrandIds: selectedSuggestedFromBrands,
+          suggestedToBrandIds: selectedSuggestedToBrands,
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to create news article");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/moderation/news"] });
+      toast({ title: "News article created successfully" });
+      newsForm.reset();
+      setShowNewsDialog(false);
+      setImageUrls([""]);
+      setSelectedSuggestedFromBrands([]);
+      setSelectedSuggestedToBrands([]);
+    },
   });
 
   // Create post mutation
   const createPostMutation = useMutation({
-    mutationFn: (postData: any) => apiRequest('POST', '/api/moderation/posts', postData),
+    mutationFn: (postData: any) =>
+      apiRequest("POST", "/api/moderation/posts", postData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/moderation/posts'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/moderation/posts"] });
       setNewPostData({
-        title: '',
-        content: '',
-        imageUrl: '',
-        linkUrl: '',
-        targetAlternatives: '',
-        isActive: true
+        title: "",
+        content: "",
+        imageUrl: "",
+        linkUrl: "",
+        targetAlternatives: "",
+        isActive: true,
       });
       setShowPostDialog(false);
-      sendRealtimeUpdate('post_created', { createdBy: user?.id });
-    }
+      sendRealtimeUpdate("post_created", { createdBy: user?.id });
+    },
   });
 
   const handleCreatePost = () => {
@@ -199,19 +338,119 @@ export default function EnhancedModeratorPanel() {
 
     const postPayload = {
       ...newPostData,
-      createdBy: user?.id
+      createdBy: user?.id,
     };
 
     createPostMutation.mutate(postPayload);
   };
 
+  const handleDeleteMission = () => {
+    if (!selectedMission) return;
+
+    apiRequest("DELETE", `/api/moderation/missions/${selectedMission.id}`)
+      .then(() => {
+        queryClient.invalidateQueries({
+          queryKey: ["/api/moderation/missions"],
+        });
+        sendRealtimeUpdate("mission_deleted", {
+          missionId: selectedMission.id,
+        });
+      })
+      .catch((error) => {
+        console.error("Error deleting mission:", error);
+      });
+    setShowDeleteMissionDialog(false);
+    setSelectedMission(null);
+  };
+
+  // Utility functions
+  const addBrandToSelection = (
+    brandId: string,
+    type: "from" | "to" | "suggestedFrom" | "suggestedTo"
+  ) => {
+    switch (type) {
+      case "from":
+        if (!selectedFromBrands.includes(brandId)) {
+          setSelectedFromBrands([...selectedFromBrands, brandId]);
+        }
+        break;
+      case "to":
+        if (!selectedToBrands.includes(brandId)) {
+          setSelectedToBrands([...selectedToBrands, brandId]);
+        }
+        break;
+      case "suggestedFrom":
+        if (!selectedSuggestedFromBrands.includes(brandId)) {
+          setSelectedSuggestedFromBrands([
+            ...selectedSuggestedFromBrands,
+            brandId,
+          ]);
+        }
+        break;
+      case "suggestedTo":
+        if (!selectedSuggestedToBrands.includes(brandId)) {
+          setSelectedSuggestedToBrands([...selectedSuggestedToBrands, brandId]);
+        }
+        break;
+    }
+  };
+
+  const [selectedFromBrands, setSelectedFromBrands] = useState<string[]>([]);
+  const [selectedToBrands, setSelectedToBrands] = useState<string[]>([]);
+
+  const removeBrandFromSelection = (
+    brandId: string,
+    type: "from" | "to" | "suggestedFrom" | "suggestedTo"
+  ) => {
+    switch (type) {
+      case "from":
+        setSelectedFromBrands(
+          selectedFromBrands.filter((id) => id !== brandId)
+        );
+        break;
+      case "to":
+        setSelectedToBrands(selectedToBrands.filter((id) => id !== brandId));
+        break;
+      case "suggestedFrom":
+        setSelectedSuggestedFromBrands(
+          selectedSuggestedFromBrands.filter((id) => id !== brandId)
+        );
+        break;
+      case "suggestedTo":
+        setSelectedSuggestedToBrands(
+          selectedSuggestedToBrands.filter((id) => id !== brandId)
+        );
+        break;
+    }
+  };
+
+  const addImageUrl = () => {
+    setImageUrls([...imageUrls, ""]);
+  };
+
+  const removeImageUrl = (index: number) => {
+    setImageUrls(imageUrls.filter((_, i) => i !== index));
+  };
+
+  const updateImageUrl = (index: number, url: string) => {
+    const updated = [...imageUrls];
+    updated[index] = url;
+    setImageUrls(updated);
+  };
+
   const sidebarItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'missions', label: 'Missions', icon: Target },
-    { id: 'posts', label: 'Posts', icon: FileText },
-    { id: 'messages', label: 'Messages', icon: MessageCircle },
-    { id: 'analytics', label: 'Analytics', icon: TrendingUp },
-    { id: 'settings', label: 'Settings', icon: Settings }
+    { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+    { id: "missions", label: "Missions", icon: Target },
+    { id: "posts", label: "Posts", icon: FileText },
+    // { id: "messages", label: "Messages", icon: MessageCircle },
+    {
+      id: "news",
+      label: "News Articles",
+      icon: Newspaper,
+      count: newsArticles.length,
+    },
+    { id: "analytics", label: "Analytics", icon: TrendingUp },
+    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   return (
@@ -232,14 +471,22 @@ export default function EnhancedModeratorPanel() {
               <h1 className="text-xl font-bold">Moderator Panel</h1>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-4">
             {/* WebSocket Status */}
-            <div className={`flex items-center gap-2 text-sm ${wsConnected ? 'text-green-600' : 'text-red-600'}`}>
-              {wsConnected ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
-              {wsConnected ? 'Live Updates' : 'Offline'}
+            <div
+              className={`flex items-center gap-2 text-sm ${
+                wsConnected ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {wsConnected ? (
+                <Wifi className="h-4 w-4" />
+              ) : (
+                <WifiOff className="h-4 w-4" />
+              )}
+              {wsConnected ? "Live Updates" : "Offline"}
             </div>
-            
+
             <Badge variant="secondary" className="bg-blue-100 text-blue-800">
               {user?.role}
             </Badge>
@@ -249,7 +496,11 @@ export default function EnhancedModeratorPanel() {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} transition-all duration-300 border-r bg-card h-[calc(100vh-73px)]`}>
+        <aside
+          className={`${
+            sidebarOpen ? "w-64" : "w-16"
+          } transition-all duration-300 border-r bg-card h-[calc(100vh-73px)]`}
+        >
           <div className="p-4">
             <nav className="space-y-2">
               {sidebarItems.map((item) => {
@@ -258,7 +509,7 @@ export default function EnhancedModeratorPanel() {
                   <Button
                     key={item.id}
                     variant={activeTab === item.id ? "default" : "ghost"}
-                    className={`w-full justify-start ${!sidebarOpen && 'px-2'}`}
+                    className={`w-full justify-start ${!sidebarOpen && "px-2"}`}
                     onClick={() => setActiveTab(item.id)}
                   >
                     <Icon className="h-4 w-4" />
@@ -273,46 +524,58 @@ export default function EnhancedModeratorPanel() {
         {/* Main Content */}
         <main className="flex-1 p-6">
           {/* Dashboard Tab */}
-          {activeTab === 'dashboard' && (
+          {activeTab === "dashboard" && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold">Dashboard</h2>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card>
                   <CardContent className="flex items-center p-6">
                     <Target className="h-8 w-8 text-blue-600" />
                     <div className="ml-4">
-                      <p className="text-sm font-medium text-muted-foreground">Active Missions</p>
-                      <p className="text-2xl font-bold">{missions.filter((m: Mission) => m.isActive).length}</p>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Active Missions
+                      </p>
+                      <p className="text-2xl font-bold">
+                        {missions.filter((m: Mission) => m.isActive).length}
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardContent className="flex items-center p-6">
                     <FileText className="h-8 w-8 text-green-600" />
                     <div className="ml-4">
-                      <p className="text-sm font-medium text-muted-foreground">Posts Created</p>
-                      <p className="text-2xl font-bold">{moderatorPosts.length}</p>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Posts Created
+                      </p>
+                      <p className="text-2xl font-bold">
+                        {moderatorPosts.length}
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardContent className="flex items-center p-6">
                     <MessageCircle className="h-8 w-8 text-purple-600" />
                     <div className="ml-4">
-                      <p className="text-sm font-medium text-muted-foreground">Messages</p>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Messages
+                      </p>
                       <p className="text-2xl font-bold">-</p>
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardContent className="flex items-center p-6">
                     <TrendingUp className="h-8 w-8 text-orange-600" />
                     <div className="ml-4">
-                      <p className="text-sm font-medium text-muted-foreground">Platform Growth</p>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Platform Growth
+                      </p>
                       <p className="text-2xl font-bold">+12%</p>
                     </div>
                   </CardContent>
@@ -329,17 +592,23 @@ export default function EnhancedModeratorPanel() {
                       <div className="flex items-center gap-3">
                         <Target className="h-4 w-4 text-blue-600" />
                         <span className="text-sm">New mission created</span>
-                        <span className="text-xs text-muted-foreground ml-auto">2 hours ago</span>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          2 hours ago
+                        </span>
                       </div>
                       <div className="flex items-center gap-3">
                         <MessageCircle className="h-4 w-4 text-purple-600" />
                         <span className="text-sm">Member message received</span>
-                        <span className="text-xs text-muted-foreground ml-auto">4 hours ago</span>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          4 hours ago
+                        </span>
                       </div>
                       <div className="flex items-center gap-3">
                         <FileText className="h-4 w-4 text-green-600" />
                         <span className="text-sm">Post published</span>
-                        <span className="text-xs text-muted-foreground ml-auto">1 day ago</span>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          1 day ago
+                        </span>
                       </div>
                     </div>
                   </CardContent>
@@ -351,15 +620,26 @@ export default function EnhancedModeratorPanel() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      <Button className="w-full justify-start" onClick={() => setShowMissionDialog(true)}>
+                      <Button
+                        className="w-full justify-start"
+                        onClick={() => setShowMissionDialog(true)}
+                      >
                         <Target className="h-4 w-4 mr-2" />
                         Create New Mission
                       </Button>
-                      <Button className="w-full justify-start" variant="outline" onClick={() => setShowPostDialog(true)}>
+                      <Button
+                        className="w-full justify-start"
+                        variant="outline"
+                        onClick={() => setShowPostDialog(true)}
+                      >
                         <FileText className="h-4 w-4 mr-2" />
                         Create New Post
                       </Button>
-                      <Button className="w-full justify-start" variant="outline" onClick={() => setActiveTab('messages')}>
+                      <Button
+                        className="w-full justify-start"
+                        variant="outline"
+                        onClick={() => setActiveTab("messages")}
+                      >
                         <MessageCircle className="h-4 w-4 mr-2" />
                         Check Messages
                       </Button>
@@ -371,7 +651,7 @@ export default function EnhancedModeratorPanel() {
           )}
 
           {/* Missions Tab */}
-          {activeTab === 'missions' && (
+          {activeTab === "missions" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Missions Management</h2>
@@ -389,11 +669,17 @@ export default function EnhancedModeratorPanel() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
                             <h3 className="font-semibold">{mission.title}</h3>
-                            <Badge variant={mission.isActive ? "default" : "secondary"}>
-                              {mission.isActive ? 'Active' : 'Inactive'}
+                            <Badge
+                              variant={
+                                mission.isActive ? "default" : "secondary"
+                              }
+                            >
+                              {mission.isActive ? "Active" : "Inactive"}
                             </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground mb-3">{mission.description}</p>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            {mission.description}
+                          </p>
                           <div className="flex items-center gap-4 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Award className="h-3 w-3" />
@@ -401,19 +687,44 @@ export default function EnhancedModeratorPanel() {
                             </span>
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
-                              {mission.startDate ? format(new Date(mission.startDate), 'MMM dd') : 'No start date'}
+                              {mission.startDate
+                                ? format(
+                                    new Date(mission.startDate),
+                                    "MMM dd yyyy"
+                                  )
+                                : "No start date"}
+                              {" - "}
+                              {mission.endDate
+                                ? format(
+                                    new Date(mission.endDate),
+                                    "MMM dd yyyy"
+                                  )
+                                : "No end date"}
                             </span>
                             <span className="flex items-center gap-1">
                               <Target className="h-3 w-3" />
-                              {mission.category}
+                              {categoryEnum[mission.targetCategory]}
                             </span>
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              handleSelectMission(mission);
+                            }}
+                          >
                             <Edit className="h-3 w-3" />
                           </Button>
-                          <Button size="sm" variant="outline">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setShowDeleteMissionDialog(true);
+                              setSelectedMission(mission);
+                            }}
+                          >
                             <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
@@ -426,7 +737,7 @@ export default function EnhancedModeratorPanel() {
           )}
 
           {/* Posts Tab */}
-          {activeTab === 'posts' && (
+          {activeTab === "posts" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Posts Management</h2>
@@ -444,15 +755,19 @@ export default function EnhancedModeratorPanel() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
                             <h3 className="font-semibold">{post.title}</h3>
-                            <Badge variant={post.isActive ? "default" : "secondary"}>
-                              {post.isActive ? 'Published' : 'Draft'}
+                            <Badge
+                              variant={post.isActive ? "default" : "secondary"}
+                            >
+                              {post.isActive ? "Published" : "Draft"}
                             </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{post.content}</p>
+                          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                            {post.content}
+                          </p>
                           <div className="flex items-center gap-4 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
-                              {format(new Date(post.createdAt), 'MMM dd, yyyy')}
+                              {format(new Date(post.createdAt), "MMM dd, yyyy")}
                             </span>
                             {post.imageUrl && (
                               <span className="flex items-center gap-1">
@@ -484,8 +799,368 @@ export default function EnhancedModeratorPanel() {
             </div>
           )}
 
+          {activeTab === "news" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold">News Management</h3>
+                <Dialog open={showNewsDialog} onOpenChange={setShowNewsDialog}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create News Article
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Create News Article</DialogTitle>
+                    </DialogHeader>
+                    <Form {...newsForm}>
+                      <form
+                        onSubmit={newsForm.handleSubmit((data) =>
+                          createNewsArticleMutation.mutate(data)
+                        )}
+                        className="space-y-4"
+                      >
+                        <FormField
+                          control={newsForm.control}
+                          name="title"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Article Title</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="Enter news title"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={newsForm.control}
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Article Content</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="Write your news article content..."
+                                  className="min-h-[120px]"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* <div>
+                          <Label>Image URLs</Label>
+                          <div className="space-y-2 mt-2">
+                            {imageUrls.map((url, index) => (
+                              <div key={index} className="flex gap-2">
+                                <Input
+                                  placeholder="https://example.com/image.jpg"
+                                  value={url}
+                                  onChange={(e) =>
+                                    updateImageUrl(index, e.target.value)
+                                  }
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => removeImageUrl(index)}
+                                  disabled={imageUrls.length === 1}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ))}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={addImageUrl}
+                            >
+                              <Plus className="w-4 h-4 mr-2" />
+                              Add Image
+                            </Button>
+                          </div>
+                        </div> */}
+
+                        <div>
+                          <Label>Suggested Switch From Brands</Label>
+                          <div className="mt-2 space-y-2">
+                            <Select
+                              onValueChange={(brandId) =>
+                                addBrandToSelection(brandId, "suggestedFrom")
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select brands to suggest switching from" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {brands
+                                  .filter(
+                                    (brand: any) =>
+                                      !selectedSuggestedFromBrands.includes(
+                                        brand.id
+                                      )
+                                  )
+                                  .map((brand: any) => (
+                                    <SelectItem key={brand.id} value={brand.id}>
+                                      {brand.name}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedSuggestedFromBrands.map((brandId) => {
+                                const brand = brands.find(
+                                  (b: any) => b.id === brandId
+                                );
+                                return (
+                                  <Badge
+                                    key={brandId}
+                                    variant="secondary"
+                                    className="flex items-center gap-1"
+                                  >
+                                    {brand?.name}
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-4 w-4 p-0"
+                                      onClick={() =>
+                                        removeBrandFromSelection(
+                                          brandId,
+                                          "suggestedFrom"
+                                        )
+                                      }
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </Button>
+                                  </Badge>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label>Suggested Switch To Brands</Label>
+                          <div className="mt-2 space-y-2">
+                            <Select
+                              onValueChange={(brandId) =>
+                                addBrandToSelection(brandId, "suggestedTo")
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select brands to suggest switching to" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {brands
+                                  .filter(
+                                    (brand: any) =>
+                                      !selectedSuggestedToBrands.includes(
+                                        brand.id
+                                      )
+                                  )
+                                  .map((brand: any) => (
+                                    <SelectItem key={brand.id} value={brand.id}>
+                                      {brand.name}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedSuggestedToBrands.map((brandId) => {
+                                const brand = brands.find(
+                                  (b: any) => b.id === brandId
+                                );
+                                return (
+                                  <Badge
+                                    key={brandId}
+                                    variant="default"
+                                    className="flex items-center gap-1"
+                                  >
+                                    {brand?.name}
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-4 w-4 p-0"
+                                      onClick={() =>
+                                        removeBrandFromSelection(
+                                          brandId,
+                                          "suggestedTo"
+                                        )
+                                      }
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </Button>
+                                  </Badge>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="comments-enabled"
+                              checked={newsForm.watch("commentsEnabled")}
+                              onCheckedChange={(checked) =>
+                                newsForm.setValue("commentsEnabled", checked)
+                              }
+                            />
+                            <Label htmlFor="comments-enabled">
+                              Enable Comments
+                            </Label>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="is-published"
+                              checked={newsForm.watch("isPublished")}
+                              onCheckedChange={(checked) =>
+                                newsForm.setValue("isPublished", checked)
+                              }
+                            />
+                            <Label htmlFor="is-published">
+                              Publish Immediately
+                            </Label>
+                          </div>
+                        </div>
+
+                        <Button
+                          type="submit"
+                          disabled={createNewsArticleMutation.isPending}
+                          className="w-full"
+                        >
+                          Create News Article
+                        </Button>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <div className="space-y-4">
+                {newsArticles.map((article: any) => (
+                  <Card key={article.id}>
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold mb-2">
+                            {article.title}
+                          </h3>
+                          <p className="text-muted-foreground mb-4">
+                            {article.description}
+                          </p>
+
+                          {(article.suggestedFromBrandIds?.length > 0 ||
+                            article.suggestedToBrandIds?.length > 0) && (
+                            <div className="space-y-2 mb-4">
+                              {article.suggestedFromBrandIds?.length > 0 && (
+                                <div>
+                                  <p className="text-xs font-medium text-red-600 mb-1">
+                                    Suggested switches from:
+                                  </p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {article.suggestedFromBrandIds.map(
+                                      (brandId: string) => {
+                                        const brand = brands.find(
+                                          (b: any) => b.id === brandId
+                                        );
+                                        return (
+                                          <Badge
+                                            key={brandId}
+                                            variant="outline"
+                                            className="text-xs"
+                                          >
+                                            {brand?.name || brandId}
+                                          </Badge>
+                                        );
+                                      }
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {article.suggestedToBrandIds?.length > 0 && (
+                                <div>
+                                  <p className="text-xs font-medium text-green-600 mb-1">
+                                    Suggested switches to:
+                                  </p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {article.suggestedToBrandIds.map(
+                                      (brandId: string) => {
+                                        const brand = brands.find(
+                                          (b: any) => b.id === brandId
+                                        );
+                                        return (
+                                          <Badge
+                                            key={brandId}
+                                            variant="default"
+                                            className="text-xs"
+                                          >
+                                            {brand?.name || brandId}
+                                          </Badge>
+                                        );
+                                      }
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span>
+                              {new Date(
+                                article.publishedAt
+                              ).toLocaleDateString()}
+                            </span>
+                            <Badge
+                              variant={
+                                article.commentsEnabled
+                                  ? "default"
+                                  : "secondary"
+                              }
+                            >
+                              Comments {article.commentsEnabled ? "On" : "Off"}
+                            </Badge>
+                            <Badge
+                              variant={
+                                article.isPublished ? "default" : "secondary"
+                              }
+                            >
+                              {article.isPublished ? "Published" : "Draft"}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 ml-4">
+                          <Button variant="outline" size="sm">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Messages Tab */}
-          {activeTab === 'messages' && (
+          {activeTab === "messages" && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold">Messages</h2>
               <MessagingSystem />
@@ -493,7 +1168,7 @@ export default function EnhancedModeratorPanel() {
           )}
 
           {/* Analytics Tab */}
-          {activeTab === 'analytics' && (
+          {activeTab === "analytics" && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold">Analytics</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -539,7 +1214,9 @@ export default function EnhancedModeratorPanel() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm">Active Missions</span>
-                        <span className="font-medium">{missions.filter((m: Mission) => m.isActive).length}</span>
+                        <span className="font-medium">
+                          {missions.filter((m: Mission) => m.isActive).length}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm">Completion Rate</span>
@@ -579,11 +1256,49 @@ export default function EnhancedModeratorPanel() {
         </main>
       </div>
 
+      {/* Delete Mission Confirmation Dialog */}
+      <Dialog
+        open={showDeleteMissionDialog}
+        onOpenChange={setShowDeleteMissionDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <DialogDescription>
+            Are you sure you want to delete this mission? This action cannot be
+            undone.
+          </DialogDescription>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteMissionDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={() => handleDeleteMission()}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Enhanced Mission Dialog */}
       <EnhancedMissionDialog
         open={showMissionDialog}
         onOpenChange={setShowMissionDialog}
-        onMissionCreated={() => sendRealtimeUpdate('mission_created', { createdBy: user?.id })}
+        onMissionCreated={() =>
+          sendRealtimeUpdate("mission_created", { createdBy: user?.id })
+        }
+      />
+      {/* Enhanced Mission Dialog */}
+      <EnhancedMissionDialog
+        open={showEditMissionDialog}
+        onOpenChange={setShowEditMissionDialog}
+        mission={selectedMission}
+        onMissionCreated={() =>
+          sendRealtimeUpdate("mission_updated", { createdBy: user?.id })
+        }
       />
 
       {/* Post Creation Dialog */}
@@ -602,7 +1317,9 @@ export default function EnhancedModeratorPanel() {
               <Input
                 id="postTitle"
                 value={newPostData.title}
-                onChange={(e) => setNewPostData(prev => ({ ...prev, title: e.target.value }))}
+                onChange={(e) =>
+                  setNewPostData((prev) => ({ ...prev, title: e.target.value }))
+                }
                 placeholder="Enter post title"
               />
             </div>
@@ -612,7 +1329,12 @@ export default function EnhancedModeratorPanel() {
               <Textarea
                 id="postContent"
                 value={newPostData.content}
-                onChange={(e) => setNewPostData(prev => ({ ...prev, content: e.target.value }))}
+                onChange={(e) =>
+                  setNewPostData((prev) => ({
+                    ...prev,
+                    content: e.target.value,
+                  }))
+                }
                 placeholder="Write your post content..."
                 rows={4}
               />
@@ -623,7 +1345,12 @@ export default function EnhancedModeratorPanel() {
               <Input
                 id="targetAlternatives"
                 value={newPostData.targetAlternatives}
-                onChange={(e) => setNewPostData(prev => ({ ...prev, targetAlternatives: e.target.value }))}
+                onChange={(e) =>
+                  setNewPostData((prev) => ({
+                    ...prev,
+                    targetAlternatives: e.target.value,
+                  }))
+                }
                 placeholder="e.g., Indian brands to recommend"
               />
             </div>
@@ -634,7 +1361,12 @@ export default function EnhancedModeratorPanel() {
                 <Input
                   id="imageUrl"
                   value={newPostData.imageUrl}
-                  onChange={(e) => setNewPostData(prev => ({ ...prev, imageUrl: e.target.value }))}
+                  onChange={(e) =>
+                    setNewPostData((prev) => ({
+                      ...prev,
+                      imageUrl: e.target.value,
+                    }))
+                  }
                   placeholder="https://..."
                 />
               </div>
@@ -644,7 +1376,12 @@ export default function EnhancedModeratorPanel() {
                 <Input
                   id="linkUrl"
                   value={newPostData.linkUrl}
-                  onChange={(e) => setNewPostData(prev => ({ ...prev, linkUrl: e.target.value }))}
+                  onChange={(e) =>
+                    setNewPostData((prev) => ({
+                      ...prev,
+                      linkUrl: e.target.value,
+                    }))
+                  }
                   placeholder="https://..."
                 />
               </div>
@@ -654,7 +1391,9 @@ export default function EnhancedModeratorPanel() {
               <Switch
                 id="isActive"
                 checked={newPostData.isActive}
-                onCheckedChange={(checked) => setNewPostData(prev => ({ ...prev, isActive: checked }))}
+                onCheckedChange={(checked) =>
+                  setNewPostData((prev) => ({ ...prev, isActive: checked }))
+                }
               />
               <Label htmlFor="isActive">Publish immediately</Label>
             </div>
@@ -664,11 +1403,15 @@ export default function EnhancedModeratorPanel() {
             <Button variant="outline" onClick={() => setShowPostDialog(false)}>
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleCreatePost}
-              disabled={!newPostData.title || !newPostData.content || createPostMutation.isPending}
+              disabled={
+                !newPostData.title ||
+                !newPostData.content ||
+                createPostMutation.isPending
+              }
             >
-              {createPostMutation.isPending ? 'Creating...' : 'Create Post'}
+              {createPostMutation.isPending ? "Creating..." : "Create Post"}
             </Button>
           </DialogFooter>
         </DialogContent>

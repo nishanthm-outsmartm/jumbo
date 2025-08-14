@@ -1,9 +1,9 @@
-import { 
-  users, 
-  switchLogs, 
-  posts, 
-  brands, 
-  likes, 
+import {
+  users,
+  switchLogs,
+  posts,
+  brands,
+  likes,
   comments,
   reactions,
   targetSuggestions,
@@ -24,7 +24,7 @@ import {
   communityMembers,
   contentTags,
   feedbackSubmissions,
-  type User, 
+  type User,
   type InsertUser,
   type SwitchLog,
   type InsertSwitchLog,
@@ -67,7 +67,7 @@ import {
   type ContentTag,
   type InsertContentTag,
   type FeedbackSubmission,
-  type InsertFeedbackSubmission
+  type InsertFeedbackSubmission,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, count } from "drizzle-orm";
@@ -103,7 +103,11 @@ export interface IStorage {
   getPostComments(postId: string): Promise<any[]>;
   addReaction(reaction: InsertReaction): Promise<Reaction>;
   getPostReactions(postId: string): Promise<any[]>;
-  getUserReaction(userId: string, postId: string, type: string): Promise<boolean>;
+  getUserReaction(
+    userId: string,
+    postId: string,
+    type: string
+  ): Promise<boolean>;
 
   // Leaderboard methods
   getLeaderboard(limit?: number, period?: string): Promise<User[]>;
@@ -114,50 +118,76 @@ export interface IStorage {
 
   // Admin methods
   getTargetSuggestions(status?: string): Promise<TargetSuggestion[]>;
-  updateTargetSuggestion(id: string, updates: Partial<TargetSuggestion>): Promise<TargetSuggestion>;
-  createTargetSuggestion(suggestion: InsertTargetSuggestion): Promise<TargetSuggestion>;
-  
+  updateTargetSuggestion(
+    id: string,
+    updates: Partial<TargetSuggestion>
+  ): Promise<TargetSuggestion>;
+  createTargetSuggestion(
+    suggestion: InsertTargetSuggestion
+  ): Promise<TargetSuggestion>;
+
   // Moderation methods
   getModerationReports(status?: string): Promise<any[]>;
-  createModerationReport(report: InsertModerationReport): Promise<ModerationReport>;
-  updateModerationReport(id: string, updates: Partial<ModerationReport>): Promise<ModerationReport>;
-  
+  createModerationReport(
+    report: InsertModerationReport
+  ): Promise<ModerationReport>;
+  updateModerationReport(
+    id: string,
+    updates: Partial<ModerationReport>
+  ): Promise<ModerationReport>;
+
   // Switch log approval methods
   getPendingSwitchLogs(): Promise<any[]>;
-  approveSwitchLog(id: string, moderatorId: string, notes?: string): Promise<SwitchLog>;
-  rejectSwitchLog(id: string, moderatorId: string, notes: string): Promise<SwitchLog>;
-  
+  approveSwitchLog(
+    id: string,
+    moderatorId: string,
+    notes?: string
+  ): Promise<SwitchLog>;
+  rejectSwitchLog(
+    id: string,
+    moderatorId: string,
+    notes: string
+  ): Promise<SwitchLog>;
+
   // Feedback question methods
-  createFeedbackQuestion(question: InsertFeedbackQuestion): Promise<FeedbackQuestion>;
+  createFeedbackQuestion(
+    question: InsertFeedbackQuestion
+  ): Promise<FeedbackQuestion>;
   getFeedbackQuestions(activeOnly?: boolean): Promise<FeedbackQuestion[]>;
-  updateFeedbackQuestion(id: string, updates: Partial<FeedbackQuestion>): Promise<FeedbackQuestion>;
+  updateFeedbackQuestion(
+    id: string,
+    updates: Partial<FeedbackQuestion>
+  ): Promise<FeedbackQuestion>;
   deleteFeedbackQuestion(id: string): Promise<void>;
   getFeedbackResponses(questionId: string): Promise<any[]>;
-  
+
   // Mission methods
   createMission(mission: InsertMission): Promise<Mission>;
   getMissions(activeOnly?: boolean): Promise<Mission[]>;
   updateMission(id: string, updates: Partial<Mission>): Promise<Mission>;
   deleteMission(id: string): Promise<void>;
   getUserMissions(userId: string): Promise<any[]>;
-  
+
   // Member management methods
   getAllUsers(filters?: { role?: string; active?: boolean }): Promise<any[]>;
   getUserDetails(id: string): Promise<any>;
   updateUserRole(id: string, role: string): Promise<User>;
-  
+
   // News article methods
   createNewsArticle(newsArticle: InsertNewsArticle): Promise<NewsArticle>;
   getNewsArticles(): Promise<NewsArticle[]>;
-  updateNewsArticle(id: string, updates: Partial<NewsArticle>): Promise<NewsArticle>;
+  updateNewsArticle(
+    id: string,
+    updates: Partial<NewsArticle>
+  ): Promise<NewsArticle>;
   deleteNewsArticle(id: string): Promise<void>;
-  
+
   // Messages
   sendMessage(message: InsertMessage): Promise<Message>;
   getMessagesForUser(userId: string): Promise<Message[]>;
   getUnreadMessages(userId: string): Promise<Message[]>;
   markMessageAsRead(messageId: string): Promise<void>;
-  
+
   // Moderator posts
   createModeratorPost(post: InsertModeratorPost): Promise<ModeratorPost>;
   getAllModeratorPosts(): Promise<ModeratorPost[]>;
@@ -187,11 +217,21 @@ export interface IStorage {
   getUserCommunities(userId: string): Promise<Community[]>;
 
   // Feedback submissions
-  createFeedbackSubmission(submission: InsertFeedbackSubmission): Promise<FeedbackSubmission>;
+  createFeedbackSubmission(
+    submission: InsertFeedbackSubmission
+  ): Promise<FeedbackSubmission>;
   getAllFeedbackSubmissions(): Promise<FeedbackSubmission[]>;
   getPendingFeedbackSubmissions(): Promise<FeedbackSubmission[]>;
-  approveFeedbackSubmission(id: string, moderatorId: string, moderatorNotes?: string): Promise<FeedbackSubmission>;
-  rejectFeedbackSubmission(id: string, moderatorId: string, moderatorNotes?: string): Promise<FeedbackSubmission>;
+  approveFeedbackSubmission(
+    id: string,
+    moderatorId: string,
+    moderatorNotes?: string
+  ): Promise<FeedbackSubmission>;
+  rejectFeedbackSubmission(
+    id: string,
+    moderatorId: string,
+    moderatorNotes?: string
+  ): Promise<FeedbackSubmission>;
 
   // Enhanced mission methods
   getMissionsByCategory(categoryId: string): Promise<Mission[]>;
@@ -206,12 +246,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.firebaseUid, firebaseUid));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.firebaseUid, firebaseUid));
     return user || undefined;
   }
 
   async getUserByHandle(handle: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.handle, handle));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.handle, handle));
     return user || undefined;
   }
 
@@ -221,35 +267,45 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User> {
-    const [user] = await db.update(users).set(updates).where(eq(users.id, id)).returning();
+    const [user] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
     return user;
   }
 
   async createSwitchLog(insertSwitchLog: InsertSwitchLog): Promise<SwitchLog> {
-    const [switchLog] = await db.insert(switchLogs).values(insertSwitchLog).returning();
-    
+    const [switchLog] = await db
+      .insert(switchLogs)
+      .values(insertSwitchLog)
+      .returning();
+
     // Update user stats
     if (switchLog.userId) {
-      await db.update(users)
+      await db
+        .update(users)
         .set({
           switchCount: sql`${users.switchCount} + 1`,
-          points: sql`${users.points} + ${switchLog.points || 25}`
+          points: sql`${users.points} + ${switchLog.points || 25}`,
         })
         .where(eq(users.id, switchLog.userId));
     }
-    
+
     return switchLog;
   }
 
   async getUserSwitchLogs(userId: string): Promise<SwitchLog[]> {
-    return db.select()
+    return db
+      .select()
       .from(switchLogs)
       .where(eq(switchLogs.userId, userId))
       .orderBy(desc(switchLogs.createdAt));
   }
 
   async getPublicSwitchLogs(limit: number = 10): Promise<SwitchLog[]> {
-    return db.select()
+    return db
+      .select()
       .from(switchLogs)
       .where(eq(switchLogs.isPublic, true))
       .orderBy(desc(switchLogs.createdAt))
@@ -269,9 +325,9 @@ export class DatabaseStorage implements IStorage {
           id: users.id,
           handle: users.handle,
           level: users.level,
-          points: users.points
+          points: users.points,
         },
-        switchLog: switchLogs
+        switchLog: switchLogs,
       })
       .from(posts)
       .leftJoin(users, eq(posts.userId, users.id))
@@ -288,7 +344,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePost(id: string, updates: Partial<Post>): Promise<Post> {
-    const [post] = await db.update(posts).set(updates).where(eq(posts.id, id)).returning();
+    const [post] = await db
+      .update(posts)
+      .set(updates)
+      .where(eq(posts.id, id))
+      .returning();
     return post;
   }
 
@@ -308,48 +368,60 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchBrands(query: string): Promise<Brand[]> {
-    return db.select()
+    return db
+      .select()
       .from(brands)
-      .where(sql`${brands.name} ILIKE ${'%' + query + '%'}`)
+      .where(sql`${brands.name} ILIKE ${"%" + query + "%"}`)
       .limit(10);
+  }
+  async getAllBrands(): Promise<Brand[]> {
+    return db.select().from(brands);
   }
 
   async toggleLike(userId: string, postId: string): Promise<boolean> {
-    const existingLike = await db.select()
+    const existingLike = await db
+      .select()
       .from(likes)
       .where(and(eq(likes.userId, userId), eq(likes.postId, postId)))
       .limit(1);
 
     if (existingLike.length > 0) {
       // Remove like
-      await db.delete(likes)
+      await db
+        .delete(likes)
         .where(and(eq(likes.userId, userId), eq(likes.postId, postId)));
-      
-      await db.update(posts)
+
+      await db
+        .update(posts)
         .set({ likesCount: sql`${posts.likesCount} - 1` })
         .where(eq(posts.id, postId));
-      
+
       return false;
     } else {
       // Add like
       await db.insert(likes).values({ userId, postId });
-      
-      await db.update(posts)
+
+      await db
+        .update(posts)
         .set({ likesCount: sql`${posts.likesCount} + 1` })
         .where(eq(posts.id, postId));
-      
+
       return true;
     }
   }
 
   async addComment(insertComment: InsertComment): Promise<Comment> {
-    const [comment] = await db.insert(comments).values(insertComment).returning();
-    
+    const [comment] = await db
+      .insert(comments)
+      .values(insertComment)
+      .returning();
+
     // Update comment count on post
-    await db.update(posts)
+    await db
+      .update(posts)
       .set({ commentsCount: sql`${posts.commentsCount} + 1` })
       .where(eq(posts.id, insertComment.postId!));
-    
+
     return comment;
   }
 
@@ -359,29 +431,27 @@ export class DatabaseStorage implements IStorage {
         comment: comments,
         user: {
           id: users.id,
-          handle: users.handle
-        }
+          handle: users.handle,
+        },
       })
       .from(comments)
       .leftJoin(users, eq(comments.userId, users.id))
       .where(eq(comments.postId, postId))
       .orderBy(desc(comments.createdAt));
-    
+
     return results;
   }
 
   async getLeaderboard(limit: number = 10): Promise<User[]> {
-    return db.select()
-      .from(users)
-      .orderBy(desc(users.points))
-      .limit(limit);
+    return db.select().from(users).orderBy(desc(users.points)).limit(limit);
   }
 
   async getTrendingBrands(): Promise<any[]> {
-    return db.select({
-      brand: brands,
-      switchCount: count(switchLogs.id)
-    })
+    return db
+      .select({
+        brand: brands,
+        switchCount: count(switchLogs.id),
+      })
       .from(brands)
       .leftJoin(switchLogs, eq(brands.id, switchLogs.toBrandId))
       .where(sql`${switchLogs.createdAt} > NOW() - INTERVAL '7 days'`)
@@ -392,38 +462,53 @@ export class DatabaseStorage implements IStorage {
 
   async getTargetSuggestions(status?: string): Promise<TargetSuggestion[]> {
     const query = db.select().from(targetSuggestions);
-    
+
     if (status) {
       return query.where(eq(targetSuggestions.status, status));
     }
-    
+
     return query.orderBy(desc(targetSuggestions.createdAt));
   }
 
-  async updateTargetSuggestion(id: string, updates: Partial<TargetSuggestion>): Promise<TargetSuggestion> {
-    const [suggestion] = await db.update(targetSuggestions)
+  async updateTargetSuggestion(
+    id: string,
+    updates: Partial<TargetSuggestion>
+  ): Promise<TargetSuggestion> {
+    const [suggestion] = await db
+      .update(targetSuggestions)
       .set(updates)
       .where(eq(targetSuggestions.id, id))
       .returning();
     return suggestion;
   }
 
-  async createTargetSuggestion(insertSuggestion: InsertTargetSuggestion): Promise<TargetSuggestion> {
-    const [suggestion] = await db.insert(targetSuggestions).values(insertSuggestion).returning();
+  async createTargetSuggestion(
+    insertSuggestion: InsertTargetSuggestion
+  ): Promise<TargetSuggestion> {
+    const [suggestion] = await db
+      .insert(targetSuggestions)
+      .values(insertSuggestion)
+      .returning();
     return suggestion;
   }
 
   // Enhanced social interactions
   async addReaction(insertReaction: InsertReaction): Promise<Reaction> {
     // Remove existing reaction of this type by this user for this post
-    await db.delete(reactions)
-      .where(and(
-        eq(reactions.userId, insertReaction.userId!),
-        eq(reactions.postId, insertReaction.postId!),
-        eq(reactions.type, insertReaction.type)
-      ));
+    await db
+      .delete(reactions)
+      .where(
+        and(
+          eq(reactions.userId, insertReaction.userId!),
+          eq(reactions.postId, insertReaction.postId!),
+          eq(reactions.type, insertReaction.type)
+        )
+      );
 
-    const [reaction] = await db.insert(reactions).values(insertReaction).returning();
+    const [reaction] = await db
+      .insert(reactions)
+      .values(insertReaction)
+      .returning();
     return reaction;
   }
 
@@ -431,67 +516,91 @@ export class DatabaseStorage implements IStorage {
     const reactionCounts = await db
       .select({
         type: reactions.type,
-        count: sql`count(*)::int`.as('count')
+        count: sql`count(*)::int`.as("count"),
       })
       .from(reactions)
       .where(eq(reactions.postId, postId))
       .groupBy(reactions.type);
-    
+
     return reactionCounts;
   }
 
-  async getUserReaction(userId: string, postId: string, type: string): Promise<boolean> {
-    const [reaction] = await db.select()
+  async getUserReaction(
+    userId: string,
+    postId: string,
+    type: string
+  ): Promise<boolean> {
+    const [reaction] = await db
+      .select()
       .from(reactions)
-      .where(and(
-        eq(reactions.userId, userId),
-        eq(reactions.postId, postId),
-        eq(reactions.type, type)
-      ))
+      .where(
+        and(
+          eq(reactions.userId, userId),
+          eq(reactions.postId, postId),
+          eq(reactions.type, type)
+        )
+      )
       .limit(1);
-    
+
     return !!reaction;
   }
 
   // Enhanced leaderboards
-  async getWeeklyLeaderboard(limit: number = 10): Promise<LeaderboardSnapshot[]> {
+  async getWeeklyLeaderboard(
+    limit: number = 10
+  ): Promise<LeaderboardSnapshot[]> {
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
-    const currentWeek = Math.ceil((currentDate.getTime() - new Date(currentYear, 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000));
+    const currentWeek = Math.ceil(
+      (currentDate.getTime() - new Date(currentYear, 0, 1).getTime()) /
+        (7 * 24 * 60 * 60 * 1000)
+    );
 
-    return db.select()
+    return db
+      .select()
       .from(leaderboardSnapshots)
-      .where(and(
-        eq(leaderboardSnapshots.period, 'weekly'),
-        eq(leaderboardSnapshots.year, currentYear),
-        eq(leaderboardSnapshots.week, currentWeek)
-      ))
+      .where(
+        and(
+          eq(leaderboardSnapshots.period, "weekly"),
+          eq(leaderboardSnapshots.year, currentYear),
+          eq(leaderboardSnapshots.week, currentWeek)
+        )
+      )
       .orderBy(leaderboardSnapshots.rank)
       .limit(limit);
   }
 
-  async getMonthlyLeaderboard(limit: number = 10): Promise<LeaderboardSnapshot[]> {
+  async getMonthlyLeaderboard(
+    limit: number = 10
+  ): Promise<LeaderboardSnapshot[]> {
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
     const currentMonth = currentDate.getMonth() + 1;
 
-    return db.select()
+    return db
+      .select()
       .from(leaderboardSnapshots)
-      .where(and(
-        eq(leaderboardSnapshots.period, 'monthly'),
-        eq(leaderboardSnapshots.year, currentYear),
-        eq(leaderboardSnapshots.month, currentMonth)
-      ))
+      .where(
+        and(
+          eq(leaderboardSnapshots.period, "monthly"),
+          eq(leaderboardSnapshots.year, currentYear),
+          eq(leaderboardSnapshots.month, currentMonth)
+        )
+      )
       .orderBy(leaderboardSnapshots.rank)
       .limit(limit);
   }
 
   async getTrendingCategories(): Promise<any[]> {
-    return db.select({
-      category: switchLogs.category,
-      switchCount: sql`count(*)::int`.as('switchCount'),
-      recentSwitches: sql`count(case when ${switchLogs.createdAt} > NOW() - interval '24 hours' then 1 end)::int`.as('recentSwitches')
-    })
+    return db
+      .select({
+        category: switchLogs.category,
+        switchCount: sql`count(*)::int`.as("switchCount"),
+        recentSwitches:
+          sql`count(case when ${switchLogs.createdAt} > NOW() - interval '24 hours' then 1 end)::int`.as(
+            "recentSwitches"
+          ),
+      })
       .from(switchLogs)
       .where(sql`${switchLogs.createdAt} > NOW() - INTERVAL '7 days'`)
       .groupBy(switchLogs.category)
@@ -501,35 +610,46 @@ export class DatabaseStorage implements IStorage {
 
   // Moderation methods
   async getModerationReports(status?: string): Promise<any[]> {
-    const query = db.select({
-      report: moderationReports,
-      reporter: {
-        id: users.id,
-        handle: users.handle
-      },
-      moderator: {
-        id: users.id,
-        handle: users.handle
-      }
-    })
+    const query = db
+      .select({
+        report: moderationReports,
+        reporter: {
+          id: users.id,
+          handle: users.handle,
+        },
+        moderator: {
+          id: users.id,
+          handle: users.handle,
+        },
+      })
       .from(moderationReports)
       .leftJoin(users, eq(moderationReports.reporterId, users.id));
 
     if (status) {
-      return query.where(eq(moderationReports.status, status))
+      return query
+        .where(eq(moderationReports.status, status))
         .orderBy(desc(moderationReports.createdAt));
     }
-    
+
     return query.orderBy(desc(moderationReports.createdAt));
   }
 
-  async createModerationReport(insertReport: InsertModerationReport): Promise<ModerationReport> {
-    const [report] = await db.insert(moderationReports).values(insertReport).returning();
+  async createModerationReport(
+    insertReport: InsertModerationReport
+  ): Promise<ModerationReport> {
+    const [report] = await db
+      .insert(moderationReports)
+      .values(insertReport)
+      .returning();
     return report;
   }
 
-  async updateModerationReport(id: string, updates: Partial<ModerationReport>): Promise<ModerationReport> {
-    const [report] = await db.update(moderationReports)
+  async updateModerationReport(
+    id: string,
+    updates: Partial<ModerationReport>
+  ): Promise<ModerationReport> {
+    const [report] = await db
+      .update(moderationReports)
       .set(updates)
       .where(eq(moderationReports.id, id))
       .returning();
@@ -538,54 +658,65 @@ export class DatabaseStorage implements IStorage {
 
   // Switch log approval methods
   async getPendingSwitchLogs(): Promise<any[]> {
-    return db.select({
-      switchLog: switchLogs,
-      user: {
-        id: users.id,
-        handle: users.handle,
-        points: users.points,
-        level: users.level
-      },
-      fromBrand: {
-        id: brands.id,
-        name: brands.name,
-        country: brands.country,
-        isIndian: brands.isIndian
-      },
-      toBrand: {
-        id: brands.id,
-        name: brands.name,
-        country: brands.country,
-        isIndian: brands.isIndian
-      }
-    })
+    return db
+      .select({
+        switchLog: switchLogs,
+        user: {
+          id: users.id,
+          handle: users.handle,
+          points: users.points,
+          level: users.level,
+        },
+        fromBrand: {
+          id: brands.id,
+          name: brands.name,
+          country: brands.country,
+          isIndian: brands.isIndian,
+        },
+        toBrand: {
+          id: brands.id,
+          name: brands.name,
+          country: brands.country,
+          isIndian: brands.isIndian,
+        },
+      })
       .from(switchLogs)
       .leftJoin(users, eq(switchLogs.userId, users.id))
       .leftJoin(brands, eq(switchLogs.fromBrandId, brands.id))
       .leftJoin(brands as any, eq(switchLogs.toBrandId, brands.id))
-      .where(eq(switchLogs.status, 'PENDING'))
+      .where(eq(switchLogs.status, "PENDING"))
       .orderBy(desc(switchLogs.createdAt));
   }
 
-  async approveSwitchLog(id: string, moderatorId: string, notes?: string): Promise<SwitchLog> {
-    const [switchLog] = await db.update(switchLogs)
+  async approveSwitchLog(
+    id: string,
+    moderatorId: string,
+    notes?: string
+  ): Promise<SwitchLog> {
+    const [switchLog] = await db
+      .update(switchLogs)
       .set({
-        status: 'APPROVED',
+        status: "APPROVED",
         moderatorId,
         moderatorNotes: notes,
-        approvedAt: new Date()
+        approvedAt: new Date(),
       })
       .where(eq(switchLogs.id, id))
       .returning();
     return switchLog;
   }
 
-  async rejectSwitchLog(id: string, moderatorId: string, notes: string): Promise<SwitchLog> {
-    const [switchLog] = await db.update(switchLogs)
+  async rejectSwitchLog(
+    id: string,
+    moderatorId: string,
+    notes: string
+  ): Promise<SwitchLog> {
+    const [switchLog] = await db
+      .update(switchLogs)
       .set({
-        status: 'REJECTED',
+        status: "REJECTED",
         moderatorId,
-        moderatorNotes: notes
+        moderatorNotes: notes,
       })
       .where(eq(switchLogs.id, id))
       .returning();
@@ -593,24 +724,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Feedback question methods
-  async createFeedbackQuestion(insertQuestion: InsertFeedbackQuestion): Promise<FeedbackQuestion> {
-    const [question] = await db.insert(feedbackQuestions).values(insertQuestion).returning();
+  async createFeedbackQuestion(
+    insertQuestion: InsertFeedbackQuestion
+  ): Promise<FeedbackQuestion> {
+    const [question] = await db
+      .insert(feedbackQuestions)
+      .values(insertQuestion)
+      .returning();
     return question;
   }
 
-  async getFeedbackQuestions(activeOnly: boolean = false): Promise<FeedbackQuestion[]> {
+  async getFeedbackQuestions(
+    activeOnly: boolean = false
+  ): Promise<FeedbackQuestion[]> {
     const query = db.select().from(feedbackQuestions);
-    
+
     if (activeOnly) {
-      return query.where(eq(feedbackQuestions.isActive, true))
+      return query
+        .where(eq(feedbackQuestions.isActive, true))
         .orderBy(desc(feedbackQuestions.createdAt));
     }
-    
+
     return query.orderBy(desc(feedbackQuestions.createdAt));
   }
 
-  async updateFeedbackQuestion(id: string, updates: Partial<FeedbackQuestion>): Promise<FeedbackQuestion> {
-    const [question] = await db.update(feedbackQuestions)
+  async updateFeedbackQuestion(
+    id: string,
+    updates: Partial<FeedbackQuestion>
+  ): Promise<FeedbackQuestion> {
+    const [question] = await db
+      .update(feedbackQuestions)
       .set(updates)
       .where(eq(feedbackQuestions.id, id))
       .returning();
@@ -622,13 +765,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFeedbackResponses(questionId: string): Promise<any[]> {
-    return db.select({
-      response: feedbackResponses,
-      user: {
-        id: users.id,
-        handle: users.handle
-      }
-    })
+    return db
+      .select({
+        response: feedbackResponses,
+        user: {
+          id: users.id,
+          handle: users.handle,
+        },
+      })
       .from(feedbackResponses)
       .leftJoin(users, eq(feedbackResponses.userId, users.id))
       .where(eq(feedbackResponses.questionId, questionId))
@@ -637,23 +781,28 @@ export class DatabaseStorage implements IStorage {
 
   // Mission methods
   async createMission(insertMission: InsertMission): Promise<Mission> {
-    const [mission] = await db.insert(missions).values(insertMission).returning();
+    const [mission] = await db
+      .insert(missions)
+      .values(insertMission)
+      .returning();
     return mission;
   }
 
   async getMissions(activeOnly: boolean = false): Promise<Mission[]> {
     const query = db.select().from(missions);
-    
+
     if (activeOnly) {
-      return query.where(eq(missions.isActive, true))
+      return query
+        .where(eq(missions.isActive, true))
         .orderBy(desc(missions.createdAt));
     }
-    
+
     return query.orderBy(desc(missions.createdAt));
   }
 
   async updateMission(id: string, updates: Partial<Mission>): Promise<Mission> {
-    const [mission] = await db.update(missions)
+    const [mission] = await db
+      .update(missions)
       .set(updates)
       .where(eq(missions.id, id))
       .returning();
@@ -665,10 +814,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserMissions(userId: string): Promise<any[]> {
-    return db.select({
-      userMission: userMissions,
-      mission: missions
-    })
+    return db
+      .select({
+        userMission: userMissions,
+        mission: missions,
+      })
       .from(userMissions)
       .leftJoin(missions, eq(userMissions.missionId, missions.id))
       .where(eq(userMissions.userId, userId))
@@ -676,18 +826,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Member management methods
-  async getAllUsers(filters?: { role?: string; active?: boolean }): Promise<any[]> {
-    const baseQuery = db.select({
-      user: users,
-      switchCount: sql`count(${switchLogs.id})::int`.as('totalSwitches'),
-      recentActivity: sql`count(case when ${switchLogs.createdAt} > NOW() - interval '30 days' then 1 end)::int`.as('recentSwitches')
-    })
+  async getAllUsers(filters?: {
+    role?: string;
+    active?: boolean;
+  }): Promise<any[]> {
+    const baseQuery = db
+      .select({
+        user: users,
+        switchCount: sql`count(${switchLogs.id})::int`.as("totalSwitches"),
+        recentActivity:
+          sql`count(case when ${switchLogs.createdAt} > NOW() - interval '30 days' then 1 end)::int`.as(
+            "recentSwitches"
+          ),
+      })
       .from(users)
       .leftJoin(switchLogs, eq(users.id, switchLogs.userId))
       .groupBy(users.id);
 
     if (filters?.role) {
-      return baseQuery.where(eq(users.role, filters.role as any))
+      return baseQuery
+        .where(eq(users.role, filters.role as any))
         .orderBy(desc(users.createdAt));
     }
 
@@ -695,11 +853,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserDetails(id: string): Promise<any> {
-    const [userDetails] = await db.select({
-      user: users,
-      totalSwitches: sql`count(${switchLogs.id})::int`.as('totalSwitches'),
-      totalPosts: sql`count(${posts.id})::int`.as('totalPosts')
-    })
+    const [userDetails] = await db
+      .select({
+        user: users,
+        totalSwitches: sql`count(${switchLogs.id})::int`.as("totalSwitches"),
+        totalPosts: sql`count(${posts.id})::int`.as("totalPosts"),
+      })
       .from(users)
       .leftJoin(switchLogs, eq(users.id, switchLogs.userId))
       .leftJoin(posts, eq(users.id, posts.userId))
@@ -710,7 +869,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserRole(id: string, role: string): Promise<User> {
-    const [user] = await db.update(users)
+    const [user] = await db
+      .update(users)
       .set({ role: role as any })
       .where(eq(users.id, id))
       .returning();
@@ -718,17 +878,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   // News article methods
-  async createNewsArticle(insertNewsArticle: InsertNewsArticle): Promise<NewsArticle> {
-    const [article] = await db.insert(newsArticles).values(insertNewsArticle).returning();
+  async createNewsArticle(
+    insertNewsArticle: InsertNewsArticle
+  ): Promise<NewsArticle> {
+    const [article] = await db
+      .insert(newsArticles)
+      .values(insertNewsArticle)
+      .returning();
     return article;
   }
 
   async getNewsArticles(): Promise<NewsArticle[]> {
-    return db.select().from(newsArticles).orderBy(desc(newsArticles.publishedAt));
+    return db
+      .select()
+      .from(newsArticles)
+      .orderBy(desc(newsArticles.publishedAt));
   }
 
-  async updateNewsArticle(id: string, updates: Partial<NewsArticle>): Promise<NewsArticle> {
-    const [article] = await db.update(newsArticles)
+  async updateNewsArticle(
+    id: string,
+    updates: Partial<NewsArticle>
+  ): Promise<NewsArticle> {
+    const [article] = await db
+      .update(newsArticles)
       .set(updates)
       .where(eq(newsArticles.id, id))
       .returning();
@@ -741,59 +913,87 @@ export class DatabaseStorage implements IStorage {
 
   // Messages
   async sendMessage(insertMessage: InsertMessage): Promise<Message> {
-    const [message] = await db.insert(messages).values(insertMessage).returning();
+    const [message] = await db
+      .insert(messages)
+      .values(insertMessage)
+      .returning();
     return message;
   }
 
   async getMessagesForUser(userId: string): Promise<Message[]> {
-    return db.select()
+    return db
+      .select()
       .from(messages)
-      .where(sql`${messages.fromUserId} = ${userId} OR ${messages.toUserId} = ${userId}`)
+      .where(
+        sql`${messages.fromUserId} = ${userId} OR ${messages.toUserId} = ${userId}`
+      )
       .orderBy(desc(messages.createdAt));
   }
 
   async getUnreadMessages(userId: string): Promise<Message[]> {
-    return db.select()
+    return db
+      .select()
       .from(messages)
       .where(and(eq(messages.toUserId, userId), eq(messages.isRead, false)))
       .orderBy(desc(messages.createdAt));
   }
 
   async markMessageAsRead(messageId: string): Promise<void> {
-    await db.update(messages)
+    await db
+      .update(messages)
       .set({ isRead: true })
       .where(eq(messages.id, messageId));
   }
 
   // Moderator posts
-  async createModeratorPost(insertPost: InsertModeratorPost): Promise<ModeratorPost> {
-    const [post] = await db.insert(moderatorPosts).values(insertPost).returning();
+  async createModeratorPost(
+    insertPost: InsertModeratorPost
+  ): Promise<ModeratorPost> {
+    const [post] = await db
+      .insert(moderatorPosts)
+      .values(insertPost)
+      .returning();
     return post;
   }
 
   async getAllModeratorPosts(): Promise<ModeratorPost[]> {
-    return db.select()
+    return db
+      .select()
       .from(moderatorPosts)
       .orderBy(desc(moderatorPosts.isPinned), desc(moderatorPosts.createdAt));
   }
 
   // Categories
   async createCategory(insertCategory: InsertCategory): Promise<Category> {
-    const [category] = await db.insert(categories).values(insertCategory).returning();
+    const [category] = await db
+      .insert(categories)
+      .values(insertCategory)
+      .returning();
     return category;
   }
 
   async getAllCategories(): Promise<Category[]> {
-    return db.select().from(categories).where(eq(categories.isActive, true)).orderBy(categories.name);
+    return db
+      .select()
+      .from(categories)
+      .where(eq(categories.isActive, true))
+      .orderBy(categories.name);
   }
 
   async getCategoryById(id: string): Promise<Category | undefined> {
-    const [category] = await db.select().from(categories).where(eq(categories.id, id));
+    const [category] = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.id, id));
     return category;
   }
 
-  async updateCategory(id: string, updates: Partial<Category>): Promise<Category> {
-    const [category] = await db.update(categories)
+  async updateCategory(
+    id: string,
+    updates: Partial<Category>
+  ): Promise<Category> {
+    const [category] = await db
+      .update(categories)
       .set(updates)
       .where(eq(categories.id, id))
       .returning();
@@ -807,7 +1007,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllTags(): Promise<Tag[]> {
-    return db.select().from(tags).where(eq(tags.isActive, true)).orderBy(desc(tags.usageCount), tags.name);
+    return db
+      .select()
+      .from(tags)
+      .where(eq(tags.isActive, true))
+      .orderBy(desc(tags.usageCount), tags.name);
   }
 
   async getTagById(id: string): Promise<Tag | undefined> {
@@ -816,7 +1020,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateTag(id: string, updates: Partial<Tag>): Promise<Tag> {
-    const [tag] = await db.update(tags)
+    const [tag] = await db
+      .update(tags)
       .set(updates)
       .where(eq(tags.id, id))
       .returning();
@@ -824,13 +1029,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async incrementTagUsage(tagId: string): Promise<void> {
-    await db.update(tags)
+    await db
+      .update(tags)
       .set({ usageCount: sql`${tags.usageCount} + 1` })
       .where(eq(tags.id, tagId));
   }
 
   async getPopularTags(limit: number = 20): Promise<Tag[]> {
-    return db.select().from(tags)
+    return db
+      .select()
+      .from(tags)
       .where(eq(tags.isActive, true))
       .orderBy(desc(tags.usageCount))
       .limit(limit);
@@ -838,23 +1046,35 @@ export class DatabaseStorage implements IStorage {
 
   // Communities
   async createCommunity(insertCommunity: InsertCommunity): Promise<Community> {
-    const [community] = await db.insert(communities).values(insertCommunity).returning();
+    const [community] = await db
+      .insert(communities)
+      .values(insertCommunity)
+      .returning();
     return community;
   }
 
   async getAllCommunities(): Promise<Community[]> {
-    return db.select().from(communities)
+    return db
+      .select()
+      .from(communities)
       .where(eq(communities.isActive, true))
       .orderBy(desc(communities.memberCount), communities.name);
   }
 
   async getCommunityById(id: string): Promise<Community | undefined> {
-    const [community] = await db.select().from(communities).where(eq(communities.id, id));
+    const [community] = await db
+      .select()
+      .from(communities)
+      .where(eq(communities.id, id));
     return community;
   }
 
-  async updateCommunity(id: string, updates: Partial<Community>): Promise<Community> {
-    const [community] = await db.update(communities)
+  async updateCommunity(
+    id: string,
+    updates: Partial<Community>
+  ): Promise<Community> {
+    const [community] = await db
+      .update(communities)
       .set({ ...updates, updatedAt: sql`NOW()` })
       .where(eq(communities.id, id))
       .returning();
@@ -862,88 +1082,129 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Community members
-  async addCommunityMember(insertMember: InsertCommunityMember): Promise<CommunityMember> {
-    const [member] = await db.insert(communityMembers).values(insertMember).returning();
-    
+  async addCommunityMember(
+    insertMember: InsertCommunityMember
+  ): Promise<CommunityMember> {
+    const [member] = await db
+      .insert(communityMembers)
+      .values(insertMember)
+      .returning();
+
     // Update community member count
-    await db.update(communities)
+    await db
+      .update(communities)
       .set({ memberCount: sql`${communities.memberCount} + 1` })
       .where(eq(communities.id, insertMember.communityId!));
-    
+
     return member;
   }
 
-  async removeCommunityMember(communityId: string, userId: string): Promise<void> {
-    await db.delete(communityMembers)
-      .where(and(eq(communityMembers.communityId, communityId), eq(communityMembers.userId, userId)));
-    
+  async removeCommunityMember(
+    communityId: string,
+    userId: string
+  ): Promise<void> {
+    await db
+      .delete(communityMembers)
+      .where(
+        and(
+          eq(communityMembers.communityId, communityId),
+          eq(communityMembers.userId, userId)
+        )
+      );
+
     // Update community member count
-    await db.update(communities)
+    await db
+      .update(communities)
       .set({ memberCount: sql`${communities.memberCount} - 1` })
       .where(eq(communities.id, communityId));
   }
 
   async getCommunityMembers(communityId: string): Promise<CommunityMember[]> {
-    return db.select().from(communityMembers)
+    return db
+      .select()
+      .from(communityMembers)
       .where(eq(communityMembers.communityId, communityId))
       .orderBy(communityMembers.joinedAt);
   }
 
   async getUserCommunities(userId: string): Promise<Community[]> {
-    return db.select({ 
-      id: communities.id, 
-      name: communities.name, 
-      description: communities.description,
-      coverImageUrl: communities.coverImageUrl,
-      visibility: communities.visibility,
-      memberCount: communities.memberCount,
-      isActive: communities.isActive,
-      createdBy: communities.createdBy,
-      createdAt: communities.createdAt,
-      updatedAt: communities.updatedAt
-    })
+    return db
+      .select({
+        id: communities.id,
+        name: communities.name,
+        description: communities.description,
+        coverImageUrl: communities.coverImageUrl,
+        visibility: communities.visibility,
+        memberCount: communities.memberCount,
+        isActive: communities.isActive,
+        createdBy: communities.createdBy,
+        createdAt: communities.createdAt,
+        updatedAt: communities.updatedAt,
+      })
       .from(communities)
-      .innerJoin(communityMembers, eq(communities.id, communityMembers.communityId))
+      .innerJoin(
+        communityMembers,
+        eq(communities.id, communityMembers.communityId)
+      )
       .where(eq(communityMembers.userId, userId));
   }
 
   // Feedback submissions (renamed from target suggestions)
-  async createFeedbackSubmission(insertSubmission: InsertFeedbackSubmission): Promise<FeedbackSubmission> {
-    const [submission] = await db.insert(feedbackSubmissions).values(insertSubmission).returning();
+  async createFeedbackSubmission(
+    insertSubmission: InsertFeedbackSubmission
+  ): Promise<FeedbackSubmission> {
+    const [submission] = await db
+      .insert(feedbackSubmissions)
+      .values(insertSubmission)
+      .returning();
     return submission;
   }
 
   async getAllFeedbackSubmissions(): Promise<FeedbackSubmission[]> {
-    return db.select().from(feedbackSubmissions)
+    return db
+      .select()
+      .from(feedbackSubmissions)
       .orderBy(desc(feedbackSubmissions.createdAt));
   }
 
   async getPendingFeedbackSubmissions(): Promise<FeedbackSubmission[]> {
-    return db.select().from(feedbackSubmissions)
-      .where(eq(feedbackSubmissions.status, 'PENDING'))
+    return db
+      .select()
+      .from(feedbackSubmissions)
+      .where(eq(feedbackSubmissions.status, "PENDING"))
       .orderBy(desc(feedbackSubmissions.createdAt));
   }
 
-  async approveFeedbackSubmission(id: string, moderatorId: string, moderatorNotes?: string): Promise<FeedbackSubmission> {
-    const [submission] = await db.update(feedbackSubmissions)
-      .set({ 
-        status: 'APPROVED', 
-        moderatorId, 
+  async approveFeedbackSubmission(
+    id: string,
+    moderatorId: string,
+    moderatorNotes?: string
+  ): Promise<FeedbackSubmission> {
+    const [submission] = await db
+      .update(feedbackSubmissions)
+      .set({
+        status: "APPROVED",
+        moderatorId,
         moderatorNotes,
-        reviewedAt: sql`NOW()` 
+        reviewedAt: sql`NOW()`,
       })
       .where(eq(feedbackSubmissions.id, id))
       .returning();
     return submission;
   }
 
-  async rejectFeedbackSubmission(id: string, moderatorId: string, moderatorNotes?: string): Promise<FeedbackSubmission> {
-    const [submission] = await db.update(feedbackSubmissions)
-      .set({ 
-        status: 'REJECTED', 
-        moderatorId, 
+  async rejectFeedbackSubmission(
+    id: string,
+    moderatorId: string,
+    moderatorNotes?: string
+  ): Promise<FeedbackSubmission> {
+    const [submission] = await db
+      .update(feedbackSubmissions)
+      .set({
+        status: "REJECTED",
+        moderatorId,
         moderatorNotes,
-        reviewedAt: sql`NOW()` 
+        reviewedAt: sql`NOW()`,
       })
       .where(eq(feedbackSubmissions.id, id))
       .returning();
@@ -952,30 +1213,42 @@ export class DatabaseStorage implements IStorage {
 
   // Enhanced switch log methods with approval workflow
   async getPendingSwitchLogs(): Promise<SwitchLog[]> {
-    return db.select().from(switchLogs)
-      .where(eq(switchLogs.status, 'PENDING'))
+    return db
+      .select()
+      .from(switchLogs)
+      .where(eq(switchLogs.status, "PENDING"))
       .orderBy(desc(switchLogs.createdAt));
   }
 
-  async approveSwitchLog(id: string, moderatorId: string, moderatorNotes?: string): Promise<SwitchLog> {
-    const [switchLog] = await db.update(switchLogs)
-      .set({ 
-        status: 'APPROVED', 
-        moderatorId, 
+  async approveSwitchLog(
+    id: string,
+    moderatorId: string,
+    moderatorNotes?: string
+  ): Promise<SwitchLog> {
+    const [switchLog] = await db
+      .update(switchLogs)
+      .set({
+        status: "APPROVED",
+        moderatorId,
         moderatorNotes,
-        approvedAt: sql`NOW()` 
+        approvedAt: sql`NOW()`,
       })
       .where(eq(switchLogs.id, id))
       .returning();
     return switchLog;
   }
 
-  async rejectSwitchLog(id: string, moderatorId: string, moderatorNotes?: string): Promise<SwitchLog> {
-    const [switchLog] = await db.update(switchLogs)
-      .set({ 
-        status: 'REJECTED', 
-        moderatorId, 
-        moderatorNotes 
+  async rejectSwitchLog(
+    id: string,
+    moderatorId: string,
+    moderatorNotes?: string
+  ): Promise<SwitchLog> {
+    const [switchLog] = await db
+      .update(switchLogs)
+      .set({
+        status: "REJECTED",
+        moderatorId,
+        moderatorNotes,
       })
       .where(eq(switchLogs.id, id))
       .returning();
@@ -984,19 +1257,28 @@ export class DatabaseStorage implements IStorage {
 
   // Enhanced mission methods
   async getMissionsByCategory(categoryId: string): Promise<Mission[]> {
-    return db.select().from(missions)
-      .where(and(eq(missions.categoryId, categoryId), eq(missions.isActive, true)))
+    return db
+      .select()
+      .from(missions)
+      .where(
+        and(eq(missions.categoryId, categoryId), eq(missions.isActive, true))
+      )
       .orderBy(desc(missions.createdAt));
   }
 
   async getMissionsByCommunity(communityId: string): Promise<Mission[]> {
-    return db.select().from(missions)
-      .where(and(eq(missions.communityId, communityId), eq(missions.isActive, true)))
+    return db
+      .select()
+      .from(missions)
+      .where(
+        and(eq(missions.communityId, communityId), eq(missions.isActive, true))
+      )
       .orderBy(desc(missions.createdAt));
   }
 
   async updateMissionStatus(id: string, status: string): Promise<Mission> {
-    const [mission] = await db.update(missions)
+    const [mission] = await db
+      .update(missions)
       .set({ status: status as any })
       .where(eq(missions.id, id))
       .returning();

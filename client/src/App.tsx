@@ -15,6 +15,7 @@ import AdminPanel from "@/pages/AdminPanel";
 import ModeratorPanel from "@/pages/ModeratorPanel";
 import EnhancedHome from "@/pages/EnhancedHome";
 import EnhancedLogin from "@/pages/EnhancedLogin";
+import EnhancedModeratorPanel from "./pages/EnhancedModeratorPanel";
 import EnhancedMemberDashboard from "@/pages/EnhancedMemberDashboard";
 import NotFound from "@/pages/not-found";
 
@@ -71,7 +72,7 @@ function AppRouter() {
 
         <Route path="/moderator">
           <ProtectedRoute>
-            <ModeratorPanel />
+            <EnhancedModeratorPanel />
           </ProtectedRoute>
         </Route>
 

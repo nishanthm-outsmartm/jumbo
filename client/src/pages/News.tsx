@@ -18,12 +18,14 @@ import {
   Coins,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { Link } from "wouter";
 
 interface NewsArticle {
   id: string;
   title: string;
   description: string;
   imageUrls: string[] | null;
+  source: string | null;
   suggestedFromBrandIds: string[] | null;
   suggestedToBrandIds: string[] | null;
   commentsEnabled: boolean;
@@ -63,9 +65,7 @@ function NewsCard({ article }: { article: NewsArticle }) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <h2 className="text-xl font-semibold mb-2 line-clamp-2 hover:text-blue-600 cursor-pointer">
-              {article.title}
-            </h2>
+            <h2 className="text-xl font-semibold mb-2">{article.title}</h2>
 
             <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
               {/* <div className="flex items-center gap-1">
@@ -101,7 +101,9 @@ function NewsCard({ article }: { article: NewsArticle }) {
       </CardHeader>
 
       <CardContent className="pt-0">
-        <p className="text-gray-700 mb-4 line-clamp-3">{article.description}</p>
+        <p className="text-gray-700 mb-4 break-words overflow-hidden">
+          {article.description}
+        </p>
 
         {/* Brand Switching Information */}
         {((article.fromBrands && article.fromBrands.length > 0) ||
@@ -153,6 +155,18 @@ function NewsCard({ article }: { article: NewsArticle }) {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {article.source && (
+          <div className="flex items-end justify-end gap-1">
+            <Link
+              href={article.source}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button>View on Source</Button>
+            </Link>
           </div>
         )}
 

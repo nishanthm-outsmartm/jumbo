@@ -8,31 +8,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, ChevronDown, Zap } from "lucide-react";
+import { Bell, ChevronDown, House, Newspaper, Target, Zap } from "lucide-react";
 
 export function Navigation() {
   const { user, logout } = useAuth();
   const [location] = useLocation();
-  const [navItems, setNavItems] = React.useState<
-    Array<{ path: string; label: string; icon: string }>
-  >([]);
-  useEffect(() => {
-    const items = [
-      { path: "/", label: "Home", icon: "home" },
-      // { path: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
-      { path: "/news", label: "News", icon: "newspaper" },
-      { path: "/missions", label: "Missions", icon: "target" },
-    ];
+  // const [navItems, setNavItems] = React.useState<
+  //   Array<{ path: string; label: string; icon: string }>
+  // >([]);
 
-    if (user?.role === "MODERATOR") {
-      items.push({
-        path: "/moderator",
-        label: "Moderator Panel",
-        icon: "shield",
-      });
-    }
-    setNavItems(items);
-  }, []);
+  const navItems = [
+    { path: "/", label: "Home", icon: <House /> },
+    // { path: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
+    { path: "/news", label: "News", icon: <Newspaper /> },
+    { path: "/missions", label: "Missions", icon: <Target /> },
+  ];
 
   // { path: '/log-switch', label: 'Log Switch', icon: 'exchange-alt' },
   // { path: '/leaderboard', label: 'Leaderboard', icon: 'trophy' },
@@ -110,6 +100,11 @@ export function Navigation() {
                       <DropdownMenuItem>Admin Panel</DropdownMenuItem>
                     </Link>
                   )}
+                  {user.role === "MODERATOR" && (
+                    <Link href="/moderator">
+                      <DropdownMenuItem>Moderator Panel</DropdownMenuItem>
+                    </Link>
+                  )}
                   <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -120,7 +115,7 @@ export function Navigation() {
 
       {/* Mobile Bottom Navigation */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
-        <div className="grid grid-cols-5 py-2">
+        <div className="flex justify-evenly py-2">
           {navItems.map((item) => (
             <Link key={item.path} href={item.path}>
               <div
@@ -128,17 +123,17 @@ export function Navigation() {
                   location === item.path ? "text-orange-500" : "text-gray-400"
                 }`}
               >
-                <i className={`fas fa-${item.icon} text-xl mb-1`} />
+                {item.icon}
                 <span className="text-xs font-medium">{item.label}</span>
               </div>
             </Link>
           ))}
-          <Link href="/profile">
+          {/* <Link href="/profile">
             <div className="flex flex-col items-center py-2 text-gray-400 cursor-pointer">
               <i className="fas fa-user text-xl mb-1" />
               <span className="text-xs font-medium">Profile</span>
             </div>
-          </Link>
+          </Link> */}
         </div>
       </div>
     </nav>

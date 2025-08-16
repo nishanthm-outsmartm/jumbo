@@ -150,7 +150,7 @@ export default function Home() {
           </div>
 
           {/* Right Sidebar */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 mb-16">
             <Leaderboard />
             {/* <div className="mt-6">
               <TrendingContent />
@@ -161,14 +161,15 @@ export default function Home() {
 
       {/* Mobile FAB */}
       <div className="lg:hidden fixed bottom-20 right-4 z-40">
-        <Link href="/log-switch">
-          <Button
-            size="lg"
-            className="bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all p-4"
-          >
-            <Plus className="h-6 w-6" />
-          </Button>
-        </Link>
+        {/* <Link href="/log-switch"> */}
+        <Button
+          disabled
+          size="lg"
+          className="bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all p-4"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+        {/* </Link> */}
       </div>
     </div>
   );

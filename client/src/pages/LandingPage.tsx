@@ -74,64 +74,63 @@ function NewsCard({
                 </Badge>
               )}
             </div>
-
-            <p className="text-gray-700 mb-4 line-clamp-3">
-              {article.description}
-            </p>
-
-            {/* Brand Switching Information */}
-            {hasSwitch && (
-              <div className="bg-gradient-to-r from-red-50 to-green-50 border border-orange-200 rounded-lg p-3 mb-3">
-                <div className="flex items-center justify-between text-sm">
-                  {article.fromBrands && article.fromBrands.length > 0 && (
-                    <div className="flex flex-col items-center">
-                      <span className="text-red-600 font-medium mb-1">
-                        Switch From:
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {article.fromBrands.map((brand: Brand) => (
-                          <Badge
-                            key={brand.id}
-                            variant="destructive"
-                            className="text-xs"
-                          >
-                            {brand.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {article.fromBrands?.length && article.toBrands?.length && (
-                    <ArrowRight className="text-gray-400 mx-2" size={16} />
-                  )}
-
-                  {article.toBrands && article.toBrands.length > 0 && (
-                    <div className="flex flex-col items-center">
-                      <span className="text-green-600 font-medium mb-1">
-                        Switch To:
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {article.toBrands.map((brand: Brand) => (
-                          <Badge
-                            key={brand.id}
-                            variant="default"
-                            className="text-xs bg-green-600"
-                          >
-                            {brand.name} 🇮🇳
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="pt-0">
+        <p className="text-gray-700 mb-4 line-clamp-3 break-words overflow-hidden">
+          {article.description}
+        </p>
+
+        {/* Brand Switching Information */}
+        {hasSwitch && (
+          <div className="bg-gradient-to-r from-red-50 to-green-50 border border-orange-200 rounded-lg p-3 mb-3">
+            <div className="flex items-center justify-between text-sm">
+              {article.fromBrands && article.fromBrands.length > 0 && (
+                <div className="flex flex-col items-center">
+                  <span className="text-red-600 font-medium mb-1">
+                    Switch From:
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {article.fromBrands.map((brand: Brand) => (
+                      <Badge
+                        key={brand.id}
+                        variant="destructive"
+                        className="text-xs"
+                      >
+                        {brand.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {article.fromBrands?.length && article.toBrands?.length && (
+                <ArrowRight className="text-gray-400 mx-2" size={16} />
+              )}
+
+              {article.toBrands && article.toBrands.length > 0 && (
+                <div className="flex flex-col items-center">
+                  <span className="text-green-600 font-medium mb-1">
+                    Switch To:
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {article.toBrands.map((brand: Brand) => (
+                      <Badge
+                        key={brand.id}
+                        variant="default"
+                        className="text-xs bg-green-600"
+                      >
+                        {brand.name} 🇮🇳
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Flame className="w-4 h-4 text-orange-500" />
@@ -198,12 +197,16 @@ function HeroSection() {
           </Badge>
         </div>
 
+        <p className="mb-4">
+          Sign up for the full feed & weekly challenges — Switch with Pride
+        </p>
+
         <Link href="/login">
           <Button
             size="lg"
             className="bg-white text-orange-600 hover:bg-gray-100 font-semibold text-lg px-8 py-3"
           >
-            Sign up for the full feed & weekly challenges — Switch with Pride
+            Sign up Now
             <ArrowRight className="w-6 h-6 ml-2" />
           </Button>
         </Link>

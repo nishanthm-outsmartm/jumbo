@@ -151,6 +151,7 @@ const newsArticleSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
   imageUrls: z.array(z.string().url()).optional(),
+  source: z.string().optional(),
   suggestedFromBrandIds: z.array(z.string()).optional(),
   suggestedToBrandIds: z.array(z.string()).optional(),
   commentsEnabled: z.boolean().default(true),
@@ -294,6 +295,7 @@ export default function EnhancedModeratorPanel() {
     defaultValues: {
       title: "",
       description: "",
+      source: "",
       imageUrls: [],
       suggestedFromBrandIds: [],
       suggestedToBrandIds: [],
@@ -1035,6 +1037,33 @@ export default function EnhancedModeratorPanel() {
                                 <Textarea
                                   placeholder="Write your news article content..."
                                   className="min-h-[120px]"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={newsForm.control}
+                          name="source"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Article Source</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="Enter news source"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* <div>
+                                  placeholder="Enter news title"
                                   {...field}
                                 />
                               </FormControl>

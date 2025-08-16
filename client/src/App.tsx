@@ -42,11 +42,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <EnhancedLogin />;
   }
 
-  return <>{children}</>;
+  return <div className="mb-16">{children}</div>;
 }
 function ProtectedModeratorRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -57,17 +57,19 @@ function ProtectedModeratorRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
-  if (user?.role !== "MODERATOR" || user?.role !=="ADMIN") return <NotFound />;
+
   if (!user) {
     return <EnhancedLogin />;
+  }
+  if (user?.role !== "MODERATOR") {
+    return <NotFound />;
   }
 
   return <>{children}</>;
 }
 function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -78,7 +80,7 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
+
   if (user?.role !== "ADMIN") return <NotFound />;
   if (!user) {
     return <EnhancedLogin />;

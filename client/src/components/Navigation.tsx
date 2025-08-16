@@ -1,26 +1,42 @@
-import React from 'react';
-import { Link, useLocation } from 'wouter';
-import { useAuth } from '@/context/AuthContext';
-import { Button } from '@/components/ui/button';
+import React, { useEffect } from "react";
+import { Link, useLocation } from "wouter";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Bell, ChevronDown, Zap } from 'lucide-react';
+} from "@/components/ui/dropdown-menu";
+import { Bell, ChevronDown, Zap } from "lucide-react";
 
 export function Navigation() {
   const { user, logout } = useAuth();
   const [location] = useLocation();
+  const [navItems, setNavItems] = React.useState<
+    Array<{ path: string; label: string; icon: string }>
+  >([]);
+  useEffect(() => {
+    const items = [
+      { path: "/", label: "Home", icon: "home" },
+      // { path: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
+      { path: "/news", label: "News", icon: "newspaper" },
+      { path: "/missions", label: "Missions", icon: "target" },
+    ];
 
-  const navItems = [
-    { path: '/', label: 'Home', icon: 'home' },
-    { path: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
-    { path: '/log-switch', label: 'Log Switch', icon: 'exchange-alt' },
-    { path: '/leaderboard', label: 'Leaderboard', icon: 'trophy' },
-    { path: '/community', label: 'Community', icon: 'users' },
-  ];
+    if (user?.role === "MODERATOR") {
+      items.push({
+        path: "/moderator",
+        label: "Moderator Panel",
+        icon: "shield",
+      });
+    }
+    setNavItems(items);
+  }, []);
+
+  // { path: '/log-switch', label: 'Log Switch', icon: 'exchange-alt' },
+  // { path: '/leaderboard', label: 'Leaderboard', icon: 'trophy' },
+  // { path: '/community', label: 'Community', icon: 'users' },
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
@@ -32,7 +48,9 @@ export function Navigation() {
               <div className="bg-gradient-to-r from-orange-500 to-yellow-500 p-2 rounded-lg">
                 <Zap className="text-white h-6 w-6" />
               </div>
-              <span className="ml-3 text-2xl font-bold text-blue-900">JumboJolt</span>
+              <span className="ml-3 text-2xl font-bold text-blue-900">
+                JumboJolt
+              </span>
             </div>
           </Link>
 
@@ -40,11 +58,13 @@ export function Navigation() {
           <div className="hidden md:flex space-x-8">
             {navItems.map((item) => (
               <Link key={item.path} href={item.path}>
-                <span className={`font-medium transition-colors cursor-pointer ${
-                  location === item.path 
-                    ? 'text-blue-900' 
-                    : 'text-gray-500 hover:text-blue-900'
-                }`}>
+                <span
+                  className={`font-medium transition-colors cursor-pointer ${
+                    location === item.path
+                      ? "text-blue-900"
+                      : "text-gray-500 hover:text-blue-900"
+                  }`}
+                >
                   {item.label}
                 </span>
               </Link>
@@ -54,16 +74,19 @@ export function Navigation() {
           {/* User Menu */}
           {user && (
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm" className="relative">
+              {/* <Button variant="ghost" size="sm" className="relative">
                 <Bell className="h-5 w-5" />
                 <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                   3
                 </span>
-              </Button>
+              </Button> */}
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-2">
+                  <Button
+                    variant="ghost"
+                    className="flex items-center space-x-2"
+                  >
                     <div className="bg-gradient-to-r from-green-500 to-orange-500 p-2 rounded-full">
                       <span className="text-white font-bold text-sm">
                         {user.handle.substring(0, 2).toUpperCase()}
@@ -76,20 +99,18 @@ export function Navigation() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <Link href="/profile">
+                  {/* <Link href="/profile" aria-disabled>
                     <DropdownMenuItem>Profile</DropdownMenuItem>
                   </Link>
-                  <Link href="/settings">
+                  <Link href="/settings" aria-disabled>
                     <DropdownMenuItem>Settings</DropdownMenuItem>
-                  </Link>
-                  {user.role === 'ADMIN' && (
+                  </Link> */}
+                  {user.role === "ADMIN" && (
                     <Link href="/admin">
                       <DropdownMenuItem>Admin Panel</DropdownMenuItem>
                     </Link>
                   )}
-                  <DropdownMenuItem onClick={logout}>
-                    Logout
-                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -102,9 +123,11 @@ export function Navigation() {
         <div className="grid grid-cols-5 py-2">
           {navItems.map((item) => (
             <Link key={item.path} href={item.path}>
-              <div className={`flex flex-col items-center py-2 transition-colors cursor-pointer ${
-                location === item.path ? 'text-orange-500' : 'text-gray-400'
-              }`}>
+              <div
+                className={`flex flex-col items-center py-2 transition-colors cursor-pointer ${
+                  location === item.path ? "text-orange-500" : "text-gray-400"
+                }`}
+              >
                 <i className={`fas fa-${item.icon} text-xl mb-1`} />
                 <span className="text-xs font-medium">{item.label}</span>
               </div>

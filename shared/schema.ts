@@ -119,10 +119,13 @@ export const switchLogs = pgTable("switch_logs", {
   userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
   fromBrandId: varchar("from_brand_id").references(() => brands.id),
   toBrandId: varchar("to_brand_id").references(() => brands.id),
+  missionId: varchar("mission_id").references(() => missions.id), // For mission-related switch logs
   category: switchCategoryEnum("category"),
   categoryId: varchar("category_id").references(() => categories.id),
   tags: text("tags").array(), // Array of tag IDs
   reason: text("reason"),
+  experience: text("experience"), // User's experience with the switch
+  financialImpact: text("financial_impact"), // Financial benefits
   evidenceUrl: varchar("evidence_url"),
   isPublic: boolean("is_public").default(false),
   status: switchLogStatus("status").default('PENDING'),
@@ -172,22 +175,42 @@ export const moderationReports = pgTable("moderation_reports", {
   resolvedAt: timestamp("resolved_at")
 });
 
+// Post types enum
+export const postTypeEnum = pgEnum("post_type", [
+  "GENERAL", // Regular posts
+  "SWITCH_LOG_PROMPT", // Moderator posts prompting switch logs
+  "MISSION_PROMPT", // Moderator posts prompting missions
+  "ANNOUNCEMENT", // Official announcements
+  "POLL" // Community polls
+]);
+
 // Posts (for social feed)
 export const posts = pgTable("posts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
   switchLogId: varchar("switch_log_id").references(() => switchLogs.id, { onDelete: 'cascade' }),
+  missionId: varchar("mission_id").references(() => missions.id), // For mission-related posts
+  postType: postTypeEnum("post_type").default("GENERAL"),
+  title: varchar("title"), // For titled posts like prompts
   content: text("content"),
   imageUrl: varchar("image_url"),
   categoryId: varchar("category_id").references(() => categories.id),
   tags: text("tags").array(), // Array of tag IDs
   communityId: varchar("community_id").references(() => communities.id), // For community-specific posts
+  targetBrandFrom: varchar("target_brand_from"), // For switch log prompts
+  targetBrandTo: varchar("target_brand_to"), // For switch log prompts
+  actionButtonText: varchar("action_button_text"), // Custom text for action button
+  actionButtonUrl: varchar("action_button_url"), // URL for action button
+  isPromotional: boolean("is_promotional").default(false), // For promoted content
+  isPinned: boolean("is_pinned").default(false), // For pinned posts
   likesCount: integer("likes_count").default(0),
   commentsCount: integer("comments_count").default(0),
   sharesCount: integer("shares_count").default(0),
+  switchLogsCount: integer("switch_logs_count").default(0), // Count of switch logs created from this post
   commentsEnabled: boolean("comments_enabled").default(true),
   upvotesEnabled: boolean("upvotes_enabled").default(true),
   downvotesEnabled: boolean("downvotes_enabled").default(true),
+  expiresAt: timestamp("expires_at"), // For time-limited posts
   createdAt: timestamp("created_at").defaultNow()
 });
 
@@ -343,7 +366,7 @@ export const messages = pgTable("messages", {
   content: text("content").notNull(),
   isRead: boolean("is_read").default(false),
   attachmentUrls: text("attachment_urls").array(),
-  replyToId: varchar("reply_to_id").references(() => messages.id),
+  replyToId: varchar("reply_to_id"), // Simplified to avoid circular reference
   createdAt: timestamp("created_at").defaultNow()
 });
 
@@ -410,6 +433,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   communityMemberships: many(communityMembers),
   createdCommunities: many(communities),
   missions: many(missions),
+  userMissions: many(userMissions),
   moderatorPosts: many(moderatorPosts)
 }));
 
@@ -443,6 +467,7 @@ export const switchLogsRelations = relations(switchLogs, ({ one, many }) => ({
   user: one(users, { fields: [switchLogs.userId], references: [users.id] }),
   fromBrand: one(brands, { fields: [switchLogs.fromBrandId], references: [brands.id] }),
   toBrand: one(brands, { fields: [switchLogs.toBrandId], references: [brands.id] }),
+  mission: one(missions, { fields: [switchLogs.missionId], references: [missions.id] }),
   category: one(categories, { fields: [switchLogs.categoryId], references: [categories.id] }),
   community: one(communities, { fields: [switchLogs.communityId], references: [communities.id] }),
   moderator: one(users, { fields: [switchLogs.moderatorId], references: [users.id] }),
@@ -487,7 +512,13 @@ export const missionsRelations = relations(missions, ({ one, many }) => ({
   creator: one(users, { fields: [missions.createdBy], references: [users.id] }),
   category: one(categories, { fields: [missions.categoryId], references: [categories.id] }),
   community: one(communities, { fields: [missions.communityId], references: [communities.id] }),
-  userMissions: many(userMissions)
+  userMissions: many(userMissions),
+  switchLogs: many(switchLogs)
+}));
+
+export const userMissionsRelations = relations(userMissions, ({ one }) => ({
+  user: one(users, { fields: [userMissions.userId], references: [users.id] }),
+  mission: one(missions, { fields: [userMissions.missionId], references: [missions.id] })
 }));
 
 export const moderatorPostsRelations = relations(moderatorPosts, ({ one }) => ({

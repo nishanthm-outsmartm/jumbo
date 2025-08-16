@@ -15,9 +15,14 @@ import AdminPanel from "@/pages/AdminPanel";
 import ModeratorPanel from "@/pages/ModeratorPanel";
 import EnhancedHome from "@/pages/EnhancedHome";
 import EnhancedLogin from "@/pages/EnhancedLogin";
-import EnhancedModeratorPanel from "./pages/EnhancedModeratorPanel";
 import EnhancedMemberDashboard from "@/pages/EnhancedMemberDashboard";
+import EnhancedModeratorPanel from "@/pages/EnhancedModeratorPanel";
+import MemberRegistration from "@/pages/MemberRegistration";
+import ModeratorRegistration from "@/pages/ModeratorRegistration";
+import News from "@/pages/News";
+import Missions from "@/pages/Missions";
 import NotFound from "@/pages/not-found";
+import LandingPage from "@/pages/LandingPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -39,44 +44,107 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
+function ProtectedModeratorRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (user?.role !== "MODERATOR" || user?.role !=="ADMIN") return <NotFound />;
+  if (!user) {
+    return <EnhancedLogin />;
+  }
+
+  return <>{children}</>;
+}
+function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (user?.role !== "ADMIN") return <NotFound />;
+  if (!user) {
+    return <EnhancedLogin />;
+  }
+
+  return <>{children}</>;
+}
 
 function AppRouter() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  // Show landing page for non-authenticated users
+  const HomePage = () => {
+    if (loading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      );
+    }
+
+    return user ? <Home /> : <LandingPage />;
+  };
 
   return (
     <div className="min-h-screen">
       {user && <Navigation />}
       <Switch>
         <Route path="/login" component={EnhancedLogin} />
-        <Route path="/old-login" component={Login} />
+        {/* <Route path="/old-login" component={Login} /> */}
         <Route path="/register" component={Register} />
+        <Route path="/register/moderator" component={EnhancedLogin} />
+        {/* <Route path="/old-register" component={Register} /> */}
+
+        {/* Home Route - Landing page for non-auth, Home for authenticated users */}
+        <Route path="/" component={HomePage} />
 
         {/* Protected Routes */}
-        <Route path="/">
+        <Route path="/home">
           <ProtectedRoute>
             <Home />
           </ProtectedRoute>
         </Route>
 
-        <Route path="/log-switch">
+        {/* <Route path="/log-switch">
           <ProtectedRoute>
             <LogSwitch />
           </ProtectedRoute>
-        </Route>
+        </Route> */}
 
         <Route path="/admin">
-          <ProtectedRoute>
+          <ProtectedAdminRoute>
             <AdminPanel />
-          </ProtectedRoute>
+          </ProtectedAdminRoute>
         </Route>
 
         <Route path="/moderator">
-          <ProtectedRoute>
+          <ProtectedModeratorRoute>
             <EnhancedModeratorPanel />
-          </ProtectedRoute>
+          </ProtectedModeratorRoute>
         </Route>
 
-        <Route path="/dashboard">
+        {/* <Route path="/dashboard">
           <ProtectedRoute>
             <EnhancedMemberDashboard />
           </ProtectedRoute>
@@ -85,6 +153,18 @@ function AppRouter() {
         <Route path="/enhanced">
           <ProtectedRoute>
             <EnhancedHome />
+          </ProtectedRoute>
+        </Route> */}
+
+        <Route path="/news">
+          <ProtectedRoute>
+            <News />
+          </ProtectedRoute>
+        </Route>
+
+        <Route path="/missions">
+          <ProtectedRoute>
+            <Missions />
           </ProtectedRoute>
         </Route>
 

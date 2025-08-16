@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import InteractivePostCard from "@/components/InteractivePostCard";
 import { 
   Search, Filter, TrendingUp, Award, Users, MessageSquare, 
   CheckCircle, XCircle, Clock, Plus, Star, Calendar,
@@ -122,6 +123,10 @@ export default function EnhancedMemberDashboard() {
   const { data: userStats } = useQuery({
     queryKey: ['/api/users', user?.id, 'stats'],
     enabled: !!user?.id
+  });
+
+  const { data: feedPosts } = useQuery<any>({
+    queryKey: ['/api/posts']
   });
 
   // Filter switch logs based on search and filters
@@ -250,8 +255,9 @@ export default function EnhancedMemberDashboard() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="feed">Feed</TabsTrigger>
             <TabsTrigger value="switch-logs">Switch Logs</TabsTrigger>
             <TabsTrigger value="missions">Missions</TabsTrigger>
             <TabsTrigger value="communities">Communities</TabsTrigger>
@@ -351,6 +357,72 @@ export default function EnhancedMemberDashboard() {
                 </CardContent>
               </Card>
 
+            </div>
+          </TabsContent>
+
+          {/* Feed Tab */}
+          <TabsContent value="feed">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">Community Feed</h2>
+                  <p className="text-muted-foreground">
+                    Latest updates from moderators and community challenges
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Filter
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {feedPosts?.posts?.length > 0 ? (
+                  feedPosts.posts.map((post: any) => (
+                    <InteractivePostCard
+                      key={post.id}
+                      post={post}
+                      onAction={(actionType, postId) => {
+                        switch (actionType) {
+                          case 'switch_log_created':
+                            queryClient.invalidateQueries({ queryKey: ['/api/switch-logs'] });
+                            toast({
+                              title: "Switch Log Created!",
+                              description: "Your brand switch has been recorded. Points will be awarded after review.",
+                            });
+                            break;
+                          case 'mission_started':
+                            // Navigate to mission or show mission details
+                            toast({
+                              title: "Mission Started!",
+                              description: "You've started a new mission. Complete it to earn points.",
+                            });
+                            break;
+                          case 'poll_voted':
+                            // Handle poll voting
+                            toast({
+                              title: "Vote Recorded",
+                              description: "Thank you for participating in the poll!",
+                            });
+                            break;
+                        }
+                      }}
+                    />
+                  ))
+                ) : (
+                  <Card className="text-center py-12">
+                    <CardContent>
+                      <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-medium mb-2">No posts yet</h3>
+                      <p className="text-muted-foreground">
+                        Check back later for updates from moderators and community challenges.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             </div>
           </TabsContent>
 

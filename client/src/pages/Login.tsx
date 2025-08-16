@@ -1,32 +1,35 @@
-import React, { useState } from 'react';
-import { 
-  signInWithPhoneNumber, 
-  RecaptchaVerifier, 
+import React, { useState } from "react";
+import {
+  signInWithPhoneNumber,
+  RecaptchaVerifier,
   ConfirmationResult,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
-  signInWithPopup
-} from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { useAuth } from '@/context/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useLocation } from 'wouter';
-import { Zap, Phone, Shield, Mail, Chrome } from 'lucide-react';
+  signInWithPopup,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLocation } from "wouter";
+import { Zap, Phone, Shield, Mail, Chrome } from "lucide-react";
 
 export default function Login() {
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [confirmationResult, setConfirmationResult] =
+    useState<ConfirmationResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'phone' | 'verification'>('phone');
-  const [authMethod, setAuthMethod] = useState<'phone' | 'email' | 'google'>('email');
+  const [step, setStep] = useState<"phone" | "verification">("phone");
+  const [authMethod, setAuthMethod] = useState<"phone" | "email" | "google">(
+    "email"
+  );
   const [isSignUp, setIsSignUp] = useState(false);
   const { login } = useAuth();
   const [, navigate] = useLocation();
@@ -34,12 +37,16 @@ export default function Login() {
   React.useEffect(() => {
     // Initialize reCAPTCHA
     if (!(window as any).recaptchaVerifier) {
-      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-        callback: () => {
-          // reCAPTCHA solved
+      (window as any).recaptchaVerifier = new RecaptchaVerifier(
+        auth,
+        "recaptcha-container",
+        {
+          size: "invisible",
+          callback: () => {
+            // reCAPTCHA solved
+          },
         }
-      });
+      );
     }
   }, []);
 
@@ -49,12 +56,18 @@ export default function Login() {
 
     try {
       const appVerifier = (window as any).recaptchaVerifier;
-      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+      const confirmationResult = await signInWithPhoneNumber(
+        auth,
+        phoneNumber,
+        appVerifier
+      );
       setConfirmationResult(confirmationResult);
-      setStep('verification');
+      setStep("verification");
     } catch (error) {
-      console.error('Error sending OTP:', error);
-      alert('Phone authentication is not enabled in Firebase. Please use email login or contact admin.');
+      console.error("Error sending OTP:", error);
+      alert(
+        "Phone authentication is not enabled in Firebase. Please use email login or contact admin."
+      );
     } finally {
       setLoading(false);
     }
@@ -67,31 +80,39 @@ export default function Login() {
     try {
       let userCredential;
       if (isSignUp) {
-        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        userCredential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
       } else {
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
+        userCredential = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
       }
-      
+
       const user = userCredential.user;
-      
+
       // Try to login or redirect to registration
       try {
         await login(user.uid);
-        navigate('/');
+        navigate("/");
       } catch (error) {
         // User not registered, redirect to registration
-        navigate('/register');
+        navigate("/register");
       }
     } catch (error: any) {
-      console.error('Email auth error:', error);
-      if (error.code === 'auth/user-not-found' && !isSignUp) {
-        alert('No account found. Please sign up first.');
+      console.error("Email auth error:", error);
+      if (error.code === "auth/user-not-found" && !isSignUp) {
+        alert("No account found. Please sign up first.");
         setIsSignUp(true);
-      } else if (error.code === 'auth/email-already-in-use') {
-        alert('Account already exists. Please sign in.');
+      } else if (error.code === "auth/email-already-in-use") {
+        alert("Account already exists. Please sign in.");
         setIsSignUp(false);
       } else {
-        alert(error.message || 'Authentication failed');
+        alert(error.message || "Authentication failed");
       }
     } finally {
       setLoading(false);
@@ -105,18 +126,18 @@ export default function Login() {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      
+
       // Try to login or redirect to registration
       try {
         await login(user.uid);
-        navigate('/');
+        navigate("/");
       } catch (error) {
         // User not registered, redirect to registration
-        navigate('/register');
+        navigate("/register");
       }
     } catch (error: any) {
-      console.error('Google auth error:', error);
-      alert(error.message || 'Google authentication failed');
+      console.error("Google auth error:", error);
+      alert(error.message || "Google authentication failed");
     } finally {
       setLoading(false);
     }
@@ -130,18 +151,18 @@ export default function Login() {
       if (confirmationResult) {
         const result = await confirmationResult.confirm(verificationCode);
         const user = result.user;
-        
+
         // Try to login or redirect to registration
         try {
           await login(user.uid);
-          navigate('/');
+          navigate("/");
         } catch (error) {
           // User not registered, redirect to registration
-          navigate('/register');
+          navigate("/register");
         }
       }
     } catch (error) {
-      console.error('Error verifying code:', error);
+      console.error("Error verifying code:", error);
     } finally {
       setLoading(false);
     }
@@ -156,17 +177,21 @@ export default function Login() {
             <Zap className="text-white h-8 w-8" />
           </div>
           <h2 className="text-3xl font-bold text-blue-900">JumboJolt</h2>
-          <p className="mt-2 text-gray-600">Switch to Indian alternatives with confidence</p>
+          <p className="mt-2 text-gray-600">
+            Switch to Indian alternatives with confidence
+          </p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle className="text-center">
-              {step === 'phone' ? 'Sign in with Phone' : 'Enter Verification Code'}
+              {step === "phone"
+                ? "Sign in with Phone"
+                : "Enter Verification Code"}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {step === 'phone' ? (
+            {step === "phone" ? (
               <form onSubmit={handleSendOTP} className="space-y-4">
                 <div>
                   <Label htmlFor="phone">Phone Number</Label>
@@ -192,7 +217,7 @@ export default function Login() {
                   className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600"
                   disabled={loading}
                 >
-                  {loading ? 'Sending...' : 'Send OTP'}
+                  {loading ? "Sending..." : "Send OTP"}
                 </Button>
               </form>
             ) : (
@@ -222,15 +247,15 @@ export default function Login() {
                   className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600"
                   disabled={loading}
                 >
-                  {loading ? 'Verifying...' : 'Verify Code'}
+                  {loading ? "Verifying..." : "Verify Code"}
                 </Button>
 
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    setStep('phone');
-                    setVerificationCode('');
+                    setStep("phone");
+                    setVerificationCode("");
                     setConfirmationResult(null);
                   }}
                   className="w-full"
@@ -244,11 +269,11 @@ export default function Login() {
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-500">
-                By signing in, you agree to our{' '}
+                By signing in, you agree to our{" "}
                 <a href="#" className="text-orange-500 hover:text-orange-600">
                   Terms of Service
-                </a>{' '}
-                and{' '}
+                </a>{" "}
+                and{" "}
                 <a href="#" className="text-orange-500 hover:text-orange-600">
                   Privacy Policy
                 </a>

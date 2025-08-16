@@ -1,0 +1,45 @@
+create the landing page for this platform.
+On landing page and home page 
+On Home Page  (After Sign-In)
+	•	Full feed view with filters:
+	•	Motivators → Progress & success stories
+	•	Triggers → Anti-India moves, external challenges, or missed opportunities
+	•	Switch Missions → News stories linked directly to a product switch suggestion
+	•	Option for members to react: 👍 Inspired / 🔄 I switched / 💡 I have a suggestion
+	•	Weekly Impact Counter showing how many switches were triggered by news items
+⸻
+2. News Curation Approach
+	•	Sources:
+	•	Economic Times (India growth stories)
+	•	Reuters & Times of India (policy, trade, tensions)
+	•	Business Today / Mint (innovation, startups)
+	•	Government releases (press statements)
+	•	Tone in Summaries:
+	•	Short, emotional, action-oriented:
+	•	“India’s aerospace industry just hit a milestone — here’s how you can back it with your choices.”
+	•	“When tariffs hit our exports, our everyday buying decisions become our strongest weapon.”
+⸻
+3. Conversion Hooks
+	•	Landing Page Prompt Example:
+Every headline here is a reason to act.
+Sign up for the full feed & weekly challenges — Switch with Pride.
+	•	After Sign-In Engagement Example:
+	•	This week’s challenge inspired by the news: Switch to Indian-made headphones — see our top picks.
+4. Content Flow
+	1.	Visitor sees curated headlines → Emotional trigger → Sign-Up
+	2.	New member gets full feed + “Switch Mission” prompt based on the latest hot story
+	3.	Member can engage by suggesting alternatives or reporting their own switch
+   ---
+   🇮🇳 This Independence Day, Make Every Choice Count
+Switch to high-quality Indian products and those from nations & brands that support India’s growth.
+🐘 JumboJolt is your movement for small, silent switches that create powerful change.
+🔒 Privacy built into every step — your identity stays with you.
+--
+[Join the Movement → Sign Up Now] (CTA Button)
+Supporting Section (below hero)
+Why Join?
+-Stay updated on impactful product switches
+- Discover and share better alternatives
+- Act anonymously or proudly — your choice
+-🇮🇳 Strengthen India with everyday decisions
+Every switch you make = A stronger step for India.

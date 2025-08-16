@@ -11,11 +11,12 @@ export default defineConfig({
     process.env.REPL_ID !== undefined
       ? [
           await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer(),
+            m.cartographer()
           ),
         ]
       : []),
   ],
+  base: "./",
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
@@ -30,8 +31,13 @@ export default defineConfig({
   },
   server: {
     fs: {
-      strict: true,
-      deny: ["**/.*"],
+      strict: false,
+      // deny: ["**/.*"],
+      allow: [
+        path.resolve(import.meta.dirname), // Allow entire project root
+        path.resolve(import.meta.dirname, "client"),
+        path.resolve(import.meta.dirname, "shared"),
+      ],
     },
   },
 });

@@ -87,9 +87,9 @@ export default function Home() {
                       <p className="text-sm font-medium text-gray-900">
                         {category.name}
                       </p>
-                      <p className="text-xs text-orange-500">
+                      {/* <p className="text-xs text-orange-500">
                         +{category.switches} switches
-                      </p>
+                      </p> */}
                     </div>
                   ))}
                 </div>
@@ -104,16 +104,23 @@ export default function Home() {
                     <Flame className="text-orange-500 mr-2 h-6 w-6" />
                     Trending Switches
                   </h2>
-                  {/* <div className="flex space-x-2">
-                    <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white">
+                  <div className="flex space-x-2">
+                    <Button
+                      size="sm"
+                      className="bg-orange-500 hover:bg-orange-600 text-white"
+                    >
                       Today
                     </Button>
-                    <Button size="sm" variant="outline">Week</Button>
-                    <Button size="sm" variant="outline">Month</Button>
-                  </div> */}
+                    <Button size="sm" variant="outline">
+                      Week
+                    </Button>
+                    <Button size="sm" variant="outline">
+                      Month
+                    </Button>
+                  </div>
                 </div>
 
-                {/* <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2">
                   <span className="px-3 py-1 bg-gradient-to-r from-green-600 to-orange-500 text-white rounded-full text-sm font-medium">
                     #PhoneSwitch
                   </span>
@@ -126,7 +133,7 @@ export default function Home() {
                   <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
                     #TechGadgets
                   </span>
-                </div> */}
+                </div>
               </CardContent>
             </Card>
 
@@ -134,20 +141,20 @@ export default function Home() {
             <SocialFeed />
 
             {/* Load More */}
-            <div className="text-center mt-8">
+            {/* <div className="text-center mt-8">
               <Button variant="outline" className="hover:bg-gray-50">
                 <i className="fas fa-refresh mr-2" />
                 Load More Posts
               </Button>
-            </div>
+            </div> */}
           </div>
 
           {/* Right Sidebar */}
           <div className="lg:col-span-3">
             <Leaderboard />
-            <div className="mt-6">
+            {/* <div className="mt-6">
               <TrendingContent />
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

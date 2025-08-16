@@ -1,38 +1,96 @@
-import React, { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useLocation } from 'wouter';
-import { apiRequest } from '@/lib/queryClient';
-import { User, MapPin, Hash } from 'lucide-react';
+import React, { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useLocation } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
+import { User, MapPin, Hash } from "lucide-react";
 
 const indianStates = [
-  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
-  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
-  'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
-  'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
-  'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
-  'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
 ];
 
 const animalNames = [
-  'Eagle', 'Tiger', 'Lion', 'Wolf', 'Bear', 'Fox', 'Hawk',
-  'Owl', 'Dolphin', 'Shark', 'Phoenix', 'Dragon', 'Falcon',
-  'Panther', 'Jaguar', 'Lynx', 'Cheetah', 'Leopard'
+  "Eagle",
+  "Tiger",
+  "Lion",
+  "Wolf",
+  "Bear",
+  "Fox",
+  "Hawk",
+  "Owl",
+  "Dolphin",
+  "Shark",
+  "Phoenix",
+  "Dragon",
+  "Falcon",
+  "Panther",
+  "Jaguar",
+  "Lynx",
+  "Cheetah",
+  "Leopard",
 ];
 
 const adjectives = [
-  'Swift', 'Brave', 'Mighty', 'Clever', 'Bold', 'Fierce',
-  'Noble', 'Wise', 'Strong', 'Agile', 'Sharp', 'Bright',
-  'Quick', 'Smart', 'Elite', 'Prime', 'Alpha', 'Royal'
+  "Swift",
+  "Brave",
+  "Mighty",
+  "Clever",
+  "Bold",
+  "Fierce",
+  "Noble",
+  "Wise",
+  "Strong",
+  "Agile",
+  "Sharp",
+  "Bright",
+  "Quick",
+  "Smart",
+  "Elite",
+  "Prime",
+  "Alpha",
+  "Royal",
 ];
 
 export default function Register() {
-  const [handle, setHandle] = useState('');
-  const [region, setRegion] = useState('');
+  const [handle, setHandle] = useState("");
+  const [region, setRegion] = useState("");
   const [loading, setLoading] = useState(false);
   const { firebaseUser } = useAuth();
   const [, navigate] = useLocation();
@@ -42,8 +100,10 @@ export default function Register() {
   }, []);
 
   const generateHandle = () => {
-    const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const randomAnimal = animalNames[Math.floor(Math.random() * animalNames.length)];
+    const randomAdjective =
+      adjectives[Math.floor(Math.random() * adjectives.length)];
+    const randomAnimal =
+      animalNames[Math.floor(Math.random() * animalNames.length)];
     setHandle(`${randomAdjective}${randomAnimal}`);
   };
 
@@ -52,20 +112,25 @@ export default function Register() {
     if (!firebaseUser) return;
 
     setLoading(true);
-    
+
     try {
-      await apiRequest('POST', '/api/auth/register', {
+      await apiRequest("POST", "/api/auth/register", {
         firebaseUid: firebaseUser.uid,
         phone: firebaseUser.phoneNumber,
         email: firebaseUser.email,
         handle,
-        region
+        region,
       });
 
-      navigate('/');
+      // Registration successful, redirect to home
+
+      navigate("/");
     } catch (error) {
-      console.error('Registration error:', error);
-      if (error instanceof Error && error.message.includes('Handle already taken')) {
+      console.error("Registration error:", error);
+      if (
+        error instanceof Error &&
+        error.message.includes("Handle already taken")
+      ) {
         generateHandle();
       }
     } finally {
@@ -74,7 +139,7 @@ export default function Register() {
   };
 
   if (!firebaseUser) {
-    navigate('/login');
+    navigate("/login");
     return null;
   }
 
@@ -82,8 +147,12 @@ export default function Register() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-blue-900">Complete Your Profile</h2>
-          <p className="mt-2 text-gray-600">Join the movement for Indian products</p>
+          <h2 className="text-3xl font-bold text-blue-900">
+            Complete Your Profile
+          </h2>
+          <p className="mt-2 text-gray-600">
+            Join the movement for Indian products
+          </p>
         </div>
 
         <Card>
@@ -117,7 +186,8 @@ export default function Register() {
                   </Button>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  This will be your public identity. Your real information stays private.
+                  This will be your public identity. Your real information stays
+                  private.
                 </p>
               </div>
 
@@ -144,7 +214,9 @@ export default function Register() {
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-blue-900 mb-2">Privacy First</h4>
+                <h4 className="font-medium text-blue-900 mb-2">
+                  Privacy First
+                </h4>
                 <ul className="text-sm text-blue-700 space-y-1">
                   <li>• Your handle keeps you anonymous</li>
                   <li>• Phone/email stays completely private</li>
@@ -158,7 +230,7 @@ export default function Register() {
                 className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600"
                 disabled={loading}
               >
-                {loading ? 'Creating Account...' : 'Join JumboJolt'}
+                {loading ? "Creating Account..." : "Join JumboJolt"}
               </Button>
             </form>
           </CardContent>

@@ -27,6 +27,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import ModeratorPostCreator from "@/components/ModeratorPostCreator";
 import {
   Shield,
   Users,
@@ -69,15 +70,15 @@ import {
   Plus,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { format, set } from "date-fns";
+import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import { BrandSelector } from "@/components/BrandSelector";
 import { EnhancedMissionDialog } from "@/components/EnhancedMissionDialog";
 import { MessagingSystem } from "@/components/MessagingSystem";
-import { z } from "zod";
+import { toast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { toast } from "@/hooks/use-toast";
+import { z } from "zod";
 import {
   Form,
   FormControl,
@@ -100,7 +101,6 @@ interface Mission {
   title: string;
   description: string;
   category: string;
-  targetCategory: string;
   fromBrandIds: string[];
   toBrandIds: string[];
   pointsReward: number;
@@ -110,19 +110,19 @@ interface Mission {
   createdBy: string;
   createdAt: string;
 }
-interface EditMission {
+
+interface MissionSubmission {
   id: string;
-  title: string;
-  description: string;
-  category: string;
-  fromBrandIds: string[];
-  toBrandIds: string[];
-  pointsReward: number;
-  startDate: Date | null;
-  endDate: Date | null;
-  isActive: boolean;
-  createdBy: string;
+  userId: string;
+  missionId: string;
+  reason: string;
+  experience: string;
+  financialImpact: string;
+  evidenceUrl: string;
+  status: string;
   createdAt: string;
+  userName: string;
+  missionTitle: string;
 }
 
 interface Post {
@@ -159,66 +159,75 @@ const newsArticleSchema = z.object({
 });
 export default function EnhancedModeratorPanel() {
   const { user } = useAuth();
+
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showMissionDialog, setShowMissionDialog] = useState(false);
-  const [showEditMissionDialog, setShowEditMissionDialog] = useState(false);
-  const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [showPostDialog, setShowPostDialog] = useState(false);
-  const [showDeleteMissionDialog, setShowDeleteMissionDialog] = useState(false);
-
   const [wsConnected, setWsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 
-  const newsForm = useForm({
-    resolver: zodResolver(newsArticleSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      imageUrls: [],
-      suggestedFromBrandIds: [],
-      suggestedToBrandIds: [],
-      commentsEnabled: true,
-      isPublished: true,
-      createdBy: user?.id || "",
-    },
-  });
   // WebSocket connection for real-time updates
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
 
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    let reconnectTimeout: NodeJS.Timeout;
 
-    ws.onopen = () => {
-      // console.log("WebSocket connected for moderator panel");
-      setWsConnected(true);
-    };
+    const connectWebSocket = () => {
+      try {
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      // console.log("Real-time update received:", data);
+        ws.onopen = () => {
+          console.log("WebSocket connected for moderator panel");
+          setWsConnected(true);
+        };
 
-      // Invalidate relevant queries to refresh data
-      if (data.type === "update") {
-        queryClient.invalidateQueries();
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            console.log("Real-time update received:", data);
+
+            // Invalidate relevant queries to refresh data
+            if (data.type === "update") {
+              queryClient.invalidateQueries();
+            }
+          } catch (error) {
+            console.error("Error parsing WebSocket message:", error);
+          }
+        };
+
+        ws.onclose = (event) => {
+          console.log("WebSocket disconnected");
+          setWsConnected(false);
+
+          // Attempt to reconnect after 3 seconds if not a clean close
+          if (!event.wasClean) {
+            reconnectTimeout = setTimeout(connectWebSocket, 3000);
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error("WebSocket error:", error);
+          setWsConnected(false);
+        };
+      } catch (error) {
+        console.error("Failed to create WebSocket connection:", error);
+        setWsConnected(false);
       }
     };
 
-    ws.onclose = () => {
-      // console.log("WebSocket disconnected");
-      setWsConnected(false);
-    };
-
-    ws.onerror = (error) => {
-      // console.error("WebSocket error:", error);
-      setWsConnected(false);
-    };
+    connectWebSocket();
 
     return () => {
-      ws.close();
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
     };
   }, [queryClient]);
 
@@ -235,18 +244,6 @@ export default function EnhancedModeratorPanel() {
     }
   }, []);
 
-  const handleSelectMission = (mission: Mission) => {
-    const missionData = {
-      ...mission,
-      // Keep the dates as strings to match the Mission interface
-      startDate: mission.startDate,
-      endDate: mission.endDate,
-    };
-
-    setSelectedMission(missionData);
-    setShowEditMissionDialog(true);
-  };
-
   // Post form state
   const [newPostData, setNewPostData] = useState({
     title: "",
@@ -256,12 +253,6 @@ export default function EnhancedModeratorPanel() {
     targetAlternatives: "",
     isActive: true,
   });
-  const [selectedSuggestedFromBrands, setSelectedSuggestedFromBrands] =
-    useState<string[]>([]);
-  const [selectedSuggestedToBrands, setSelectedSuggestedToBrands] = useState<
-    string[]
-  >([]);
-  const [imageUrls, setImageUrls] = useState<string[]>([""]);
 
   // Queries
   const { data: missions = [] } = useQuery<Mission[]>({
@@ -270,6 +261,10 @@ export default function EnhancedModeratorPanel() {
 
   const { data: moderatorPosts = [] } = useQuery<Post[]>({
     queryKey: ["/api/moderation/posts"],
+  });
+
+  const { data: missionSubmissions = [] } = useQuery<MissionSubmission[]>({
+    queryKey: ["/api/moderation/mission-submissions"],
   });
 
   const { data: analytics } = useQuery<any>({
@@ -287,63 +282,42 @@ export default function EnhancedModeratorPanel() {
   });
 
   const [showNewsDialog, setShowNewsDialog] = useState(false);
+  const [selectedSuggestedFromBrands, setSelectedSuggestedFromBrands] =
+    useState<string[]>([]);
+  const [selectedSuggestedToBrands, setSelectedSuggestedToBrands] = useState<
+    string[]
+  >([]);
+  const [imageUrls, setImageUrls] = useState<string[]>([""]);
 
-  const createNewsArticleMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await fetch("/api/moderation/news", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          imageUrls: imageUrls.filter((url) => url.trim()),
-          suggestedFromBrandIds: selectedSuggestedFromBrands,
-          suggestedToBrandIds: selectedSuggestedToBrands,
-        }),
-      });
-      if (!response.ok) throw new Error("Failed to create news article");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/moderation/news"] });
-      toast({ title: "News article created successfully" });
-      newsForm.reset();
-      setShowNewsDialog(false);
-      setImageUrls([""]);
-      setSelectedSuggestedFromBrands([]);
-      setSelectedSuggestedToBrands([]);
+  const newsForm = useForm({
+    resolver: zodResolver(newsArticleSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      imageUrls: [],
+      suggestedFromBrandIds: [],
+      suggestedToBrandIds: [],
+      commentsEnabled: true,
+      isPublished: true,
+      createdBy: user?.id || "",
     },
   });
 
-  // Create post mutation
-  const createPostMutation = useMutation({
-    mutationFn: (postData: any) =>
-      apiRequest("POST", "/api/moderation/posts", postData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/moderation/posts"] });
-      setNewPostData({
-        title: "",
-        content: "",
-        imageUrl: "",
-        linkUrl: "",
-        targetAlternatives: "",
-        isActive: true,
-      });
-      setShowPostDialog(false);
-      sendRealtimeUpdate("post_created", { createdBy: user?.id });
-    },
-  });
+  const [showEditMissionDialog, setShowEditMissionDialog] = useState(false);
+  const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
 
-  const handleCreatePost = () => {
-    if (!newPostData.title || !newPostData.content) return;
-
-    const postPayload = {
-      ...newPostData,
-      createdBy: user?.id,
+  const handleSelectMission = (mission: Mission) => {
+    const missionData = {
+      ...mission,
+      // Keep the dates as strings to match the Mission interface
+      startDate: mission.startDate,
+      endDate: mission.endDate,
     };
 
-    createPostMutation.mutate(postPayload);
+    setSelectedMission(missionData);
+    setShowEditMissionDialog(true);
   };
-
+  const [showDeleteMissionDialog, setShowDeleteMissionDialog] = useState(false);
   const handleDeleteMission = () => {
     if (!selectedMission) return;
 
@@ -424,33 +398,77 @@ export default function EnhancedModeratorPanel() {
     }
   };
 
-  const addImageUrl = () => {
-    setImageUrls([...imageUrls, ""]);
-  };
+  const createNewsArticleMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch("/api/moderation/news", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          imageUrls: imageUrls.filter((url) => url.trim()),
+          suggestedFromBrandIds: selectedSuggestedFromBrands,
+          suggestedToBrandIds: selectedSuggestedToBrands,
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to create news article");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/moderation/news"] });
+      toast({ title: "News article created successfully" });
+      newsForm.reset();
+      setShowNewsDialog(false);
+      setImageUrls([""]);
+      setSelectedSuggestedFromBrands([]);
+      setSelectedSuggestedToBrands([]);
+    },
+  });
 
-  const removeImageUrl = (index: number) => {
-    setImageUrls(imageUrls.filter((_, i) => i !== index));
-  };
+  // Create post mutation
+  const createPostMutation = useMutation({
+    mutationFn: (postData: any) =>
+      apiRequest("POST", "/api/moderation/posts", postData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/moderation/posts"] });
+      setNewPostData({
+        title: "",
+        content: "",
+        imageUrl: "",
+        linkUrl: "",
+        targetAlternatives: "",
+        isActive: true,
+      });
+      setShowPostDialog(false);
+      sendRealtimeUpdate("post_created", { createdBy: user?.id });
+    },
+  });
 
-  const updateImageUrl = (index: number, url: string) => {
-    const updated = [...imageUrls];
-    updated[index] = url;
-    setImageUrls(updated);
+  const handleCreatePost = () => {
+    if (!newPostData.title || !newPostData.content) return;
+
+    const postPayload = {
+      ...newPostData,
+      createdBy: user?.id,
+    };
+
+    createPostMutation.mutate(postPayload);
   };
 
   const sidebarItems = [
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-    { id: "missions", label: "Missions", icon: Target },
-    { id: "posts", label: "Posts", icon: FileText },
-    // { id: "messages", label: "Messages", icon: MessageCircle },
+    // { id: "content", label: "Create Content", icon: PlusCircle },
     {
       id: "news",
       label: "News Articles",
       icon: Newspaper,
       count: newsArticles.length,
     },
-    { id: "analytics", label: "Analytics", icon: TrendingUp },
-    { id: "settings", label: "Settings", icon: Settings },
+    { id: "missions", label: "Missions", icon: Target },
+    { id: "submissions", label: "Mission Submissions", icon: CheckCircle },
+    // { id: "posts", label: "Posts", icon: FileText },
+    // { id: "messages", label: "Messages", icon: MessageCircle },
+    // { id: "analytics", label: "Analytics", icon: TrendingUp },
+    // { id: "settings", label: "Settings", icon: Settings },
   ];
 
   return (
@@ -614,7 +632,7 @@ export default function EnhancedModeratorPanel() {
                   </CardContent>
                 </Card>
 
-                <Card>
+                {/* <Card>
                   <CardHeader>
                     <CardTitle>Quick Actions</CardTitle>
                   </CardHeader>
@@ -630,10 +648,10 @@ export default function EnhancedModeratorPanel() {
                       <Button
                         className="w-full justify-start"
                         variant="outline"
-                        onClick={() => setShowPostDialog(true)}
+                        onClick={() => setActiveTab("content")}
                       >
-                        <FileText className="h-4 w-4 mr-2" />
-                        Create New Post
+                        <PlusCircle className="h-4 w-4 mr-2" />
+                        Create Community Content
                       </Button>
                       <Button
                         className="w-full justify-start"
@@ -645,8 +663,36 @@ export default function EnhancedModeratorPanel() {
                       </Button>
                     </div>
                   </CardContent>
-                </Card>
+                </Card> */}
               </div>
+            </div>
+          )}
+
+          {/* Content Creation Tab */}
+          {activeTab === "content" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">
+                    Create Community Content
+                  </h2>
+                  <p className="text-muted-foreground">
+                    Create engaging posts to encourage community participation
+                    and brand switching
+                  </p>
+                </div>
+              </div>
+
+              <ModeratorPostCreator
+                onPostCreated={() => {
+                  // Refresh data after post creation
+                  queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/feed"] });
+                  sendRealtimeUpdate("content_created", {
+                    createdBy: user?.id,
+                  });
+                }}
+              />
             </div>
           )}
 
@@ -688,22 +734,12 @@ export default function EnhancedModeratorPanel() {
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
                               {mission.startDate
-                                ? format(
-                                    new Date(mission.startDate),
-                                    "MMM dd yyyy"
-                                  )
+                                ? format(new Date(mission.startDate), "MMM dd")
                                 : "No start date"}
-                              {" - "}
-                              {mission.endDate
-                                ? format(
-                                    new Date(mission.endDate),
-                                    "MMM dd yyyy"
-                                  )
-                                : "No end date"}
                             </span>
                             <span className="flex items-center gap-1">
                               <Target className="h-3 w-3" />
-                              {categoryEnum[mission.targetCategory]}
+                              {mission.category}
                             </span>
                           </div>
                         </div>
@@ -732,6 +768,157 @@ export default function EnhancedModeratorPanel() {
                     </CardContent>
                   </Card>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Mission Submissions Tab */}
+          {activeTab === "submissions" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Mission Submissions</h2>
+                <Badge variant="outline">
+                  {missionSubmissions.length} pending
+                </Badge>
+              </div>
+
+              <div className="grid gap-4">
+                {missionSubmissions.map((submission: MissionSubmission) => (
+                  <Card key={submission.id}>
+                    <CardContent className="p-6">
+                      <div className="space-y-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="font-semibold">
+                                {submission.missionTitle}
+                              </h3>
+                              <Badge variant="secondary">
+                                {submission.status}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Submitted by: {submission.userName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(
+                                new Date(submission.createdAt),
+                                "MMM dd, yyyy at h:mm a"
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div>
+                            <Label className="text-sm font-medium">
+                              Reason for Switch:
+                            </Label>
+                            <p className="text-sm mt-1">{submission.reason}</p>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">
+                              Experience:
+                            </Label>
+                            <p className="text-sm mt-1">
+                              {submission.experience}
+                            </p>
+                          </div>
+
+                          {submission.financialImpact && (
+                            <div>
+                              <Label className="text-sm font-medium">
+                                Financial Impact:
+                              </Label>
+                              <p className="text-sm mt-1">
+                                {submission.financialImpact}
+                              </p>
+                            </div>
+                          )}
+
+                          {submission.evidenceUrl && (
+                            <div>
+                              <Label className="text-sm font-medium">
+                                Evidence:
+                              </Label>
+                              <img
+                                src={submission.evidenceUrl}
+                                alt="Evidence"
+                                className="mt-1 w-20 h-20 object-cover rounded border"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2 pt-4 border-t">
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => {
+                              // Verify submission as approved
+                              apiRequest(
+                                "POST",
+                                `/api/switch-logs/${submission.id}/verify`,
+                                {
+                                  approved: true,
+                                  feedback: "Mission submission approved",
+                                }
+                              ).then(() => {
+                                queryClient.invalidateQueries({
+                                  queryKey: [
+                                    "/api/moderation/mission-submissions",
+                                  ],
+                                });
+                              });
+                            }}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              // Verify submission as rejected
+                              apiRequest(
+                                "POST",
+                                `/api/switch-logs/${submission.id}/verify`,
+                                {
+                                  approved: false,
+                                  feedback: "Mission submission rejected",
+                                }
+                              ).then(() => {
+                                queryClient.invalidateQueries({
+                                  queryKey: [
+                                    "/api/moderation/mission-submissions",
+                                  ],
+                                });
+                              });
+                            }}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Reject
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {missionSubmissions.length === 0 && (
+                  <Card>
+                    <CardContent className="p-8 text-center">
+                      <CheckCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-medium mb-2">
+                        No pending submissions
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        All mission submissions have been reviewed.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </div>
           )}
@@ -1291,6 +1478,7 @@ export default function EnhancedModeratorPanel() {
           sendRealtimeUpdate("mission_created", { createdBy: user?.id })
         }
       />
+
       {/* Enhanced Mission Dialog */}
       <EnhancedMissionDialog
         open={showEditMissionDialog}

@@ -1,0 +1,937 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JumboJolt - Switch to Indian Alternatives</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        saffron: {
+                            500: '#FF6B35',
+                            600: '#F7931E',
+                            700: '#E8751F'
+                        },
+                        forest: {
+                            500: '#138808',
+                            600: '#4CAF50',
+                            700: '#2E7D32'
+                        },
+                        royal: {
+                            500: '#1565C0',
+                            600: '#1976D2',
+                            700: '#0D47A1'
+                        }
+                    },
+                    fontFamily: {
+                        'inter': ['Inter', 'sans-serif'],
+                        'opensans': ['Open Sans', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+</head>
+<body class="bg-gray-50 font-opensans">
+    <!-- @COMPONENT: Navigation -->
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-2xl font-inter font-bold text-saffron-500">JumboJolt</h1>
+                    </div>
+                    <div class="hidden md:ml-10 md:flex md:space-x-8">
+                        <a href="#" class="text-gray-900 hover:text-saffron-500 px-3 py-2 text-sm font-medium transition-colors">Home</a>
+                        <a href="#" class="text-gray-500 hover:text-saffron-500 px-3 py-2 text-sm font-medium transition-colors">Leaderboard</a>
+                        <a href="#" class="text-gray-500 hover:text-saffron-500 px-3 py-2 text-sm font-medium transition-colors">Groups</a>
+                        <a href="#" class="text-gray-500 hover:text-saffron-500 px-3 py-2 text-sm font-medium transition-colors">Trending</a>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Search Bar -->
+                    <div class="relative hidden md:block">
+                        <input type="text" placeholder="Search brands, products..." class="w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-saffron-500 focus:border-transparent">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    </div>
+                    
+                    <!-- Notifications -->
+                    <button class="relative p-2 text-gray-500 hover:text-saffron-500 transition-colors">
+                        <i class="fas fa-bell text-xl"></i>
+                        <span class="absolute -top-1 -right-1 bg-saffron-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" data-mock="true">3</span>
+                    </button>
+                    
+                    <!-- User Menu -->
+                    <div class="relative">
+                        <button class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div class="w-8 h-8 bg-gradient-to-r from-saffron-500 to-forest-500 rounded-full flex items-center justify-center">
+                                <span class="text-white text-sm font-bold" data-bind="user.handle">BK</span>
+                            </div>
+                            <span class="hidden md:block text-sm font-medium text-gray-700" data-bind="user.handle">BraveKite</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <!-- @END_COMPONENT: Navigation -->
+
+    <!-- @COMPONENT: MainLayout -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            
+            <!-- @COMPONENT: Sidebar -->
+            <!-- Left Sidebar - Desktop Only -->
+            <div class="hidden lg:block lg:col-span-1">
+                <div class="bg-white rounded-xl shadow-sm p-6 sticky top-24">
+                    <!-- Quick Stats -->
+                    <div class="mb-6">
+                        <h3 class="font-inter font-semibold text-gray-900 mb-3">Your Impact</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">Switches Made</span>
+                                <span class="font-bold text-saffron-500" data-bind="user.switches">12</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">Rank</span>
+                                <span class="font-bold text-forest-500" data-bind="user.rank">#47</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">Points</span>
+                                <span class="font-bold text-royal-500" data-bind="user.points">2,450</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Level Progress -->
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-gray-600">Level 3</span>
+                            <span class="text-xs text-gray-500">2,450 / 3,000 XP</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-saffron-500 to-forest-500 h-2 rounded-full" style="width: 82%"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Achievements -->
+                    <div class="mb-6">
+                        <h4 class="font-inter font-semibold text-gray-900 mb-3">Latest Achievements</h4>
+                        <div class="space-y-2">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-trophy text-white text-xs"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-medium text-gray-900">Switch Streak</p>
+                                    <p class="text-xs text-gray-500">5 switches in a row</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Actions -->
+                    <div class="space-y-2">
+                        <button class="w-full bg-saffron-500 hover:bg-saffron-600 text-white py-2 px-4 rounded-lg font-medium transition-colors" data-event="click:openSwitchModal">
+                            <i class="fas fa-plus mr-2"></i>Log a Switch
+                        </button>
+                        <button class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg font-medium transition-colors">
+                            <i class="fas fa-lightbulb mr-2"></i>Suggest Brand
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: Sidebar -->
+            
+            <!-- @COMPONENT: MainFeed -->
+            <!-- Main Content Area -->
+            <div class="lg:col-span-2">
+                <!-- Welcome Banner -->
+                <div class="bg-gradient-to-r from-saffron-500 to-forest-500 rounded-xl p-6 mb-6 text-white">
+                    <h2 class="text-2xl font-inter font-bold mb-2">Welcome back, <span data-bind="user.handle">BraveKite</span>!</h2>
+                    <p class="opacity-90">You're making a difference. See what others are switching to today.</p>
+                </div>
+                
+                <!-- Trending Categories -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-inter font-semibold text-gray-900">Trending Categories</h3>
+                        <a href="#" class="text-saffron-500 text-sm hover:text-saffron-600 transition-colors">See all</a>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <!-- @MAP: categories.map(category => ( -->
+                        <div class="text-center p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                            <!-- Indian food and beverages category -->
+                            <img src="https://images.unsplash.com/photo-1596040033229-a9821ebd058d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100" alt="Food & Beverages" class="w-16 h-16 rounded-lg mx-auto mb-2 object-cover">
+                            <p class="text-sm font-medium text-gray-900">Food & Beverages</p>
+                            <p class="text-xs text-saffron-500">+142 switches</p>
+                        </div>
+                        <div class="text-center p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                            <!-- Indian electronics and gadgets -->
+                            <img src="https://images.unsplash.com/photo-1588508065123-287b28e013da?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100" alt="Electronics" class="w-16 h-16 rounded-lg mx-auto mb-2 object-cover">
+                            <p class="text-sm font-medium text-gray-900">Electronics</p>
+                            <p class="text-xs text-forest-500">+89 switches</p>
+                        </div>
+                        <div class="text-center p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                            <!-- Indian clothing and fashion -->
+                            <img src="https://pixabay.com/get/g2352d5f74e1a938829e544835c614c1d252bc8d923941f7a6f3ffd3f365e694907cf607301167f9218a97a0cd76f4e326c749917d1371d7ffff0ce24edcf4c93_1280.jpg" alt="Fashion" class="w-16 h-16 rounded-lg mx-auto mb-2 object-cover">
+                            <p class="text-sm font-medium text-gray-900">Fashion</p>
+                            <p class="text-xs text-royal-500">+67 switches</p>
+                        </div>
+                        <div class="text-center p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                            <!-- Indian beauty and personal care -->
+                            <img src="https://images.unsplash.com/photo-1596462502278-27bfdc403348?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100" alt="Beauty" class="w-16 h-16 rounded-lg mx-auto mb-2 object-cover">
+                            <p class="text-sm font-medium text-gray-900">Beauty</p>
+                            <p class="text-xs text-saffron-500">+45 switches</p>
+                        </div>
+                        <!-- @END_MAP )) -->
+                    </div>
+                </div>
+                
+                <!-- Activity Feed -->
+                <div class="space-y-6">
+                    <!-- @MAP: feedItems.map(item => ( -->
+                    <!-- Switch Post -->
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                        <div class="p-6">
+                            <div class="flex items-start space-x-3">
+                                <div class="w-10 h-10 bg-gradient-to-r from-forest-500 to-royal-500 rounded-full flex items-center justify-center">
+                                    <span class="text-white text-sm font-bold" data-bind="post.user.handle">SH</span>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        <h4 class="font-medium text-gray-900" data-bind="post.user.handle">SmartHawk</h4>
+                                        <span class="text-gray-500 text-sm">made a switch</span>
+                                        <span class="text-gray-400 text-sm">2h ago</span>
+                                    </div>
+                                    
+                                    <div class="bg-gray-50 rounded-lg p-4 mb-3">
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div class="text-center">
+                                                <p class="text-xs text-gray-500 mb-1">FROM</p>
+                                                <!-- International cola brand being replaced -->
+                                                <img src="https://images.unsplash.com/photo-1581636625402-29b2a704ef13?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=200&h=150" alt="Foreign cola brand" class="w-full h-24 object-cover rounded-lg mb-2">
+                                                <p class="font-medium text-gray-900" data-bind="switch.fromBrand">Coca Cola</p>
+                                            </div>
+                                            <div class="text-center">
+                                                <p class="text-xs text-gray-500 mb-1">TO</p>
+                                                <!-- Indian soft drink alternative -->
+                                                <img src="https://images.unsplash.com/photo-1570197788417-0e82375c9371?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=200&h=150" alt="Indian beverage alternative" class="w-full h-24 object-cover rounded-lg mb-2">
+                                                <p class="font-medium text-forest-500" data-bind="switch.toBrand">Thums Up</p>
+                                            </div>
+                                        </div>
+                                        <div class="text-center mt-3">
+                                            <i class="fas fa-arrow-right text-saffron-500 text-xl"></i>
+                                        </div>
+                                    </div>
+                                    
+                                    <p class="text-gray-700 text-sm mb-3" data-bind="switch.reason">"Supporting local brands feels amazing! The taste is actually better too! 🇮🇳"</p>
+                                    
+                                    <!-- Engagement Stats -->
+                                    <div class="flex items-center space-x-6 text-sm text-gray-500">
+                                        <button class="flex items-center space-x-1 hover:text-saffron-500 transition-colors" data-event="click:toggleLike">
+                                            <i class="fas fa-heart"></i>
+                                            <span data-bind="post.likes">24</span>
+                                        </button>
+                                        <button class="flex items-center space-x-1 hover:text-royal-500 transition-colors" data-event="click:toggleComment">
+                                            <i class="fas fa-comment"></i>
+                                            <span data-bind="post.comments">8</span>
+                                        </button>
+                                        <button class="flex items-center space-x-1 hover:text-forest-500 transition-colors" data-event="click:sharePost">
+                                            <i class="fas fa-share"></i>
+                                            <span>Share</span>
+                                        </button>
+                                        <div class="flex items-center space-x-1">
+                                            <i class="fas fa-fire text-saffron-500"></i>
+                                            <span class="text-saffron-500 font-medium">+50 XP</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Achievement Post -->
+                    <div class="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl shadow-sm overflow-hidden text-white">
+                        <div class="p-6">
+                            <div class="flex items-start space-x-3">
+                                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                                    <span class="text-white text-sm font-bold" data-bind="achievement.user.handle">CL</span>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        <h4 class="font-medium" data-bind="achievement.user.handle">CleverLion</h4>
+                                        <span class="opacity-90 text-sm">earned an achievement</span>
+                                        <span class="opacity-75 text-sm">5h ago</span>
+                                    </div>
+                                    
+                                    <div class="bg-white/10 rounded-lg p-4 mb-3">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-medal text-2xl"></i>
+                                            </div>
+                                            <div>
+                                                <h5 class="font-bold text-lg" data-bind="achievement.title">Switch Champion</h5>
+                                                <p class="opacity-90 text-sm" data-bind="achievement.description">Made 25 successful product switches</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Engagement Stats -->
+                                    <div class="flex items-center space-x-6 text-sm">
+                                        <button class="flex items-center space-x-1 hover:opacity-80 transition-opacity" data-event="click:congratulate">
+                                            <i class="fas fa-thumbs-up"></i>
+                                            <span data-bind="achievement.congratulations">42</span>
+                                        </button>
+                                        <div class="flex items-center space-Looking at the attached file, this is for JumboJolt - a privacy-first platform that empowers Indian consumers to switch from foreign products to quality Indian alternatives. This is an interesting social platform with gamification elements focused on consumer behavior change.
+
+Let me analyze the design requirements:
+
+1. **Purpose & User Needs**: This is experience-focused - it's about community engagement, social features, gamification, and visual appeal to drive user engagement in switching behaviors.
+
+2. **Content Characteristics**: Visual-rich - product images, user-generated content, feeds, leaderboards, badges, achievements.
+
+3. **Market Context**: Design-differentiated - this is a social platform where visual identity and engagement are key differentiators.
+
+4. **Update Frequency**: Trend-sensitive - social platforms need to feel current and engaging.
+
+5. **Component Complexity**: Custom UI needed - gamification elements, specialized feeds, achievement systems.
+
+This clearly falls into the Reference-Based Approach category. Given it's a social platform with gamification, I should take inspiration from platforms like Instagram for social features, LinkedIn for professional networking aspects, and gaming platforms for the gamification elements.
+
+For the Indian context and color palette, I should use warm, vibrant colors that resonate with Indian aesthetics - oranges, deep blues, greens, and gold accents.
+
+Key features to design:
+- Enhanced home page with trending content and gamified leaderboards
+- Social features (comments, likes, reactions)
+- Image-rich content feeds 
+- Moderator/admin dashboards
+- Member profiles with achievements
+- Firebase OTP authentication
+- Anonymous handle system
+- Silent/public switch logging
+
+I need to create a comprehensive, production-ready mockup that showcases all these features in a cohesive design.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# style
+
+**Design Approach**: Reference-based approach inspired by Instagram's social feed structure, LinkedIn's professional networking elements, and gaming platforms' gamification patterns, tailored for Indian consumer culture.
+
+**Color Palette**: 
+- Primary: Saffron Orange (#FF9933), Deep Blue (#003366)
+- Secondary: Forest Green (#228B22), Golden Yellow (#FFD700)
+- Neutral: Warm Gray (#F5F5F5), Charcoal (#333333)
+- Status: Success Green (#10B981), Warning Amber (#F59E0B), Error Red (#EF4444)
+
+**Typography**: Inter for primary text (clean, modern), Poppins for headings (friendly, approachable), system fonts for performance.
+
+**Layout**: Mobile-first responsive grid with card-based layouts, sidebar navigation for desktop, bottom navigation for mobile.
+
+**Components**: Gamified progress bars, achievement badges, interactive reaction buttons, rich media cards, data visualization charts for admin dashboards.
+
+**Interactions**: Smooth transitions, micro-animations for achievements, hover states, loading skeletons, real-time update indicators.
+
+# directory_structure
+```json
+[
+     {"path": "production_design_mockup.html", "status": "new"}
+]
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JumboJolt - Empowering Indian Consumer Choices</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'saffron': '#FF9933',
+                        'deep-blue': '#003366',
+                        'forest-green': '#228B22',
+                        'golden': '#FFD700',
+                        'warm-gray': '#F5F5F5'
+                    },
+                    fontFamily: {
+                        'inter': ['Inter', 'sans-serif'],
+                        'poppins': ['Poppins', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-warm-gray font-inter">
+    <!-- Navigation Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center">
+                    <div class="bg-gradient-to-r from-saffron to-golden p-2 rounded-lg">
+                        <i class="fas fa-bolt text-white text-xl"></i>
+                    </div>
+                    <span class="ml-3 text-2xl font-poppins font-bold text-deep-blue">JumboJolt</span>
+                </div>
+
+                <!-- Desktop Navigation -->
+                <nav class="hidden md:flex space-x-8">
+                    <a href="#" class="text-deep-blue hover:text-saffron font-medium transition-colors">
+                        <i class="fas fa-home mr-2"></i>Home
+                    </a>
+                    <a href="#" class="text-gray-500 hover:text-deep-blue font-medium transition-colors">
+                        <i class="fas fa-exchange-alt mr-2"></i>Log Switch
+                    </a>
+                    <a href="#" class="text-gray-500 hover:text-deep-blue font-medium transition-colors">
+                        <i class="fas fa-trophy mr-2"></i>Leaderboard
+                    </a>
+                    <a href="#" class="text-gray-500 hover:text-deep-blue font-medium transition-colors">
+                        <i class="fas fa-users mr-2"></i>Community
+                    </a>
+                </nav>
+
+                <!-- User Menu -->
+                <div class="flex items-center space-x-4">
+                    <button class="relative p-2 text-gray-400 hover:text-deep-blue transition-colors">
+                        <i class="fas fa-bell text-xl"></i>
+                        <span class="absolute -top-1 -right-1 bg-saffron text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">3</span>
+                    </button>
+                    <div class="flex items-center space-x-2">
+                        <div class="bg-gradient-to-r from-forest-green to-saffron p-2 rounded-full">
+                            <span class="text-white font-bold text-sm">BK</span>
+                        </div>
+                        <span class="hidden md:block text-sm font-medium text-gray-700">BraveKite</span>
+                        <button class="text-gray-400 hover:text-deep-blue">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left Sidebar - Hidden on mobile -->
+            <div class="hidden lg:block lg:col-span-3">
+                <!-- User Stats Card -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <div class="text-center">
+                        <div class="bg-gradient-to-r from-forest-green to-saffron p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                            <span class="text-white font-bold text-xl">BK</span>
+                        </div>
+                        <h3 class="font-poppins font-semibold text-gray-900">BraveKite</h3>
+                        <p class="text-sm text-gray-500 mb-4">Level 5 Switcher</p>
+                        
+                        <!-- Progress Bar -->
+                        <div class="mb-4">
+                            <div class="flex justify-between text-xs text-gray-500 mb-1">
+                                <span>Progress to Level 6</span>
+                                <span>750/1000 XP</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-gradient-to-r from-forest-green to-saffron h-2 rounded-full" style="width: 75%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Stats -->
+                        <div class="grid grid-cols-2 gap-4 text-center">
+                            <div>
+                                <p class="text-2xl font-bold text-saffron">23</p>
+                                <p class="text-xs text-gray-500">Switches</p>
+                            </div>
+                            <div>
+                                <p class="text-2xl font-bold text-forest-green">750</p>
+                                <p class="text-xs text-gray-500">Points</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h4 class="font-poppins font-semibold text-gray-900 mb-4">Quick Actions</h4>
+                    <div class="space-y-3">
+                        <button class="w-full bg-gradient-to-r from-saffron to-golden text-white py-3 px-4 rounded-lg font-medium hover:shadow-lg transition-all">
+                            <i class="fas fa-plus mr-2"></i>Log New Switch
+                        </button>
+                        <button class="w-full bg-gray-100 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-200 transition-all">
+                            <i class="fas fa-lightbulb mr-2"></i>Suggest Product
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Feed -->
+            <div class="lg:col-span-6">
+                <!-- Trending Header -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-poppins font-bold text-gray-900">
+                            <i class="fas fa-fire text-saffron mr-2"></i>Trending Switches
+                        </h2>
+                        <div class="flex space-x-2">
+                            <button class="px-3 py-1 bg-saffron text-white rounded-full text-sm font-medium">Today</button>
+                            <button class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-medium hover:bg-gray-200">Week</button>
+                            <button class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-medium hover:bg-gray-200">Month</button>
+                        </div>
+                    </div>
+
+                    <!-- Trending Categories -->
+                    <div class="flex flex-wrap gap-2">
+                        <span class="px-3 py-1 bg-gradient-to-r from-forest-green to-saffron text-white rounded-full text-sm font-medium">#PhoneSwitch</span>
+                        <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">#FoodChoice</span>
+                        <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">#ClothingBrand</span>
+                        <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">#TechGadgets</span>
+                    </div>
+                </div>
+
+                <!-- Feed Posts -->
+                <div class="space-y-6">
+                    <!-- Post 1 -->
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                        <div class="p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="bg-gradient-to-r from-blue-500 to-purple-500 p-2 rounded-full">
+                                        <span class="text-white font-bold text-sm">SW</span>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900">SwiftEagle</p>
+                                        <p class="text-sm text-gray-500">2 hours ago • Level 7</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="bg-golden text-white px-2 py-1 rounded-full text-xs font-medium">
+                                        <i class="fas fa-star mr-1"></i>Top Switcher
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <p class="text-gray-800 mb-3">Just switched from iPhone to OnePlus! 🇮🇳 The camera quality is incredible and I'm saving ₹30,000! #PhoneSwitch #MadeInIndia</p>
+                                
+                                <!-- Switch Details -->
+                                <div class="bg-gradient-to-r from-red-50 to-green-50 border border-gray-200 rounded-lg p-4 mb-4">
+                                    <div class="flex items-center justify-between">
+                                        <div class="text-center">
+                                            <div class="text-red-500 mb-2">
+                                                <i class="fas fa-arrow-left text-xl"></i>
+                                            </div>
+                                            <p class="text-sm font-medium text-gray-700">From</p>
+                                            <p class="font-bold text-gray-900">iPhone 14</p>
+                                            <p class="text-xs text-gray-500">Apple (USA)</p>
+                                        </div>
+                                        <div class="flex-1 flex justify-center">
+                                            <i class="fas fa-exchange-alt text-2xl text-saffron"></i>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-forest-green mb-2">
+                                                <i class="fas fa-arrow-right text-xl"></i>
+                                            </div>
+                                            <p class="text-sm font-medium text-gray-700">To</p>
+                                            <p class="font-bold text-gray-900">OnePlus 11</p>
+                                            <p class="text-xs text-gray-500">OnePlus (India)</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Product Images -->
+                            <!-- High-quality smartphone comparison image -->
+                            <img src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=400" alt="Smartphone comparison showing iPhone vs OnePlus devices" class="w-full h-64 object-cover rounded-lg mb-4" />
+
+                            <!-- Interaction Bar -->
+                            <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                                <div class="flex items-center space-x-6">
+                                    <button class="flex items-center space-x-2 text-gray-500 hover:text-saffron transition-colors">
+                                        <i class="fas fa-heart"></i>
+                                        <span class="text-sm font-medium">47</span>
+                                    </button>
+                                    <button class="flex items-center space-x-2 text-gray-500 hover:text-deep-blue transition-colors">
+                                        <i class="fas fa-comment"></i>
+                                        <span class="text-sm font-medium">12</span>
+                                    </button>
+                                    <button class="flex items-center space-x-2 text-gray-500 hover:text-forest-green transition-colors">
+                                        <i class="fas fa-share"></i>
+                                        <span class="text-sm font-medium">8</span>
+                                    </button>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm text-gray-500">+50 XP</span>
+                                    <div class="bg-golden text-white px-2 py-1 rounded-full text-xs">
+                                        <i class="fas fa-coins mr-1"></i>Rewarded
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Post 2 -->
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                        <div class="p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="bg-gradient-to-r from-green-500 to-blue-500 p-2 rounded-full">
+                                        <span class="text-white font-bold text-sm">MT</span>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900">MightyTiger</p>
+                                        <p class="text-sm text-gray-500">4 hours ago • Level 4</p>
+                                    </div>
+                                </div>
+                                <button class="text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-ellipsis-h"></i>
+                                </button>
+                            </div>
+
+                            <div class="mb-4">
+                                <p class="text-gray-800 mb-3">Switched from Maggi to MTR Ready-to-Eat meals. Supporting local businesses and the taste is authentic! 🍛 #FoodChoice #LocalBrand</p>
+                                
+                                <!-- Switch Details -->
+                                <div class="bg-gradient-to-r from-red-50 to-green-50 border border-gray-200 rounded-lg p-4 mb-4">
+                                    <div class="flex items-center justify-between">
+                                        <div class="text-center">
+                                            <div class="text-red-500 mb-2">
+                                                <i class="fas fa-arrow-left text-xl"></i>
+                                            </div>
+                                            <p class="text-sm font-medium text-gray-700">From</p>
+                                            <p class="font-bold text-gray-900">Maggi Noodles</p>
+                                            <p class="text-xs text-gray-500">Nestlé (Switzerland)</p>
+                                        </div>
+                                        <div class="flex-1 flex justify-center">
+                                            <i class="fas fa-exchange-alt text-2xl text-saffron"></i>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-forest-green mb-2">
+                                                <i class="fas fa-arrow-right text-xl"></i>
+                                            </div>
+                                            <p class="text-sm font-medium text-gray-700">To</p>
+                                            <p class="font-bold text-gray-900">MTR Ready Meals</p>
+                                            <p class="text-xs text-gray-500">MTR Foods (India)</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Indian food products comparison image -->
+                            <img src="https://pixabay.com/get/g0736a55b42f938f5c7d808c873c40a9e722f37879e869f57db167a22de6f2ae20a272eeba701024e46c506635439b0b22378ca091857dee6817744f17aee804d_1280.jpg" alt="Traditional Indian food products and packaging display" class="w-full h-64 object-cover rounded-lg mb-4" />
+
+                            <!-- Interaction Bar -->
+                            <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                                <div class="flex items-center space-x-6">
+                                    <button class="flex items-center space-x-2 text-saffron">
+                                        <i class="fas fa-heart"></i>
+                                        <span class="text-sm font-medium">23</span>
+                                    </button>
+                                    <button class="flex items-center space-x-2 text-gray-500 hover:text-deep-blue transition-colors">
+                                        <i class="fas fa-comment"></i>
+                                        <span class="text-sm font-medium">7</span>
+                                    </button>
+                                    <button class="flex items-center space-x-2 text-gray-500 hover:text-forest-green transition-colors">
+                                        <i class="fas fa-share"></i>
+                                        <span class="text-sm font-medium">3</span>
+                                    </button>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm text-gray-500">+25 XP</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Post 3 -->
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                        <div class="p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="bg-gradient-to-r from-purple-500 to-pink-500 p-2 rounded-full">
+                                        <span class="text-white font-bold text-sm">CL</span>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900">CleverLion</p>
+                                        <p class="text-sm text-gray-500">6 hours ago • Level 6</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="bg-saffron text-white px-2 py-1 rounded-full text-xs font-medium">
+                                        <i class="fas fa-fire mr-1"></i>Hot
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <p class="text-gray-800 mb-3">Made the switch to FabIndia clothing! Quality is amazing and supporting local artisans. 🧵 #ClothingBrand #SupportLocal</p>
+                            </div>
+
+                            <!-- Indian textile and clothing products image -->
+                            <img src="https://pixabay.com/get/gba612cbe6407eb452ae65701901c2c3c312c221bed3c5f90c023ec266cdef92a0759f6ec48fea086b155f2bc7e11f91cbba24bb2bf4ade00ce39d76eb78e0a1c_1280.jpg" alt="Beautiful Indian textile products and traditional clothing display" class="w-full h-64 object-cover rounded-lg mb-4" />
+
+                            <!-- Interaction Bar -->
+                            <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                                <div class="flex items-center space-x-6">
+                                    <button class="flex items-center space-x-2 text-gray-500 hover:text-saffron transition-colors">
+                                        <i class="fas fa-heart"></i>
+                                        <span class="text-sm font-medium">34</span>
+                                    </button>
+                                    <button class="flex items-center space-x-2 text-gray-500 hover:text-deep-blue transition-colors">
+                                        <i class="fas fa-comment"></i>
+                                        <span class="text-sm font-medium">9</span>
+                                    </button>
+                                    <button class="flex items-center space-x-2 text-gray-500 hover:text-forest-green transition-colors">
+                                        <i class="fas fa-share"></i>
+                                        <span class="text-sm font-medium">5</span>
+                                    </button>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm text-gray-500">+30 XP</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Load More -->
+                <div class="text-center mt-8">
+                    <button class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-6 rounded-lg transition-all">
+                        <i class="fas fa-refresh mr-2"></i>Load More Posts
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Sidebar -->
+            <div class="lg:col-span-3">
+                <!-- Live Leaderboard -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="font-poppins font-semibold text-gray-900">
+                            <i class="fas fa-trophy text-golden mr-2"></i>Leaderboard
+                        </h4>
+                        <select class="text-sm bg-gray-100 border-0 rounded-lg px-3 py-1">
+                            <option>This Week</option>
+                            <option>This Month</option>
+                            <option>All Time</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3 p-3 bg-gradient-to-r from-golden/10 to-saffron/10 rounded-lg">
+                            <div class="flex items-center justify-center w-8 h-8 bg-golden text-white rounded-full text-sm font-bold">1</div>
+                            <div class="flex-1">
+                                <p class="font-medium text-gray-900">SwiftEagle</p>
+                                <p class="text-xs text-gray-500">1,250 points • 45 switches</p>
+                            </div>
+                            <i class="fas fa-crown text-golden"></i>
+                        </div>
+
+                        <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                            <div class="flex items-center justify-center w-8 h-8 bg-gray-400 text-white rounded-full text-sm font-bold">2</div>
+                            <div class="flex-1">
+                                <p class="font-medium text-gray-900">BraveKite</p>
+                                <p class="text-xs text-gray-500">750 points • 23 switches</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                            <div class="flex items-center justify-center w-8 h-8 bg-orange-400 text-white rounded-full text-sm font-bold">3</div>
+                            <div class="flex-1">
+                                <p class="font-medium text-gray-900">CleverLion</p>
+                                <p class="text-xs text-gray-500">720 points • 28 switches</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-3 p-3">
+                            <div class="flex items-center justify-center w-8 h-8 bg-gray-300 text-gray-600 rounded-full text-sm font-bold">4</div>
+                            <div class="flex-1">
+                                <p class="font-medium text-gray-900">MightyTiger</p>
+                                <p class="text-xs text-gray-500">680 points • 22 switches</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-3 p-3">
+                            <div class="flex items-center justify-center w-8 h-8 bg-gray-300 text-gray-600 rounded-full text-sm font-bold">5</div>
+                            <div class="flex-1">
+                                <p class="font-medium text-gray-900">WiseOwl</p>
+                                <p class="text-xs text-gray-500">650 points • 19 switches</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="w-full mt-4 text-saffron font-medium text-sm hover:text-deep-blue transition-colors">
+                        View Full Leaderboard <i class="fas fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+
+                <!-- Trending Products -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <h4 class="font-poppins font-semibold text-gray-900 mb-4">
+                        <i class="fas fa-chart-line text-saffron mr-2"></i>Trending Alternatives
+                    </h4>
+
+                    <div class="space-y-4">
+                        <div class="border border-gray-200 rounded-lg p-3">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <p class="font-medium text-sm text-gray-900">OnePlus Phones</p>
+                                    <p class="text-xs text-gray-500">Alternative to iPhone</p>
+                                </div>
+                                <span class="bg-forest-green text-white text-xs px-2 py-1 rounded-full">+15</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-forest-green h-2 rounded-full" style="width: 80%"></div>
+                            </div>
+                        </div>
+
+                        <div class="border border-gray-200 rounded-lg p-3">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <p class="font-medium text-sm text-gray-900">MTR Foods</p>
+                                    <p class="text-xs text-gray-500">Alternative to Maggi</p>
+                                </div>
+                                <span class="bg-forest-green text-white text-xs px-2 py-1 rounded-full">+12</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-forest-green h-2 rounded-full" style="width: 65%"></div>
+                            </div>
+                        </div>
+
+                        <div class="border border-gray-200 rounded-lg p-3">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <p class="font-medium text-sm text-gray-900">FabIndia</p>
+                                    <p class="text-xs text-gray-500">Alternative to Zara</p>
+                                </div>
+                                <span class="bg-forest-green text-white text-xs px-2 py-1 rounded-full">+8</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-forest-green h-2 rounded-full" style="width: 45%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Community Stats -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h4 class="font-poppins font-semibold text-gray-900 mb-4">
+                        <i class="fas fa-users text-forest-green mr-2"></i>Community Impact
+                    </h4>
+
+                    <div class="grid grid-cols-1 gap-4">
+                        <div class="text-center p-4 bg-gradient-to-r from-saffron/10 to-golden/10 rounded-lg">
+                            <p class="text-2xl font-bold text-saffron">2,847</p>
+                            <p class="text-sm text-gray-600">Total Switches</p>
+                        </div>
+                        
+                        <div class="text-center p-4 bg-gradient-to-r from-forest-green/10 to-saffron/10 rounded-lg">
+                            <p class="text-2xl font-bold text-forest-green">₹45.2L</p>
+                            <p class="text-sm text-gray-600">Money Redirected</p>
+                        </div>
+                        
+                        <div class="text-center p-4 bg-gradient-to-r from-deep-blue/10 to-forest-green/10 rounded-lg">
+                            <p class="text-2xl font-bold text-deep-blue">1,234</p>
+                            <p class="text-sm text-gray-600">Active Members</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+        <div class="grid grid-cols-5 py-2">
+            <button class="flex flex-col items-center py-2 text-saffron">
+                <i class="fas fa-home text-xl mb-1"></i>
+                <span class="text-xs font-medium">Home</span>
+            </button>
+            <button class="flex flex-col items-center py-2 text-gray-400">
+                <i class="fas fa-exchange-alt text-xl mb-1"></i>
+                <span class="text-xs font-medium">Switch</span>
+            </button>
+            <button class="flex flex-col items-center py-2 text-gray-400">
+                <i class="fas fa-trophy text-xl mb-1"></i>
+                <span class="text-xs font-medium">Ranks</span>
+            </button>
+            <button class="flex flex-col items-center py-2 text-gray-400">
+                <i class="fas fa-users text-xl mb-1"></i>
+                <span class="text-xs font-medium">Groups</span>
+            </button>
+            <button class="flex flex-col items-center py-2 text-gray-400">
+                <i class="fas fa-user text-xl mb-1"></i>
+                <span class="text-xs font-medium">Profile</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Floating Action Button (Mobile) -->
+    <div class="lg:hidden fixed bottom-20 right-4 z-40">
+        <button class="bg-gradient-to-r from-saffron to-golden text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all">
+            <i class="fas fa-plus text-xl"></i>
+        </button>
+    </div>
+
+    <!-- Achievement Notification (Sample) -->
+    <div class="fixed top-20 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-sm z-50 transform translate-x-full transition-transform" id="achievement-notification">
+        <div class="flex items-center space-x-3">
+            <div class="bg-golden p-2 rounded-full">
+                <i class="fas fa-trophy text-white"></i>
+            </div>
+            <div>
+                <p class="font-medium text-gray-900">Achievement Unlocked!</p>
+                <p class="text-sm text-gray-600">Social Butterfly - 10 likes received</p>
+            </div>
+            <button class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // TODO: Implement real-time notifications, social interactions, and achievement system
+            // TODO: Add proper state management for user interactions
+            // TODO: Implement API calls for data fetching and updates
+            
+            // Simple demo interactions for the mockup
+            const likeButtons = document.querySelectorAll('.fas.fa-heart').forEach(button => {
+                button.parentElement.addEventListener('click', function() {
+                    this.classList.toggle('text-saffron');
+                    this.classList.toggle('text-gray-500');
+                });
+            });
+
+            // Demo achievement notification
+            setTimeout(() => {
+                const notification = document.getElementById('achievement-notification');
+                notification.classList.remove('translate-x-full');
+                setTimeout(() => {
+                    notification.classList.add('translate-x-full');
+                }, 3000);
+            }, 2000);
+
+            // Mobile menu toggle (basic demo)
+            document.querySelectorAll('.lg\\:hidden button').forEach(button => {
+                button.addEventListener('click', function() {
+                    document.querySelectorAll('.lg\\:hidden button').forEach(btn => {
+                        btn.classList.remove('text-saffron');
+                        btn.classList.add('text-gray-400');
+                    });
+                    this.classList.add('text-saffron');
+                    this.classList.remove('text-gray-400');
+                });
+            });
+        })();
+    </script>
+</body>
+</html>

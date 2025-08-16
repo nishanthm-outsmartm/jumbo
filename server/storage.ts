@@ -78,6 +78,7 @@ export interface IStorage {
   getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined>;
   getUserByHandle(handle: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  createModeratorUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User>;
 
   // Switch log methods
@@ -167,6 +168,7 @@ export interface IStorage {
   updateMission(id: string, updates: Partial<Mission>): Promise<Mission>;
   deleteMission(id: string): Promise<void>;
   getUserMissions(userId: string): Promise<any[]>;
+  getMissionSubmissions(): Promise<any[]>;
 
   // Member management methods
   getAllUsers(filters?: { role?: string; active?: boolean }): Promise<any[]>;
@@ -266,6 +268,11 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async createModeratorUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
   async updateUser(id: string, updates: Partial<User>): Promise<User> {
     const [user] = await db
       .update(users)
@@ -356,6 +363,9 @@ export class DatabaseStorage implements IStorage {
     const [brand] = await db.select().from(brands).where(eq(brands.id, id));
     return brand || undefined;
   }
+  async getAllBrands(): Promise<Brand[]> {
+    return db.select().from(brands);
+  }
 
   async getBrandByName(name: string): Promise<Brand | undefined> {
     const [brand] = await db.select().from(brands).where(eq(brands.name, name));
@@ -373,9 +383,6 @@ export class DatabaseStorage implements IStorage {
       .from(brands)
       .where(sql`${brands.name} ILIKE ${"%" + query + "%"}`)
       .limit(10);
-  }
-  async getAllBrands(): Promise<Brand[]> {
-    return db.select().from(brands);
   }
 
   async toggleLike(userId: string, postId: string): Promise<boolean> {
@@ -945,22 +952,34 @@ export class DatabaseStorage implements IStorage {
       .where(eq(messages.id, messageId));
   }
 
-  // Moderator posts
-  async createModeratorPost(
-    insertPost: InsertModeratorPost
-  ): Promise<ModeratorPost> {
-    const [post] = await db
-      .insert(moderatorPosts)
-      .values(insertPost)
-      .returning();
-    return post;
-  }
-
-  async getAllModeratorPosts(): Promise<ModeratorPost[]> {
+  // Mission methods for interface compliance
+  async getMissionsByCategory(categoryId: string): Promise<Mission[]> {
     return db
       .select()
-      .from(moderatorPosts)
-      .orderBy(desc(moderatorPosts.isPinned), desc(moderatorPosts.createdAt));
+      .from(missions)
+      .where(
+        and(eq(missions.categoryId, categoryId), eq(missions.isActive, true))
+      )
+      .orderBy(desc(missions.createdAt));
+  }
+
+  async getMissionsByCommunity(communityId: string): Promise<Mission[]> {
+    return db
+      .select()
+      .from(missions)
+      .where(
+        and(eq(missions.communityId, communityId), eq(missions.isActive, true))
+      )
+      .orderBy(desc(missions.createdAt));
+  }
+
+  async updateMissionStatus(id: string, status: string): Promise<Mission> {
+    const [mission] = await db
+      .update(missions)
+      .set({ status: status as any })
+      .where(eq(missions.id, id))
+      .returning();
+    return mission;
   }
 
   // Categories
@@ -1211,78 +1230,962 @@ export class DatabaseStorage implements IStorage {
     return submission;
   }
 
-  // Enhanced switch log methods with approval workflow
-  async getPendingSwitchLogs(): Promise<SwitchLog[]> {
-    return db
-      .select()
-      .from(switchLogs)
-      .where(eq(switchLogs.status, "PENDING"))
-      .orderBy(desc(switchLogs.createdAt));
+  // Moderator post creation methods
+  async createModeratorPost(postData: {
+    userId: string;
+    postType: string;
+    title?: string;
+    content: string;
+    categoryId?: string;
+    communityId?: string;
+    missionId?: string;
+    targetBrandFrom?: string;
+    targetBrandTo?: string;
+    actionButtonText?: string;
+    actionButtonUrl?: string;
+    tags?: string[];
+    imageUrl?: string;
+    isPinned?: boolean;
+    expiresAt?: string;
+  }): Promise<any> {
+    const [post] = await db
+      .insert(posts)
+      .values({
+        userId: postData.userId,
+        postType: postData.postType as any,
+        title: postData.title,
+        content: postData.content,
+        categoryId: postData.categoryId,
+        communityId: postData.communityId,
+        missionId: postData.missionId,
+        targetBrandFrom: postData.targetBrandFrom,
+        targetBrandTo: postData.targetBrandTo,
+        actionButtonText: postData.actionButtonText,
+        actionButtonUrl: postData.actionButtonUrl,
+        tags: postData.tags,
+        imageUrl: postData.imageUrl,
+        isPinned: postData.isPinned || false,
+        expiresAt: postData.expiresAt ? new Date(postData.expiresAt) : null,
+      })
+      .returning();
+    return post;
   }
 
-  async approveSwitchLog(
-    id: string,
-    moderatorId: string,
-    moderatorNotes?: string
-  ): Promise<SwitchLog> {
-    const [switchLog] = await db
-      .update(switchLogs)
-      .set({
-        status: "APPROVED",
-        moderatorId,
-        moderatorNotes,
-        approvedAt: sql`NOW()`,
+  async getAllPostsWithDetails(): Promise<any[]> {
+    const result = await db
+      .select({
+        post: posts,
+        user: {
+          id: users.id,
+          handle: users.handle,
+          role: users.role,
+        },
+        category: {
+          id: categories.id,
+          name: categories.name,
+          color: categories.color,
+        },
+        community: {
+          id: communities.id,
+          name: communities.name,
+        },
+        mission: {
+          id: missions.id,
+          title: missions.title,
+        },
       })
-      .where(eq(switchLogs.id, id))
+      .from(posts)
+      .leftJoin(users, eq(posts.userId, users.id))
+      .leftJoin(categories, eq(posts.categoryId, categories.id))
+      .leftJoin(communities, eq(posts.communityId, communities.id))
+      .leftJoin(missions, eq(posts.missionId, missions.id))
+      .orderBy(desc(posts.createdAt));
+
+    return result;
+  }
+
+  async getPostsByType(postType: string): Promise<any[]> {
+    const result = await db
+      .select({
+        post: posts,
+        user: {
+          id: users.id,
+          handle: users.handle,
+          role: users.role,
+        },
+        category: {
+          id: categories.id,
+          name: categories.name,
+          color: categories.color,
+        },
+        community: {
+          id: communities.id,
+          name: communities.name,
+        },
+        mission: {
+          id: missions.id,
+          title: missions.title,
+        },
+      })
+      .from(posts)
+      .leftJoin(users, eq(posts.userId, users.id))
+      .leftJoin(categories, eq(posts.categoryId, categories.id))
+      .leftJoin(communities, eq(posts.communityId, communities.id))
+      .leftJoin(missions, eq(posts.missionId, missions.id))
+      .where(eq(posts.postType, postType as any))
+      .orderBy(desc(posts.createdAt));
+
+    return result;
+  }
+
+  async incrementSwitchLogCount(postId: string): Promise<void> {
+    await db
+      .update(posts)
+      .set({ switchLogsCount: sql`${posts.switchLogsCount} + 1` })
+      .where(eq(posts.id, postId));
+  }
+
+  async createSwitchLogFromPost(data: {
+    userId: string;
+    postId?: string;
+    fromBrandId?: string;
+    toBrandId?: string;
+    category: string;
+    reason: string;
+    categoryId?: string;
+    communityId?: string;
+    tags?: string[];
+  }): Promise<any> {
+    const [switchLog] = await db
+      .insert(switchLogs)
+      .values({
+        userId: data.userId,
+        fromBrandId: data.fromBrandId,
+        toBrandId: data.toBrandId,
+        category: data.category as any,
+        reason: data.reason,
+        categoryId: data.categoryId,
+        communityId: data.communityId,
+        tags: data.tags,
+        status: "PENDING",
+      })
       .returning();
+
+    // If this switch log was created from a post, increment the count
+    if (data.postId) {
+      await this.incrementSwitchLogCount(data.postId);
+    }
+
     return switchLog;
   }
 
-  async rejectSwitchLog(
-    id: string,
+  async getAllNewsArticles(): Promise<any[]> {
+    try {
+      // First, get actual articles from database
+      const articles = await db
+        .select()
+        .from(newsArticles)
+        .orderBy(desc(newsArticles.publishedAt));
+
+      // Enhance articles with brand names
+      const enhancedArticles = await Promise.all(
+        articles.map(async (article) => {
+          let fromBrands: any[] = [];
+          let toBrands: any[] = [];
+
+          // Handle from brands
+          if (
+            article.suggestedFromBrandIds &&
+            Array.isArray(article.suggestedFromBrandIds) &&
+            article.suggestedFromBrandIds.length > 0
+          ) {
+            try {
+              fromBrands = await db
+                .select()
+                .from(brands)
+                .where(
+                  sql`${brands.id} IN (${sql.join(
+                    article.suggestedFromBrandIds.map((id) => sql`${id}`),
+                    sql`, `
+                  )})`
+                );
+            } catch (error) {
+              console.error("Error fetching from brands:", error);
+            }
+          }
+
+          // Handle to brands
+          if (
+            article.suggestedToBrandIds &&
+            Array.isArray(article.suggestedToBrandIds) &&
+            article.suggestedToBrandIds.length > 0
+          ) {
+            try {
+              toBrands = await db
+                .select()
+                .from(brands)
+                .where(
+                  sql`${brands.id} IN (${sql.join(
+                    article.suggestedToBrandIds.map((id) => sql`${id}`),
+                    sql`, `
+                  )})`
+                );
+            } catch (error) {
+              console.error("Error fetching to brands:", error);
+            }
+          }
+
+          return {
+            ...article,
+            fromBrands,
+            toBrands,
+          };
+        })
+      );
+
+      // If no articles exist, return sample data for demonstration
+      if (enhancedArticles.length === 0) {
+        return [
+          {
+            id: "sample-1",
+            title: "Top 10 Indian Smartphone Brands Gaining Market Share",
+            description:
+              "Discover how Indian smartphone manufacturers like Lava, Micromax, and others are making significant strides in the domestic market, offering quality alternatives to foreign brands.",
+            imageUrls: null,
+            suggestedFromBrandIds: null,
+            suggestedToBrandIds: null,
+            commentsEnabled: true,
+            isPublished: true,
+            publishedAt: new Date(
+              Date.now() - 2 * 60 * 60 * 1000
+            ).toISOString(), // 2 hours ago
+            createdBy: "admin",
+            createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+            fromBrands: [
+              {
+                id: "1",
+                name: "Samsung",
+                country: "South Korea",
+                isIndian: false,
+              },
+            ],
+            toBrands: [
+              { id: "2", name: "Lava", country: "India", isIndian: true },
+              { id: "3", name: "Micromax", country: "India", isIndian: true },
+            ],
+          },
+          {
+            id: "sample-2",
+            title: "Indian Fashion Industry: Local Brands vs Global Giants",
+            description:
+              "An in-depth analysis of how Indian fashion brands are competing with international companies, focusing on traditional wear, sustainable fashion, and price competitiveness.",
+            imageUrls: null,
+            suggestedFromBrandIds: null,
+            suggestedToBrandIds: null,
+            commentsEnabled: true,
+            isPublished: true,
+            publishedAt: new Date(
+              Date.now() - 4 * 60 * 60 * 1000
+            ).toISOString(), // 4 hours ago
+            createdBy: "admin",
+            createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+            fromBrands: [
+              { id: "4", name: "Zara", country: "Spain", isIndian: false },
+              { id: "5", name: "H&M", country: "Sweden", isIndian: false },
+            ],
+            toBrands: [
+              { id: "6", name: "Fabindia", country: "India", isIndian: true },
+              { id: "7", name: "Biba", country: "India", isIndian: true },
+            ],
+          },
+          {
+            id: "sample-3",
+            title: "Consumer Electronics: Make in India Success Stories",
+            description:
+              "Highlighting successful Indian electronics manufacturers who are providing quality alternatives in categories like televisions, home appliances, and audio equipment.",
+            imageUrls: null,
+            suggestedFromBrandIds: null,
+            suggestedToBrandIds: null,
+            commentsEnabled: true,
+            isPublished: true,
+            publishedAt: new Date(
+              Date.now() - 6 * 60 * 60 * 1000
+            ).toISOString(), // 6 hours ago
+            createdBy: "admin",
+            createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+          },
+          {
+            id: "sample-4",
+            title:
+              "Food & Beverages: Supporting Local Brands for Healthier Choices",
+            description:
+              "Explore how switching to local food and beverage brands not only supports the Indian economy but also often provides healthier, more authentic products.",
+            imageUrls: null,
+            suggestedFromBrandIds: null,
+            suggestedToBrandIds: null,
+            commentsEnabled: false,
+            isPublished: true,
+            publishedAt: new Date(
+              Date.now() - 8 * 60 * 60 * 1000
+            ).toISOString(), // 8 hours ago
+            createdBy: "admin",
+            createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+          },
+          {
+            id: "sample-5",
+            title: "Automotive Sector: Indian Car Manufacturers Rising",
+            description:
+              "A comprehensive look at how Indian automotive companies are innovating and competing in both domestic and international markets with affordable, efficient vehicles.",
+            imageUrls: null,
+            suggestedFromBrandIds: null,
+            suggestedToBrandIds: null,
+            commentsEnabled: true,
+            isPublished: true,
+            publishedAt: new Date(
+              Date.now() - 12 * 60 * 60 * 1000
+            ).toISOString(), // 12 hours ago
+            createdBy: "admin",
+            createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+          },
+        ];
+      }
+
+      return enhancedArticles;
+    } catch (error) {
+      console.error("Error in getAllNewsArticles:", error);
+      // Return sample data if database query fails
+      return [
+        {
+          id: "sample-1",
+          title: "Top 10 Indian Smartphone Brands Gaining Market Share",
+          description:
+            "Discover how Indian smartphone manufacturers like Lava, Micromax, and others are making significant strides in the domestic market, offering quality alternatives to foreign brands.",
+          imageUrls: null,
+          suggestedFromBrandIds: null,
+          suggestedToBrandIds: null,
+          commentsEnabled: true,
+          isPublished: true,
+          publishedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          createdBy: "admin",
+          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          fromBrands: [
+            {
+              id: "1",
+              name: "Samsung",
+              country: "South Korea",
+              isIndian: false,
+            },
+          ],
+          toBrands: [
+            { id: "2", name: "Lava", country: "India", isIndian: true },
+            { id: "3", name: "Micromax", country: "India", isIndian: true },
+          ],
+        },
+        {
+          id: "sample-2",
+          title: "Indian Fashion Industry: Local Brands vs Global Giants",
+          description:
+            "An in-depth analysis of how Indian fashion brands are competing with international companies, focusing on traditional wear, sustainable fashion, and price competitiveness.",
+          imageUrls: null,
+          suggestedFromBrandIds: null,
+          suggestedToBrandIds: null,
+          commentsEnabled: true,
+          isPublished: true,
+          publishedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+          createdBy: "admin",
+          createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+          fromBrands: [
+            { id: "4", name: "Zara", country: "Spain", isIndian: false },
+          ],
+          toBrands: [
+            { id: "6", name: "Fabindia", country: "India", isIndian: true },
+          ],
+        },
+      ];
+    }
+  }
+
+  async getAllMissions(): Promise<any[]> {
+    try {
+      const allMissions = await db
+        .select({
+          id: missions.id,
+          title: missions.title,
+          description: missions.description,
+          targetCategory: missions.targetCategory,
+          pointsReward: missions.pointsReward,
+          startDate: missions.startDate,
+          endDate: missions.endDate,
+          status: missions.status,
+          impact: missions.impact,
+          fromBrandIds: missions.fromBrandIds,
+          toBrandIds: missions.toBrandIds,
+        })
+        .from(missions)
+        .where(sql`${missions.isActive} = true`)
+        .orderBy(desc(missions.startDate));
+
+      // Enhance missions with brand names
+      const enhancedMissions = await Promise.all(
+        allMissions.map(async (mission) => {
+          let fromBrands: any[] = [];
+          let toBrands: any[] = [];
+
+          // Handle from brands
+          if (
+            mission.fromBrandIds &&
+            Array.isArray(mission.fromBrandIds) &&
+            mission.fromBrandIds.length > 0
+          ) {
+            try {
+              fromBrands = await db
+                .select()
+                .from(brands)
+                .where(
+                  sql`${brands.id} IN (${sql.join(
+                    mission.fromBrandIds.map((id) => sql`${id}`),
+                    sql`, `
+                  )})`
+                );
+            } catch (error) {
+              console.error("Error fetching mission from brands:", error);
+            }
+          }
+
+          // Handle to brands
+          if (
+            mission.toBrandIds &&
+            Array.isArray(mission.toBrandIds) &&
+            mission.toBrandIds.length > 0
+          ) {
+            try {
+              toBrands = await db
+                .select()
+                .from(brands)
+                .where(
+                  sql`${brands.id} IN (${sql.join(
+                    mission.toBrandIds.map((id) => sql`${id}`),
+                    sql`, `
+                  )})`
+                );
+            } catch (error) {
+              console.error("Error fetching mission to brands:", error);
+            }
+          }
+
+          return {
+            ...mission,
+            fromBrands,
+            toBrands,
+          };
+        })
+      );
+
+      // If no missions exist, return sample data
+      if (enhancedMissions.length === 0) {
+        return [
+          {
+            id: "mission-1",
+            title: "Switch to Indian Electronics",
+            description:
+              "Join the mission to support Indian electronics brands and reduce dependency on foreign imports.",
+            targetCategory: "ELECTRONICS",
+            pointsReward: 100,
+            startDate: new Date(
+              Date.now() - 7 * 24 * 60 * 60 * 1000
+            ).toISOString(),
+            endDate: new Date(
+              Date.now() + 23 * 24 * 60 * 60 * 1000
+            ).toISOString(),
+            status: "ACTIVE",
+            impact: "HIGH",
+            fromBrands: [
+              { id: "8", name: "Apple", country: "USA", isIndian: false },
+              { id: "9", name: "Sony", country: "Japan", isIndian: false },
+            ],
+            toBrands: [
+              { id: "10", name: "Boat", country: "India", isIndian: true },
+              { id: "11", name: "Noise", country: "India", isIndian: true },
+            ],
+          },
+          {
+            id: "mission-2",
+            title: "Support Indian Food Brands",
+            description:
+              "Discover and switch to authentic Indian food and beverage brands for healthier, local options.",
+            targetCategory: "FOOD_BEVERAGES",
+            pointsReward: 75,
+            startDate: new Date(
+              Date.now() - 3 * 24 * 60 * 60 * 1000
+            ).toISOString(),
+            endDate: new Date(
+              Date.now() + 27 * 24 * 60 * 60 * 1000
+            ).toISOString(),
+            status: "ACTIVE",
+            impact: "MEDIUM",
+            fromBrands: [
+              { id: "12", name: "Coca-Cola", country: "USA", isIndian: false },
+              {
+                id: "13",
+                name: "Nestlé",
+                country: "Switzerland",
+                isIndian: false,
+              },
+            ],
+            toBrands: [
+              {
+                id: "14",
+                name: "Paper Boat",
+                country: "India",
+                isIndian: true,
+              },
+              {
+                id: "15",
+                name: "Haldiram's",
+                country: "India",
+                isIndian: true,
+              },
+            ],
+          },
+        ];
+      }
+
+      return enhancedMissions;
+    } catch (error) {
+      console.error("Error in getAllMissions:", error);
+      // Return sample data if database query fails
+      return [
+        {
+          id: "mission-1",
+          title: "Switch to Indian Electronics",
+          description:
+            "Join the mission to support Indian electronics brands and reduce dependency on foreign imports.",
+          targetCategory: "ELECTRONICS",
+          pointsReward: 100,
+          startDate: new Date(
+            Date.now() - 7 * 24 * 60 * 60 * 1000
+          ).toISOString(),
+          endDate: new Date(
+            Date.now() + 23 * 24 * 60 * 60 * 1000
+          ).toISOString(),
+          status: "ACTIVE",
+          impact: "HIGH",
+          fromBrands: [
+            { id: "8", name: "Apple", country: "USA", isIndian: false },
+          ],
+          toBrands: [
+            { id: "10", name: "Boat", country: "India", isIndian: true },
+          ],
+        },
+      ];
+    }
+  }
+
+  async getOngoingMissions(): Promise<any[]> {
+    try {
+      const now = new Date();
+      const activeMissions = await db
+        .select({
+          id: missions.id,
+          title: missions.title,
+          description: missions.description,
+          targetCategory: missions.targetCategory,
+          pointsReward: missions.pointsReward,
+          startDate: missions.startDate,
+          endDate: missions.endDate,
+          status: missions.status,
+          impact: missions.impact,
+          fromBrandIds: missions.fromBrandIds,
+          toBrandIds: missions.toBrandIds,
+        })
+        .from(missions)
+        .where(
+          sql`${missions.status} = 'ACTIVE' AND ${missions.isActive} = true AND (${missions.endDate} IS NULL OR ${missions.endDate} > ${now})`
+        )
+        .orderBy(desc(missions.startDate));
+
+      // Enhance missions with brand names
+      const enhancedMissions = await Promise.all(
+        activeMissions.map(async (mission) => {
+          let fromBrands: any[] = [];
+          let toBrands: any[] = [];
+
+          // Handle from brands
+          if (
+            mission.fromBrandIds &&
+            Array.isArray(mission.fromBrandIds) &&
+            mission.fromBrandIds.length > 0
+          ) {
+            try {
+              fromBrands = await db
+                .select()
+                .from(brands)
+                .where(
+                  sql`${brands.id} IN (${sql.join(
+                    mission.fromBrandIds.map((id) => sql`${id}`),
+                    sql`, `
+                  )})`
+                );
+            } catch (error) {
+              console.error("Error fetching mission from brands:", error);
+            }
+          }
+
+          // Handle to brands
+          if (
+            mission.toBrandIds &&
+            Array.isArray(mission.toBrandIds) &&
+            mission.toBrandIds.length > 0
+          ) {
+            try {
+              toBrands = await db
+                .select()
+                .from(brands)
+                .where(
+                  sql`${brands.id} IN (${sql.join(
+                    mission.toBrandIds.map((id) => sql`${id}`),
+                    sql`, `
+                  )})`
+                );
+            } catch (error) {
+              console.error("Error fetching mission to brands:", error);
+            }
+          }
+
+          return {
+            ...mission,
+            fromBrands,
+            toBrands,
+          };
+        })
+      );
+
+      // If no missions exist, return sample data
+      if (enhancedMissions.length === 0) {
+        return [
+          {
+            id: "mission-1",
+            title: "Switch to Indian Electronics",
+            description:
+              "Join the mission to support Indian electronics brands and reduce dependency on foreign imports.",
+            targetCategory: "ELECTRONICS",
+            pointsReward: 100,
+            startDate: new Date(
+              Date.now() - 7 * 24 * 60 * 60 * 1000
+            ).toISOString(), // 7 days ago
+            endDate: new Date(
+              Date.now() + 23 * 24 * 60 * 60 * 1000
+            ).toISOString(), // 23 days from now
+            status: "ACTIVE",
+            impact: "HIGH",
+            fromBrands: [
+              { id: "8", name: "Apple", country: "USA", isIndian: false },
+              { id: "9", name: "Sony", country: "Japan", isIndian: false },
+            ],
+            toBrands: [
+              { id: "10", name: "Boat", country: "India", isIndian: true },
+              { id: "11", name: "Noise", country: "India", isIndian: true },
+            ],
+          },
+          {
+            id: "mission-2",
+            title: "Support Indian Food Brands",
+            description:
+              "Discover and switch to authentic Indian food and beverage brands for healthier, local options.",
+            targetCategory: "FOOD_BEVERAGES",
+            pointsReward: 75,
+            startDate: new Date(
+              Date.now() - 3 * 24 * 60 * 60 * 1000
+            ).toISOString(), // 3 days ago
+            endDate: new Date(
+              Date.now() + 27 * 24 * 60 * 60 * 1000
+            ).toISOString(), // 27 days from now
+            status: "ACTIVE",
+            impact: "MEDIUM",
+            fromBrands: [
+              { id: "12", name: "Coca-Cola", country: "USA", isIndian: false },
+              {
+                id: "13",
+                name: "Nestlé",
+                country: "Switzerland",
+                isIndian: false,
+              },
+            ],
+            toBrands: [
+              {
+                id: "14",
+                name: "Paper Boat",
+                country: "India",
+                isIndian: true,
+              },
+              {
+                id: "15",
+                name: "Haldiram's",
+                country: "India",
+                isIndian: true,
+              },
+            ],
+          },
+        ];
+      }
+
+      return enhancedMissions;
+    } catch (error) {
+      console.error("Error in getOngoingMissions:", error);
+      // Return sample data if database query fails
+      return [
+        {
+          id: "mission-1",
+          title: "Switch to Indian Electronics",
+          description:
+            "Join the mission to support Indian electronics brands and reduce dependency on foreign imports.",
+          targetCategory: "ELECTRONICS",
+          pointsReward: 100,
+          startDate: new Date(
+            Date.now() - 7 * 24 * 60 * 60 * 1000
+          ).toISOString(),
+          endDate: new Date(
+            Date.now() + 23 * 24 * 60 * 60 * 1000
+          ).toISOString(),
+          status: "ACTIVE",
+          impact: "HIGH",
+          fromBrands: [
+            { id: "8", name: "Apple", country: "USA", isIndian: false },
+          ],
+          toBrands: [
+            { id: "10", name: "Boat", country: "India", isIndian: true },
+          ],
+        },
+      ];
+    }
+  }
+
+  // async getUserMissions(userId: string): Promise<any[]> {
+  //   try {
+  //     const userMissionsList = await db.select().from(userMissions).where(eq(userMissions.userId, userId));
+  //     return userMissionsList;
+  //   } catch (error) {
+  //     console.error('Error getting user missions:', error);
+  //     return [];
+  //   }
+  // }
+
+  async joinMission(userId: string, missionId: string): Promise<any> {
+    try {
+      // Check if user already joined this mission
+      const existing = await db
+        .select()
+        .from(userMissions)
+        .where(
+          and(
+            eq(userMissions.userId, userId),
+            eq(userMissions.missionId, missionId)
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        throw new Error("You have already joined this mission");
+      }
+
+      const [userMission] = await db
+        .insert(userMissions)
+        .values({
+          userId,
+          missionId,
+          status: "STARTED",
+        })
+        .returning();
+
+      return userMission;
+    } catch (error) {
+      console.error("Error joining mission:", error);
+      throw error;
+    }
+  }
+
+  async submitMissionSwitchLog(
+    userId: string,
+    missionId: string,
+    switchLogData: any
+  ): Promise<any> {
+    try {
+      // Check if user has joined this mission
+      console.log(
+        "Checking user mission for userId:",
+        userId,
+        "missionId:",
+        missionId
+      );
+      const userMission = await db
+        .select()
+        .from(userMissions)
+        .where(
+          and(
+            eq(userMissions.userId, userId),
+            eq(userMissions.missionId, missionId)
+          )
+        )
+        .limit(1);
+
+      console.log("Found user mission:", userMission);
+      if (userMission.length === 0) {
+        throw new Error("You must join the mission first");
+      }
+
+      if (userMission[0].status !== "STARTED") {
+        throw new Error("Mission already completed or failed");
+      }
+
+      // Create switch log with mission reference
+      const switchLog = await this.createSwitchLog({
+        userId,
+        targetBrandFrom: switchLogData.targetBrandFrom,
+        targetBrandTo: switchLogData.targetBrandTo,
+        reason: switchLogData.reason,
+        experience: switchLogData.experience,
+        financialImpact: switchLogData.financialImpact,
+        evidenceUrl: switchLogData.evidenceUrl,
+        missionId,
+        status: "PENDING",
+      });
+
+      return switchLog;
+    } catch (error) {
+      console.error("Error submitting mission switch log:", error);
+      throw error;
+    }
+  }
+
+  async verifyMissionSwitchLog(
+    switchLogId: string,
     moderatorId: string,
-    moderatorNotes?: string
-  ): Promise<SwitchLog> {
-    const [switchLog] = await db
-      .update(switchLogs)
-      .set({
-        status: "REJECTED",
-        moderatorId,
-        moderatorNotes,
-      })
-      .where(eq(switchLogs.id, id))
-      .returning();
-    return switchLog;
+    approved: boolean,
+    feedback?: string
+  ): Promise<any> {
+    try {
+      // Get the switch log
+      const [switchLog] = await db
+        .select()
+        .from(switchLogs)
+        .where(eq(switchLogs.id, switchLogId));
+
+      if (!switchLog) {
+        throw new Error("Switch log not found");
+      }
+
+      if (!switchLog.missionId) {
+        throw new Error("This switch log is not associated with a mission");
+      }
+
+      // Update switch log status
+      const newStatus = approved ? "APPROVED" : "REJECTED";
+      const updateData: any = {
+        status: newStatus,
+        moderatorNotes: feedback,
+        approvedAt: new Date(),
+      };
+
+      // Only set moderatorId if it's not null and the user exists
+      if (moderatorId) {
+        updateData.moderatorId = moderatorId;
+      }
+
+      await db
+        .update(switchLogs)
+        .set(updateData)
+        .where(eq(switchLogs.id, switchLogId));
+
+      // Get mission details for points calculation
+      const [mission] = await db
+        .select()
+        .from(missions)
+        .where(eq(missions.id, switchLog.missionId));
+
+      // If approved, complete the user mission and award points
+      if (approved && mission) {
+        // Update user mission status
+        await db
+          .update(userMissions)
+          .set({
+            status: "COMPLETED",
+            completedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(userMissions.userId, switchLog.userId),
+              eq(userMissions.missionId, switchLog.missionId)
+            )
+          );
+
+        // Award points to user
+        await db
+          .update(users)
+          .set({
+            points: sql`${users.points} + ${mission.pointsReward}`,
+          })
+          .where(eq(users.id, switchLog.userId));
+      } else if (!approved) {
+        // Mark mission as failed
+        await db
+          .update(userMissions)
+          .set({ status: "FAILED" })
+          .where(
+            and(
+              eq(userMissions.userId, switchLog.userId),
+              eq(userMissions.missionId, switchLog.missionId)
+            )
+          );
+      }
+
+      const pointsAwarded = approved && mission ? mission.pointsReward : 0;
+      return { success: true, approved, pointsAwarded };
+    } catch (error) {
+      console.error("Error verifying mission switch log:", error);
+      throw error;
+    }
   }
 
-  // Enhanced mission methods
-  async getMissionsByCategory(categoryId: string): Promise<Mission[]> {
-    return db
-      .select()
-      .from(missions)
-      .where(
-        and(eq(missions.categoryId, categoryId), eq(missions.isActive, true))
-      )
-      .orderBy(desc(missions.createdAt));
-  }
+  async getMissionSubmissions(): Promise<any[]> {
+    try {
+      console.log("Fetching mission submissions...");
 
-  async getMissionsByCommunity(communityId: string): Promise<Mission[]> {
-    return db
-      .select()
-      .from(missions)
-      .where(
-        and(eq(missions.communityId, communityId), eq(missions.isActive, true))
-      )
-      .orderBy(desc(missions.createdAt));
-  }
+      // Get all switch logs that are related to missions and pending verification
+      const submissions = await db
+        .select({
+          id: switchLogs.id,
+          userId: switchLogs.userId,
+          missionId: switchLogs.missionId,
+          reason: switchLogs.reason,
+          experience: switchLogs.experience,
+          financialImpact: switchLogs.financialImpact,
+          evidenceUrl: switchLogs.evidenceUrl,
+          status: switchLogs.status,
+          createdAt: switchLogs.createdAt,
+          userName: users.handle,
+          missionTitle: missions.title,
+        })
+        .from(switchLogs)
+        .leftJoin(users, eq(switchLogs.userId, users.id))
+        .leftJoin(missions, eq(switchLogs.missionId, missions.id))
+        .where(
+          sql`${switchLogs.missionId} IS NOT NULL AND ${switchLogs.status} = 'PENDING'`
+        )
+        .orderBy(desc(switchLogs.createdAt));
 
-  async updateMissionStatus(id: string, status: string): Promise<Mission> {
-    const [mission] = await db
-      .update(missions)
-      .set({ status: status as any })
-      .where(eq(missions.id, id))
-      .returning();
-    return mission;
+      console.log("Found mission submissions:", submissions.length);
+      return submissions;
+    } catch (error) {
+      console.error("Error fetching mission submissions:", error);
+      return [];
+    }
   }
 }
 

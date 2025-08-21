@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useLayoutEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
+import Navbar from "@/components/landing/navbar";
 
 interface NewsArticle {
   id: string;
@@ -161,7 +162,7 @@ function HeroSection() {
           <div className="bg-white/20 p-4 rounded-2xl">
             <Zap className="text-white h-12 w-12" />
           </div>
-          <h1 className="text-6xl">JumboJolt</h1>
+          <h1 className="text-3xl lg:text-6xl">JumboJolt</h1>
         </div>
 
         <h1 className="text-5xl font-bold mb-6">
@@ -238,6 +239,10 @@ function ConversionPrompt() {
 }
 
 export default function LandingPage() {
+  useLayoutEffect(() => {
+    document.title = "JumboJolt";
+  }, []);
+
   const { data: articles = [], isLoading } = useQuery({
     queryKey: ["/api/news"],
     queryFn: async () => {
@@ -273,6 +278,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Navbar />
       <HeroSection />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

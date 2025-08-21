@@ -76,21 +76,17 @@ export function UserStats() {
 
           {/* Quick Actions */}
           <div className="space-y-3">
-            <Button
-              disabled
-              className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white font-medium transition-all"
-            >
+            <Button className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white font-medium transition-all">
               <Zap className="mr-2 h-4 w-4" />
               Log New Switch
             </Button>
 
             <Button
-              disabled
               variant="outline"
               className="w-full text-gray-700 hover:bg-gray-50 transition-all"
             >
               <Target className="mr-2 h-4 w-4" />
-              Suggest Product
+              Suggest Idea
             </Button>
           </div>
         </div>

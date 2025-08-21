@@ -68,9 +68,15 @@ import {
   type InsertContentTag,
   type FeedbackSubmission,
   type InsertFeedbackSubmission,
+  passwordResetTokens,
 } from "@shared/schema";
 import { db } from "./db";
+import crypto from "crypto";
 import { eq, desc, sql, and, count } from "drizzle-orm";
+import { sendEmail } from "./services/email.service";
+import config from "../client/src/lib/config";
+import { error } from "console";
+import { auth } from "./services/firebase-admin";
 
 export interface IStorage {
   // User methods
@@ -857,6 +863,156 @@ export class DatabaseStorage implements IStorage {
     }
 
     return baseQuery.orderBy(desc(users.createdAt));
+  }
+
+  async forgotPassword(email: string): Promise<any> {
+    try {
+      if (!email) {
+        return { error: "Email is required" };
+      }
+
+      // Check if user exists in our database
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (!user) {
+        // Don't reveal if user exists or not for security
+        return {
+          message:
+            "If an account with this email exists, a password reset link has been sent.",
+        };
+      }
+
+      // Generate reset token
+      const resetToken = crypto.randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + 3600000); // 1 hour
+
+      // Store reset token in database
+      await db.insert(passwordResetTokens).values({
+        userId: user.id,
+        token: resetToken,
+        expiresAt,
+      });
+
+      const resetUrl = `${config.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+      const emailSent = await sendEmail({
+        to: email,
+        subject: "Password Reset Request",
+        html: `
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+          <h2>Password Reset Request</h2>
+          <p>You requested a password reset for your account. Click the link below to reset your password:</p>
+          <a href="${resetUrl}" style="display: inline-block; padding: 10px 20px; background-color: #EA580C; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0;">Reset Password</a>
+          <p>This link will expire in 1 hour.</p>
+          <p>If you didn't request this password reset, please ignore this email.</p>
+        </div>
+      `,
+      });
+      if (!emailSent) {
+        return { error: "Failed to send password reset email" };
+      } else {
+        return {
+          message:
+            "If an account with this email exists, a password reset link has been sent.",
+        };
+      }
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      return { error: "Internal server error" };
+    }
+  }
+
+  async verifyResetToken(token: string): Promise<{
+    error: string | null;
+    valid: boolean | null;
+    email: string | null;
+  }> {
+    // Find valid token
+    const [resetToken] = await db
+      .select({
+        id: passwordResetTokens.id,
+        userId: passwordResetTokens.userId,
+        expiresAt: passwordResetTokens.expiresAt,
+        used: passwordResetTokens.used,
+        userEmail: users.email,
+      })
+      .from(passwordResetTokens)
+      .innerJoin(users, eq(passwordResetTokens.userId, users.id))
+      .where(eq(passwordResetTokens.token, token))
+      .limit(1);
+
+    if (!resetToken) {
+      return { error: "Invalid reset token", valid: null, email: null };
+    }
+
+    if (resetToken.used) {
+      return {
+        error: "Reset token has already been used",
+        valid: null,
+        email: null,
+      };
+    }
+
+    if (new Date() > resetToken.expiresAt) {
+      return { error: "Reset token has expired", valid: null, email: null };
+    }
+
+    return {
+      error: null,
+      valid: true,
+      email: resetToken.userEmail,
+    };
+  }
+
+  async resetPassword(
+    token: string,
+    newPassword: string
+  ): Promise<{ success: boolean; error: string | null }> {
+    // Find and validate token
+    const [resetToken] = await db
+      .select({
+        id: passwordResetTokens.id,
+        userId: passwordResetTokens.userId,
+        expiresAt: passwordResetTokens.expiresAt,
+        used: passwordResetTokens.used,
+        firebaseUid: users.firebaseUid,
+        userEmail: users.email,
+      })
+      .from(passwordResetTokens)
+      .innerJoin(users, eq(passwordResetTokens.userId, users.id))
+      .where(eq(passwordResetTokens.token, token))
+      .limit(1);
+
+    if (!resetToken) {
+      return { success: false, error: "Invalid reset token" };
+    }
+
+    if (resetToken.used) {
+      return { success: false, error: "Reset token has already been used" };
+    }
+
+    if (new Date() > resetToken.expiresAt) {
+      return { success: false, error: "Reset token has expired" };
+    }
+
+    // Update password in Firebase
+    await auth.updateUser(resetToken.firebaseUid, {
+      password: newPassword,
+    });
+
+    // Mark token as used
+    await db
+      .update(passwordResetTokens)
+      .set({ used: true })
+      .where(eq(passwordResetTokens.id, resetToken.id));
+
+    // Revoke all refresh tokens to force re-login
+    await auth.revokeRefreshTokens(resetToken.firebaseUid);
+    return { success: true, error: null };
   }
 
   async getUserDetails(id: string): Promise<any> {
@@ -2110,7 +2266,7 @@ export class DatabaseStorage implements IStorage {
         .where(eq(missions.id, switchLog.missionId));
 
       // If approved, complete the user mission and award points
-      if (approved && mission) {
+      if (approved && mission && switchLog.userId) {
         // Update user mission status
         await db
           .update(userMissions)
@@ -2132,7 +2288,7 @@ export class DatabaseStorage implements IStorage {
             points: sql`${users.points} + ${mission.pointsReward}`,
           })
           .where(eq(users.id, switchLog.userId));
-      } else if (!approved) {
+      } else if (!approved && switchLog.userId) {
         // Mark mission as failed
         await db
           .update(userMissions)

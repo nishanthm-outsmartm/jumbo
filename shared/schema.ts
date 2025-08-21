@@ -70,6 +70,20 @@ export const users = pgTable("users", {
   switchCount: integer("switch_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   lastLoginAt: timestamp("last_login_at"),
+  isStrategist: boolean("is_strategist").default(false).notNull(),
+});
+
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  token: varchar("token", { length: 255 }).unique().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Public aliases for social sharing

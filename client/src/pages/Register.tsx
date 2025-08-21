@@ -109,6 +109,7 @@ export default function Register() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!firebaseUser) return;
 
     setLoading(true);
@@ -124,7 +125,7 @@ export default function Register() {
 
       // Registration successful, redirect to home
 
-      navigate("/");
+      navigate("/login");
     } catch (error) {
       console.error("Registration error:", error);
       if (

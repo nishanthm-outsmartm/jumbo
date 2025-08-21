@@ -41,6 +41,7 @@ interface Mission {
   fromBrands?: Brand[];
   toBrandIds: string[];
   toBrands?: Brand[];
+  financialValue: number;
   pointsReward: number;
   startDate: string | null;
   endDate: string | null;
@@ -72,6 +73,7 @@ export function EnhancedMissionDialog({
           category: mission.targetCategory || mission.category,
           fromBrandIds: mission.fromBrandIds,
           toBrandIds: mission.toBrandIds,
+          financialValue: mission.financialValue,
           pointsReward: mission.pointsReward,
           startDate: mission.startDate ? mission.startDate.slice(0, 10) : "",
           endDate: mission.endDate ? mission.endDate.slice(0, 10) : "",
@@ -83,6 +85,7 @@ export function EnhancedMissionDialog({
           category: "",
           fromBrandIds: [],
           toBrandIds: [],
+          financialValue: 0,
           pointsReward: 50,
           startDate: "",
           endDate: "",
@@ -123,6 +126,7 @@ export function EnhancedMissionDialog({
       category: "",
       fromBrandIds: [],
       toBrandIds: [],
+      financialValue: 0,
       pointsReward: 50,
       startDate: "",
       endDate: "",
@@ -150,6 +154,7 @@ export function EnhancedMissionDialog({
         category: mission.targetCategory || mission.category,
         fromBrandIds: mission.fromBrandIds,
         toBrandIds: mission.toBrandIds,
+        financialValue: mission.financialValue,
         pointsReward: mission.pointsReward,
         startDate: mission.startDate ? mission.startDate.slice(0, 10) : "",
         endDate: mission.endDate ? mission.endDate.slice(0, 10) : "",
@@ -307,6 +312,28 @@ export function EnhancedMissionDialog({
           {/* Mission Configuration */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
+              <Label
+                htmlFor="financialValue"
+                className="flex items-center gap-1"
+              >
+                <Award className="h-4 w-4" />
+                Financial Impact
+              </Label>
+              <Input
+                id="financialValue"
+                type="number"
+                value={missionData.financialValue}
+                onChange={(e) =>
+                  setMissionData((prev) => ({
+                    ...prev,
+                    financialValue: parseInt(e.target.value),
+                  }))
+                }
+                className="mt-1"
+              />
+            </div>
+
+            <div>
               <Label htmlFor="pointsReward" className="flex items-center gap-1">
                 <Award className="h-4 w-4" />
                 Points Reward
@@ -320,7 +347,7 @@ export function EnhancedMissionDialog({
                 onChange={(e) =>
                   setMissionData((prev) => ({
                     ...prev,
-                    pointsReward: parseInt(e.target.value) || 50,
+                    pointsReward: parseInt(e.target.value),
                   }))
                 }
                 className="mt-1"

@@ -103,6 +103,7 @@ interface Mission {
   category: string;
   fromBrandIds: string[];
   toBrandIds: string[];
+  financialValue: number;
   pointsReward: number;
   startDate: string | null;
   endDate: string | null;
@@ -117,7 +118,7 @@ interface MissionSubmission {
   missionId: string;
   reason: string;
   experience: string;
-  financialImpact: string;
+  financialValue: number;
   evidenceUrl: string;
   status: string;
   createdAt: string;
@@ -828,13 +829,13 @@ export default function EnhancedModeratorPanel() {
                             </p>
                           </div>
 
-                          {submission.financialImpact && (
+                          {submission.financialValue && (
                             <div>
                               <Label className="text-sm font-medium">
                                 Financial Impact:
                               </Label>
                               <p className="text-sm mt-1">
-                                {submission.financialImpact}
+                                {submission.financialValue}
                               </p>
                             </div>
                           )}

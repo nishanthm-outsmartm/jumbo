@@ -23,6 +23,7 @@ import News from "@/pages/News";
 import Missions from "@/pages/Missions";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/LandingPage";
+import CookieConsent from "./components/landing/CookieConsent";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -115,8 +116,9 @@ function AppRouter() {
         <Route path="/login" component={EnhancedLogin} />
         {/* <Route path="/old-login" component={Login} /> */}
         <Route path="/register" component={Register} />
-        <Route path="/register/moderator" component={EnhancedLogin} />
+        {/* <Route path="/register/moderator" component={EnhancedLogin} /> */}
         {/* <Route path="/old-register" component={Register} /> */}
+        <Route path="/reset-password" component={EnhancedLogin} />
 
         {/* Home Route - Landing page for non-auth, Home for authenticated users */}
         <Route path="/" component={HomePage} />
@@ -183,6 +185,7 @@ function App() {
       <AuthProvider>
         <TooltipProvider>
           <Toaster />
+          {/* <CookieConsent /> */}
           <AppRouter />
         </TooltipProvider>
       </AuthProvider>

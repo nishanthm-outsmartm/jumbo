@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -15,8 +15,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocation } from "wouter";
 import { Zap, Mail, Chrome, Shield, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import ForgotPasswordForm from "@/components/auth/ForgetPasswordForm";
+import ResetPasswordForm from "@/components/auth/ResetPasswordForm";
+
+type AuthView = "login" | "forgot-password" | "reset-password";
 
 export default function EnhancedLogin() {
+  const [currentView, setCurrentView] = useState<AuthView>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,6 +29,20 @@ export default function EnhancedLogin() {
   const [isSignUp, setIsSignUp] = useState(false);
   const { login } = useAuth();
   const [, navigate] = useLocation();
+
+  // Get token from URL parameters manually
+  const getUrlParameter = (name: string) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+  };
+
+  const resetToken = getUrlParameter("token");
+
+  useEffect(() => {
+    if (resetToken) {
+      setCurrentView("reset-password");
+    }
+  }, [resetToken]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,6 +123,36 @@ export default function EnhancedLogin() {
     }
   };
 
+  const handleForgotPasswordSuccess = () => {
+    setCurrentView("login");
+  };
+
+  const handleResetPasswordSuccess = () => {
+    setCurrentView("login");
+    setEmail("");
+    setPassword("");
+  };
+
+  if (currentView === "forgot-password") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <ForgotPasswordForm onBackToLogin={() => setCurrentView("login")} />
+      </div>
+    );
+  }
+
+  if (currentView === "reset-password" && resetToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <ResetPasswordForm
+          token={resetToken}
+          onSuccess={handleResetPasswordSuccess}
+          onBackToLogin={() => setCurrentView("login")}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-green-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -135,7 +184,7 @@ export default function EnhancedLogin() {
             )}
 
             <Tabs defaultValue="email" className="space-y-4">
-              {/* <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="email">
                   <Mail className="h-4 w-4 mr-2" />
                   Email
@@ -144,7 +193,7 @@ export default function EnhancedLogin() {
                   <Chrome className="h-4 w-4 mr-2" />
                   Google
                 </TabsTrigger>
-              </TabsList> */}
+              </TabsList>
 
               <TabsContent value="email" className="space-y-4">
                 <form onSubmit={handleEmailAuth} className="space-y-4">
@@ -173,9 +222,21 @@ export default function EnhancedLogin() {
                       minLength={6}
                     />
                   </div>
+
+                  {/* foreget password */}
+
+                  <div className="text-sm text-blue-600 hover:text-gray-900 hover:underline pr-2 cursor-pointer text-right self-end">
+                    <Button
+                      variant="link"
+                      className="px-0 font-normal text-sm"
+                      onClick={() => setCurrentView("forgot-password")}
+                    >
+                      Forgot your password?
+                    </Button>
+                  </div>
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-orange-500 to-green-600 hover:from-orange-600 hover:to-green-700"
+                    className="w-full bg-gradient-to-r from-orange-500 to-green-600 hover:from-orange-600 hover:to-green-700 "
                     disabled={loading}
                   >
                     {loading

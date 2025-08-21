@@ -108,6 +108,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      const emailSent = await storage.forgotPassword(email);
+      if (!emailSent) {
+        return res.status(500).json(emailSent);
+      }
+
+      res.json({
+        emailSent,
+      });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res
+        .status(500)
+        .json({ error: "Failed to process forgot password request" });
+    }
+  });
+
+  // Verify reset token
+  app.post("/api/auth/verify-reset-token", async (req, res) => {
+    try {
+      const { token } = req.body;
+
+      if (!token) {
+        return res.status(400).json({ error: "Token is required" });
+      }
+      const resetToken = await storage.verifyResetToken(token);
+      if (resetToken.error) {
+        return res.status(400).json({ error: resetToken.error });
+      }
+      res.status(200).json({
+        valid: resetToken.valid,
+        email: resetToken.email,
+      });
+    } catch (error) {
+      console.error("Verify reset token error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Reset password
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+
+      if (!token || !newPassword) {
+        return res
+          .status(400)
+          .json({ error: "Token and new password are required" });
+      }
+
+      if (newPassword.length < 6) {
+        return res
+          .status(400)
+          .json({ error: "Password must be at least 6 characters long" });
+      }
+
+      const result = await storage.resetPassword(token, newPassword);
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      res.status(200).json({ message: "Password reset successfully" });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Switch logging
   app.post("/api/switches", async (req, res) => {
     try {

@@ -72,7 +72,13 @@ export default function EnhancedLogin() {
         await login(user.uid);
         navigate("/");
       } catch (error) {
-        navigate("/register");
+        if (isSignUp) {
+          // If signing up and user not found in backend, redirect to register
+          navigate("/register");
+        } else {
+          // If signing in and user not found in backend, show error
+          setError("Account exists in Firebase but not registered. Please sign up first.");
+        }
       }
     } catch (error: any) {
       console.error("Email auth error:", error);
@@ -108,8 +114,8 @@ export default function EnhancedLogin() {
         await login(user.uid);
         navigate("/");
       } catch (error) {
-        // User not registered, redirect to registration
-        navigate("/register");
+        // Only redirect to registration if this is a new user
+        setError("Account exists in Google but not registered. Please sign up first.");
       }
     } catch (error: any) {
       console.error("Google auth error:", error);

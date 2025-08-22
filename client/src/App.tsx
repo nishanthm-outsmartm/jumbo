@@ -131,11 +131,12 @@ function AppRouter() {
           </ProtectedRoute>
         </Route>
 
-        {/* <Route path="/log-switch">
-          <ProtectedRoute>
-            <LogSwitch />
-          </ProtectedRoute>
-        </Route> */}
+        {/* Add this route for admin profile */}
+        <Route path="/admin/profile">
+          <ProtectedAdminRoute>
+            <AdminProfile />
+          </ProtectedAdminRoute>
+        </Route>
 
         <Route path="/admin">
           <ProtectedAdminRoute>

@@ -3,20 +3,25 @@ import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { apiRequest } from '@/lib/queryClient';
 
-interface User {
-  id: string;
+// Example User type/interface
+export type User = {
   handle: string;
-  points: number;
-  level: number;
-  role?: string;
-}
+  email: string;      // add this
+  phone?: string;     // add this (optional if not always present)
+  region?: string;
+  role: string;
+  // ...other fields...
+};
 
-interface AuthContextType {
+export type AuthContextType = {
   user: User | null;
   firebaseUser: FirebaseUser | null;
   loading: boolean;
   login: (firebaseUid: string) => Promise<User>;
   logout: () => Promise<void>;
+  updateEmail: (newEmail: string) => Promise<void>;
+  updatePhoneNumber: (newPhone: string) => Promise<void>;
+  resetPassword: () => Promise<void>; // add this
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -64,8 +69,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setFirebaseUser(null);
   };
 
+  const updateEmail = async (newEmail: string) => {
+    if (!firebaseUser) throw new Error('Not authenticated');
+    await apiRequest('POST', '/api/auth/update-email', { 
+      email: newEmail,
+      uid: firebaseUser.uid
+    });
+  };
+
+  const updatePhoneNumber = async (newPhone: string) => {
+    if (!firebaseUser) throw new Error('Not authenticated');
+    await apiRequest('POST', '/api/auth/update-phone', { 
+      phone: newPhone,
+      uid: firebaseUser.uid
+    });
+  };
+
+  const resetPassword = async () => {
+    if (!firebaseUser) throw new Error('Not authenticated');
+    await apiRequest('POST', '/api/auth/reset-password', { 
+      uid: firebaseUser.uid
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, firebaseUser, loading, login, logout, updateEmail, updatePhoneNumber, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

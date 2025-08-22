@@ -895,7 +895,13 @@ export const insertFeedbackSubmissionSchema = createInsertSchema(
 });
 
 // Types
-export type User = typeof users.$inferSelect;
+export type User = {
+  handle: string;
+  email?: string;
+  phone?: string;
+  region?: string;
+  role?: string;
+}
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type SwitchLog = typeof switchLogs.$inferSelect;
 export type InsertSwitchLog = z.infer<typeof insertSwitchLogSchema>;

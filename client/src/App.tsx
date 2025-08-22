@@ -192,6 +192,11 @@ function AppRouter() {
         </Route>
 
         {/* Member Profile Route */}
+        <Route path="/profile">
+          <ProtectedRoute>
+            <MemberProfile />
+          </ProtectedRoute>
+        </Route>
         <Route path="/member/profile">
           <ProtectedRoute>
             <MemberProfile />

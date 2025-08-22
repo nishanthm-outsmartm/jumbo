@@ -22,6 +22,7 @@ export type AuthContextType = {
   updateEmail: (newEmail: string) => Promise<void>;
   updatePhoneNumber: (newPhone: string) => Promise<void>;
   resetPassword: () => Promise<void>; // add this
+  refreshUser: () => Promise<void>; // <-- Add this line
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -92,8 +93,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const refreshUser = async () => {
+    if (!firebaseUser) throw new Error('Not authenticated');
+    try {
+      const response = await apiRequest('POST', '/api/auth/refresh-user', { 
+        uid: firebaseUser.uid
+      });
+      const data = await response.json();
+      setUser(data.user);
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, loading, login, logout, updateEmail, updatePhoneNumber, resetPassword }}>
+    <AuthContext.Provider value={{ user, firebaseUser, loading, login, logout, updateEmail, updatePhoneNumber, resetPassword, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

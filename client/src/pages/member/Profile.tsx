@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function MemberProfile() {
-  const { user, updateEmail, updatePhoneNumber, resetPassword } = useAuth();
+  const { user, updateEmail, updatePhoneNumber, resetPassword, refreshUser } = useAuth();
   const [email, setEmail] = useState(user?.email || "");
   const [editingEmail, setEditingEmail] = useState(false);
   const [phone, setPhone] = useState(user?.phone || "");
@@ -13,6 +13,39 @@ export default function MemberProfile() {
   const [emailError, setEmailError] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  // Fetch latest user data on mount
+  useEffect(() => {
+    refreshUser && refreshUser();
+    // Optionally, update local state after refresh
+  }, [refreshUser]);
+
+  // Helper to update local state after successful update
+  const handleEmailSave = async () => {
+    setEmailError("");
+    setSuccessMsg("");
+    try {
+      await updateEmail(email);
+      setEditingEmail(false);
+      setSuccessMsg("Email updated successfully.");
+      refreshUser && refreshUser();
+    } catch (err: any) {
+      setEmailError(err.message || "Failed to update email.");
+    }
+  };
+
+  const handlePhoneSave = async () => {
+    setPhoneError("");
+    setSuccessMsg("");
+    try {
+      await updatePhoneNumber(phone);
+      setEditingPhone(false);
+      setSuccessMsg("Phone number updated successfully.");
+      refreshUser && refreshUser();
+    } catch (err: any) {
+      setPhoneError(err.message || "Failed to update phone number.");
+    }
+  };
 
   return (
     <div className="max-w-xl mx-auto mt-10">
@@ -28,7 +61,7 @@ export default function MemberProfile() {
           </div>
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Email (varchar)</label>
+            <label className="block text-sm font-medium text-gray-700">Email</label>
             {editingEmail ? (
               <div className="flex gap-2 mt-1">
                 <Input
@@ -37,22 +70,12 @@ export default function MemberProfile() {
                   onChange={e => setEmail(e.target.value)}
                   className="w-full"
                 />
-                <Button onClick={async () => {
-                  setEmailError("");
-                  setSuccessMsg("");
-                  try {
-                    await updateEmail(email);
-                    setEditingEmail(false);
-                    setSuccessMsg("Email updated successfully.");
-                  } catch (err: any) {
-                    setEmailError(err.message || "Failed to update email.");
-                  }
-                }}>Save</Button>
+                <Button onClick={handleEmailSave}>Save</Button>
                 <Button variant="outline" onClick={() => { setEditingEmail(false); setEmail(user?.email || ""); }}>Cancel</Button>
               </div>
             ) : (
               <div className="flex items-center gap-2 mt-1">
-                <span>{user?.email}</span>
+                <span>{user?.email || "-"}</span>
                 <Button variant="outline" size="sm" onClick={() => setEditingEmail(true)}>
                   Change
                 </Button>
@@ -62,7 +85,7 @@ export default function MemberProfile() {
           </div>
           {/* Phone Number */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Phone (varchar)</label>
+            <label className="block text-sm font-medium text-gray-700">Phone</label>
             {editingPhone ? (
               <div className="flex gap-2 mt-1">
                 <Input
@@ -72,17 +95,7 @@ export default function MemberProfile() {
                   className="w-full"
                   placeholder="+91 9876543210"
                 />
-                <Button onClick={async () => {
-                  setPhoneError("");
-                  setSuccessMsg("");
-                  try {
-                    await updatePhoneNumber(phone);
-                    setEditingPhone(false);
-                    setSuccessMsg("Phone number updated successfully.");
-                  } catch (err: any) {
-                    setPhoneError(err.message || "Failed to update phone number.");
-                  }
-                }}>{user?.phone ? "Change" : "Add"}</Button>
+                <Button onClick={handlePhoneSave}>{user?.phone ? "Change" : "Add"}</Button>
                 <Button variant="outline" onClick={() => { setEditingPhone(false); setPhone(user?.phone || ""); }}>Cancel</Button>
               </div>
             ) : (
@@ -97,12 +110,12 @@ export default function MemberProfile() {
           </div>
           {/* Region */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Region (varchar)</label>
+            <label className="block text-sm font-medium text-gray-700">Region</label>
             <div className="mt-1">{user?.region || "-"}</div>
           </div>
           {/* Role */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Role (user_role)</label>
+            <label className="block text-sm font-medium text-gray-700">Role</label>
             <div className="mt-1">{user?.role || "-"}</div>
           </div>
           {/* Reset Password */}

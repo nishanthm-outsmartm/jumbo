@@ -28,7 +28,7 @@ export default function StrategistProfile() {
           </div>
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Email (varchar)</label>
+            <label className="block text-sm font-medium text-gray-700">Email</label>
             {editingEmail ? (
               <div className="flex gap-2 mt-1">
                 <Input
@@ -62,7 +62,7 @@ export default function StrategistProfile() {
           </div>
           {/* Phone Number */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Phone (varchar)</label>
+            <label className="block text-sm font-medium text-gray-700">Phone</label>
             {editingPhone ? (
               <div className="flex gap-2 mt-1">
                 <Input
@@ -97,12 +97,12 @@ export default function StrategistProfile() {
           </div>
           {/* Region */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Region (varchar)</label>
+            <label className="block text-sm font-medium text-gray-700">Region</label>
             <div className="mt-1">{user?.region || "-"}</div>
           </div>
           {/* Role */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Role (user_role)</label>
+            <label className="block text-sm font-medium text-gray-700">Role</label>
             <div className="mt-1">{user?.role || "-"}</div>
           </div>
           {/* Reset Password */}

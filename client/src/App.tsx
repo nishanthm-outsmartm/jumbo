@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { Navigation } from "@/components/Navigation";
 
 // Import pages
+import AdminProfile from "@/pages/admin/Profile";
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";

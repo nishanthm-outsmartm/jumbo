@@ -89,12 +89,28 @@ export function Navigation() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {/* <Link href="/profile" aria-disabled>
-                    <DropdownMenuItem>Profile</DropdownMenuItem>
-                  </Link>
-                  <Link href="/settings" aria-disabled>
-                    <DropdownMenuItem>Settings</DropdownMenuItem>
-                  </Link> */}
+                  {/* Profile menu item based on user role */}
+                  {user.role === "ADMIN" && (
+                    <Link href="/admin/profile">
+                      <DropdownMenuItem>Profile</DropdownMenuItem>
+                    </Link>
+                  )}
+                  {user.role === "MODERATOR" && (
+                    <Link href="/moderator/profile">
+                      <DropdownMenuItem>Profile</DropdownMenuItem>
+                    </Link>
+                  )}
+                  {user.role === "STRATEGIST" && (
+                    <Link href="/strategist/profile">
+                      <DropdownMenuItem>Profile</DropdownMenuItem>
+                    </Link>
+                  )}
+                  {user.role === "MEMBER" && (
+                    <Link href="/profile">
+                      <DropdownMenuItem>Profile</DropdownMenuItem>
+                    </Link>
+                  )}
+                  {/* ...existing admin/moderator panel links... */}
                   {user.role === "ADMIN" && (
                     <Link href="/admin">
                       <DropdownMenuItem>Admin Panel</DropdownMenuItem>

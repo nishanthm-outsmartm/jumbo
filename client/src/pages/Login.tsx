@@ -95,13 +95,20 @@ export default function Login() {
 
       const user = userCredential.user;
 
-      // Try to login or redirect to registration
+      // Try to login or handle registration
       try {
         await login(user.uid);
         navigate("/");
-      } catch (error) {
-        // User not registered, redirect to registration
-        navigate("/register");
+      } catch (error: any) {
+        // Check for user-not-found error from your backend
+        const msg = error?.message?.toLowerCase?.() || "";
+        if (isSignUp) {
+          navigate("/register");
+        } else if (msg.includes("not found") || msg.includes("no user")) {
+          alert("Account exists in Firebase but not registered. Please sign up first.");
+        } else {
+          alert(error.message || "An unexpected error occurred during login.");
+        }
       }
     } catch (error: any) {
       console.error("Email auth error:", error);
@@ -127,13 +134,17 @@ export default function Login() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Try to login or redirect to registration
+      // Try to login or handle registration
       try {
         await login(user.uid);
         navigate("/");
-      } catch (error) {
-        // User not registered, redirect to registration
-        navigate("/register");
+      } catch (error: any) {
+        const msg = error?.message?.toLowerCase?.() || "";
+        if (msg.includes("not found") || msg.includes("no user")) {
+          alert("Account exists in Google but not registered. Please sign up first.");
+        } else {
+          alert(error.message || "An unexpected error occurred during login.");
+        }
       }
     } catch (error: any) {
       console.error("Google auth error:", error);

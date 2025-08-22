@@ -25,6 +25,9 @@ import Missions from "@/pages/Missions";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/LandingPage";
 import CookieConsent from "./components/landing/CookieConsent";
+import MemberProfile from "@/pages/member/Profile";
+import ModeratorProfile from "@/pages/moderator/Profile";
+import StrategistProfile from "@/pages/strategist/Profile";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -171,6 +174,27 @@ function AppRouter() {
         <Route path="/missions">
           <ProtectedRoute>
             <Missions />
+          </ProtectedRoute>
+        </Route>
+
+        {/* Member Profile Route */}
+        <Route path="/member/profile">
+          <ProtectedRoute>
+            <MemberProfile />
+          </ProtectedRoute>
+        </Route>
+
+        {/* Moderator Profile Route */}
+        <Route path="/moderator/profile">
+          <ProtectedModeratorRoute>
+            <ModeratorProfile />
+          </ProtectedModeratorRoute>
+        </Route>
+
+        {/* Strategist Profile Route */}
+        <Route path="/strategist/profile">
+          <ProtectedRoute>
+            <StrategistProfile />
           </ProtectedRoute>
         </Route>
 

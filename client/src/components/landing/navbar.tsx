@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "wouter";
 import { Menu, X } from "lucide-react";
+import { QuickAnonymousJoin } from "@/components/auth/QuickAnonymousJoin";
 
 const navLinks = [
   //   { name: "Home", href: "/" },
@@ -15,7 +16,7 @@ const Navbar = () => {
   return (
     <nav className="bg-white shadow sticky top-0 z-30">
       <div className="max-w-6xl mx-auto sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-16 px-5">
           {/* Logo */}
           <Link href="/" className=" gap-2">
             <span className="font-bold text-xl text-orange-600">JumboJolt</span>
@@ -32,11 +33,18 @@ const Navbar = () => {
                 {link.name}
               </a>
             ))}
-            <Link href="/login">
-              <button className="ml-4 px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition font-semibold">
-                Login / Sign Up
-              </button>
-            </Link>
+            <div className="flex items-center gap-2 ml-4">
+              <QuickAnonymousJoin
+                onSuccess={() => window.location.reload()}
+                variant="outline"
+                size="sm"
+              />
+              <Link href="/login">
+                <button className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition font-semibold">
+                  Login / Sign Up
+                </button>
+              </Link>
+            </div>
           </div>
 
           {/* Mobile Hamburger */}
@@ -64,14 +72,25 @@ const Navbar = () => {
                 {link.name}
               </a>
             ))}
-            <Link href="/login">
-              <button
-                className="mt-2 px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition font-semibold w-full"
-                onClick={() => setOpen(false)}
-              >
-                Login / Sign Up
-              </button>
-            </Link>
+            <div className="mt-2 flex flex-col gap-2">
+              <QuickAnonymousJoin
+                onSuccess={() => {
+                  setOpen(false);
+                  window.location.reload();
+                }}
+                variant="outline"
+                size="sm"
+                className="w-full"
+              />
+              <Link href="/login">
+                <button
+                  className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition font-semibold w-full"
+                  onClick={() => setOpen(false)}
+                >
+                  Login / Sign Up
+                </button>
+              </Link>
+            </div>
           </div>
         </div>
       )}

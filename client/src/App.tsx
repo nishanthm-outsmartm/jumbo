@@ -24,6 +24,10 @@ import Missions from "@/pages/Missions";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/LandingPage";
 import CookieConsent from "./components/landing/CookieConsent";
+import ModeratorFeedbackPage from "./pages/moderator/ModeratorFeedbackPage";
+import Rewards from "@/pages/Rewards";
+import PrivacyCenterPage from "@/pages/PrivacyCenter";
+import { AnonymousUserBanner } from "./components/auth/AnonymousUserBanner";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -112,6 +116,8 @@ function AppRouter() {
   return (
     <div className="min-h-screen">
       {user && <Navigation />}
+      <AnonymousUserBanner />
+      <CookieConsent />
       <Switch>
         <Route path="/login" component={EnhancedLogin} />
         {/* <Route path="/old-login" component={Login} /> */}
@@ -119,6 +125,10 @@ function AppRouter() {
         {/* <Route path="/register/moderator" component={EnhancedLogin} /> */}
         {/* <Route path="/old-register" component={Register} /> */}
         <Route path="/reset-password" component={EnhancedLogin} />
+        <Route
+          path="/moderator/suggested-feedbacks"
+          component={ModeratorFeedbackPage}
+        />
 
         {/* Home Route - Landing page for non-auth, Home for authenticated users */}
         <Route path="/" component={HomePage} />
@@ -130,11 +140,11 @@ function AppRouter() {
           </ProtectedRoute>
         </Route>
 
-        {/* <Route path="/log-switch">
+        <Route path="/log-switch">
           <ProtectedRoute>
             <LogSwitch />
           </ProtectedRoute>
-        </Route> */}
+        </Route>
 
         <Route path="/admin">
           <ProtectedAdminRoute>
@@ -145,6 +155,11 @@ function AppRouter() {
         <Route path="/moderator">
           <ProtectedModeratorRoute>
             <EnhancedModeratorPanel />
+          </ProtectedModeratorRoute>
+        </Route>
+        <Route path="/moderator/suggested-feedbacks">
+          <ProtectedModeratorRoute>
+            <ModeratorFeedbackPage />
           </ProtectedModeratorRoute>
         </Route>
 
@@ -172,6 +187,18 @@ function AppRouter() {
           </ProtectedRoute>
         </Route>
 
+        <Route path="/rewards">
+          <ProtectedRoute>
+            <Rewards />
+          </ProtectedRoute>
+        </Route>
+
+        <Route path="/privacy">
+          <ProtectedRoute>
+            <PrivacyCenterPage />
+          </ProtectedRoute>
+        </Route>
+
         {/* Fallback to 404 */}
         <Route component={NotFound} />
       </Switch>
@@ -185,7 +212,7 @@ function App() {
       <AuthProvider>
         <TooltipProvider>
           <Toaster />
-          {/* <CookieConsent /> */}
+
           <AppRouter />
         </TooltipProvider>
       </AuthProvider>

@@ -24,6 +24,13 @@ import {
   communityMembers,
   contentTags,
   feedbackSubmissions,
+  // New anonymous user features
+  recoveryKeys,
+  rewards,
+  userRewards,
+  newsLikes,
+  newsShares,
+  gdprRequests,
   type User,
   type InsertUser,
   type SwitchLog,
@@ -68,24 +75,63 @@ import {
   type InsertContentTag,
   type FeedbackSubmission,
   type InsertFeedbackSubmission,
+  // New anonymous user types
+  type RecoveryKey,
+  type InsertRecoveryKey,
+  type Reward,
+  type InsertReward,
+  type UserReward,
+  type InsertUserReward,
+  type NewsLike,
+  type InsertNewsLike,
+  type NewsShare,
+  type InsertNewsShare,
+  type GdprRequest,
+  type InsertGdprRequest,
   passwordResetTokens,
+  switchFeedbacks,
 } from "@shared/schema";
 import { db } from "./db";
 import crypto from "crypto";
-import { eq, desc, sql, and, count } from "drizzle-orm";
+import { eq, desc, sql, and, count, ilike, asc, countDistinct } from "drizzle-orm";
 import { sendEmail } from "./services/email.service";
-import config from "../client/src/lib/config";
+import { serverConfig } from "@shared/config/server.config";
 import { error } from "console";
 import { auth } from "./services/firebase-admin";
+import { uploadImage } from "./services/minio/upload";
 
 export interface IStorage {
   // User methods
   getUser(id: string): Promise<User | undefined>;
   getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined>;
   getUserByHandle(handle: string): Promise<User | undefined>;
+  getUserByCookieId(cookieId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  createAnonymousUser(handle: string, cookieId: string): Promise<User>;
   createModeratorUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User>;
+  migrateAnonymousToRegistered(anonymousUserId: string, firebaseUid: string, email?: string, phone?: string): Promise<User>;
+
+  // Recovery key methods
+  createRecoveryKey(userId: string, keyHash: string, keyDisplay: string, qrCodeData?: string): Promise<any>;
+  getRecoveryKeyByHash(keyHash: string): Promise<any>;
+  useRecoveryKey(keyHash: string): Promise<User>;
+
+  // Rewards methods
+  getRewards(): Promise<any[]>;
+  claimReward(userId: string, rewardId: string): Promise<any>;
+  getUserRewards(userId: string): Promise<any[]>;
+
+  // News engagement methods
+  likeNews(userId: string, newsId: string): Promise<boolean>;
+  shareNews(userId: string, newsId: string, platform?: string): Promise<any>;
+  getNewsComments(newsId: string): Promise<any[]>;
+  addNewsComment(userId: string, newsId: string, content: string): Promise<any>;
+
+  // GDPR methods
+  exportUserData(userId: string): Promise<any>;
+  deleteUserData(userId: string): Promise<boolean>;
+  createGdprRequest(userId: string, requestType: string, requestData?: any): Promise<any>;
 
   // Switch log methods
   createSwitchLog(switchLog: InsertSwitchLog): Promise<SwitchLog>;
@@ -117,7 +163,7 @@ export interface IStorage {
   ): Promise<boolean>;
 
   // Leaderboard methods
-  getLeaderboard(limit?: number, period?: string): Promise<User[]>;
+  getLeaderboard(limit?: number, userType?: string): Promise<User[]>;
   getWeeklyLeaderboard(limit?: number): Promise<LeaderboardSnapshot[]>;
   getMonthlyLeaderboard(limit?: number): Promise<LeaderboardSnapshot[]>;
   getTrendingBrands(): Promise<any[]>;
@@ -197,7 +243,25 @@ export interface IStorage {
   markMessageAsRead(messageId: string): Promise<void>;
 
   // Moderator posts
-  createModeratorPost(post: InsertModeratorPost): Promise<ModeratorPost>;
+  createModeratorPost(postData: {
+    userId: string;
+    postType: string;
+    title?: string;
+    content: string;
+    categoryId?: string;
+    communityId?: string;
+    missionId?: string;
+    targetBrandFrom?: string;
+    targetBrandTo?: string;
+    actionButtonText?: string;
+    actionButtonUrl?: string;
+    isPromotional?: boolean;
+    isPinned?: boolean;
+    commentsEnabled?: boolean;
+    upvotesEnabled?: boolean;
+    downvotesEnabled?: boolean;
+    expiresAt?: string;
+  }): Promise<Post>;
   getAllModeratorPosts(): Promise<ModeratorPost[]>;
 
   // Categories
@@ -274,6 +338,39 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getUserByCookieId(cookieId: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.cookieId, cookieId));
+    return user || undefined;
+  }
+
+  async createAnonymousUser(handle: string, cookieId: string): Promise<User> {
+    const [user] = await db.insert(users).values({
+      handle,
+      cookieId,
+      userType: "ANONYMOUS",
+      firebaseUid: null,
+    }).returning();
+    return user;
+  }
+
+  async migrateAnonymousToRegistered(anonymousUserId: string, firebaseUid: string, email?: string, phone?: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        firebaseUid,
+        email,
+        phone,
+        userType: "REGISTERED",
+        cookieId: null, // Clear cookie ID after migration
+      })
+      .where(eq(users.id, anonymousUserId))
+      .returning();
+    return user;
+  }
+
   async createModeratorUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
@@ -288,7 +385,56 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  // Recovery key methods
+  async createRecoveryKey(userId: string, keyHash: string, keyDisplay: string, qrCodeData?: string): Promise<RecoveryKey> {
+    const [recoveryKey] = await db.insert(recoveryKeys).values({
+      userId,
+      keyHash,
+      keyDisplay,
+      qrCodeData,
+    }).returning();
+    return recoveryKey;
+  }
+
+  async getRecoveryKeyByHash(keyHash: string): Promise<RecoveryKey | undefined> {
+    const [recoveryKey] = await db
+      .select()
+      .from(recoveryKeys)
+      .where(eq(recoveryKeys.keyHash, keyHash));
+    return recoveryKey || undefined;
+  }
+
+  async useRecoveryKey(keyHash: string): Promise<User> {
+    // Mark recovery key as used
+    await db
+      .update(recoveryKeys)
+      .set({ isUsed: true, usedAt: new Date() })
+      .where(eq(recoveryKeys.keyHash, keyHash));
+
+    // Get the user associated with this recovery key
+    const [recoveryKey] = await db
+      .select()
+      .from(recoveryKeys)
+      .where(eq(recoveryKeys.keyHash, keyHash));
+
+    if (!recoveryKey) {
+      throw new Error("Recovery key not found");
+    }
+
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, recoveryKey.userId));
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    return user;
+  }
+
   async createSwitchLog(insertSwitchLog: InsertSwitchLog): Promise<SwitchLog> {
+    console.log(insertSwitchLog);
     const [switchLog] = await db
       .insert(switchLogs)
       .values(insertSwitchLog)
@@ -300,7 +446,7 @@ export class DatabaseStorage implements IStorage {
         .update(users)
         .set({
           switchCount: sql`${users.switchCount} + 1`,
-          points: sql`${users.points} + ${switchLog.points || 25}`,
+          points: sql`${users.points} + ${switchLog.points || 0}`,
         })
         .where(eq(users.id, switchLog.userId));
     }
@@ -363,6 +509,90 @@ export class DatabaseStorage implements IStorage {
       .where(eq(posts.id, id))
       .returning();
     return post;
+  }
+
+  async createFeedback(insertFeedback: {
+    userId: string;
+    fromBrands: string;
+    toBrands: string;
+    url?: string; // Optional, as in the schema
+    message: string;
+    isPublic?: boolean; // Optional, defaults to false in schema
+    status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  }) {
+    const [feedback] = await db.insert(switchFeedbacks).values(insertFeedback).returning();
+    return feedback;
+  }
+
+
+
+
+
+  async getFeedbacks({ status, page, limit, search, sort = 'desc' }: {
+    status?: "PENDING" | "APPROVED" | "REJECTED";
+    page: number;
+    limit: number;
+    search?: string;
+    sort?: 'asc' | 'desc';
+  }) {
+    const offset = (page - 1) * limit;
+
+    let whereClause = undefined;
+    if (status) {
+      whereClause = eq(switchFeedbacks.status, status);
+    }
+    if (search) {
+      whereClause = whereClause
+        ? and(whereClause, ilike(switchFeedbacks.message, `%${search}%`))
+        : ilike(switchFeedbacks.message, `%${search}%`);
+    }
+
+    const feedbacks = await db
+      .select()
+      .from(switchFeedbacks)
+      .where(whereClause)
+      .orderBy(sort === 'asc' ? asc(switchFeedbacks.createdAt) : desc(switchFeedbacks.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const totalResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(switchFeedbacks)
+      .where(whereClause);
+
+    const total = totalResult[0]?.count || 0;
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      feedbacks, // Drizzle returns an array, no need for extra Array.isArray check
+      pagination: { page, limit, total, totalPages },
+    };
+  }
+
+  async getActiveUsersLast24h(): Promise<number> {
+    const [result] = await db
+      .select({ count: countDistinct(switchLogs.userId) })
+      .from(switchLogs)
+      .where(sql`${switchLogs.createdAt} > NOW() - INTERVAL '24 hours'`);
+    return result.count || 0;
+  }
+
+  async getActiveUsersLast7d(): Promise<number> {
+    const [result] = await db
+      .select({ count: countDistinct(switchLogs.userId) })
+      .from(switchLogs)
+      .where(sql`${switchLogs.createdAt} > NOW() - INTERVAL '7 days'`);
+    return result.count || 0;
+
+  }
+
+  async getActiveUsersLast30d(): Promise<number> {
+    const [result] = await db
+      .select({ count: countDistinct(switchLogs.userId) })
+      .from(switchLogs)
+      .where(sql`${switchLogs.createdAt} > NOW() - INTERVAL '30 days'`);
+    return result.count || 0;
+
   }
 
   async getBrand(id: string): Promise<Brand | undefined> {
@@ -455,8 +685,14 @@ export class DatabaseStorage implements IStorage {
     return results;
   }
 
-  async getLeaderboard(limit: number = 10): Promise<User[]> {
-    return db.select().from(users).orderBy(desc(users.points)).limit(limit);
+  async getLeaderboard(limit: number = 10, userType?: string): Promise<User[]> {
+    let query = db.select().from(users);
+
+    if (userType) {
+      query = query.where(eq(users.userType, userType as any));
+    }
+
+    return query.orderBy(desc(users.points)).limit(limit);
   }
 
   async getTrendingBrands(): Promise<any[]> {
@@ -566,7 +802,7 @@ export class DatabaseStorage implements IStorage {
     const currentYear = currentDate.getFullYear();
     const currentWeek = Math.ceil(
       (currentDate.getTime() - new Date(currentYear, 0, 1).getTime()) /
-        (7 * 24 * 60 * 60 * 1000)
+      (7 * 24 * 60 * 60 * 1000)
     );
 
     return db
@@ -826,14 +1062,27 @@ export class DatabaseStorage implements IStorage {
     await db.delete(missions).where(eq(missions.id, id));
   }
 
-  async getUserMissions(userId: string): Promise<any[]> {
+  async getUserMissions(userId: string) {
+    // return db
+    //   .select({
+    //     userMission: userMissions,
+    //     mission: missions,
+    //   })
+    //   .from(userMissions)
+    //   .leftJoin(missions, eq(userMissions.missionId, missions.id))
+    //   .where(eq(userMissions.userId, userId))
+    //   .orderBy(desc(userMissions.createdAt));
     return db
       .select({
-        userMission: userMissions,
-        mission: missions,
+        id: userMissions.id,
+        missionId: userMissions.missionId,
+        status: userMissions.status,
+        // switchApprovalStatus
+        completedAt: userMissions.completedAt,
+        createdAt: userMissions.createdAt
       })
       .from(userMissions)
-      .leftJoin(missions, eq(userMissions.missionId, missions.id))
+      // .leftJoin(switchLogs, and(eq(userMissions.missionId, switchLogs.missionId),eq( switchLogs.)))
       .where(eq(userMissions.userId, userId))
       .orderBy(desc(userMissions.createdAt));
   }
@@ -897,7 +1146,7 @@ export class DatabaseStorage implements IStorage {
         expiresAt,
       });
 
-      const resetUrl = `${config.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+      const resetUrl = `${serverConfig.env.frontendUrl}/reset-password?token=${resetToken}`;
 
       const emailSent = await sendEmail({
         to: email,
@@ -1000,18 +1249,20 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Update password in Firebase
-    await auth.updateUser(resetToken.firebaseUid, {
-      password: newPassword,
-    });
+    if (resetToken.firebaseUid) {
+      await auth.updateUser(resetToken.firebaseUid, {
+        password: newPassword,
+      });
+
+      // Revoke all refresh tokens to force re-login
+      await auth.revokeRefreshTokens(resetToken.firebaseUid);
+    }
 
     // Mark token as used
     await db
       .update(passwordResetTokens)
       .set({ used: true })
       .where(eq(passwordResetTokens.id, resetToken.id));
-
-    // Revoke all refresh tokens to force re-login
-    await auth.revokeRefreshTokens(resetToken.firebaseUid);
     return { success: true, error: null };
   }
 
@@ -1072,6 +1323,189 @@ export class DatabaseStorage implements IStorage {
 
   async deleteNewsArticle(id: string): Promise<void> {
     await db.delete(newsArticles).where(eq(newsArticles.id, id));
+  }
+
+  // Rewards methods
+  async getRewards(): Promise<Reward[]> {
+    return db
+      .select()
+      .from(rewards)
+      .where(eq(rewards.isActive, true))
+      .orderBy(desc(rewards.createdAt));
+  }
+
+  async claimReward(userId: string, rewardId: string): Promise<UserReward> {
+    // Check if user already claimed this reward
+    const existingClaim = await db
+      .select()
+      .from(userRewards)
+      .where(and(eq(userRewards.userId, userId), eq(userRewards.rewardId, rewardId)));
+
+    if (existingClaim.length > 0) {
+      throw new Error("Reward already claimed");
+    }
+
+    // Create user reward claim
+    const [userReward] = await db.insert(userRewards).values({
+      userId,
+      rewardId,
+      status: "CLAIMED",
+    }).returning();
+
+    // Update reward claim count
+    await db
+      .update(rewards)
+      .set({ currentClaims: sql`${rewards.currentClaims} + 1` })
+      .where(eq(rewards.id, rewardId));
+
+    return userReward;
+  }
+
+  async getUserRewards(userId: string): Promise<UserReward[]> {
+    return db
+      .select()
+      .from(userRewards)
+      .where(eq(userRewards.userId, userId))
+      .orderBy(desc(userRewards.claimedAt));
+  }
+
+  // News engagement methods
+  async likeNews(userId: string, newsId: string): Promise<boolean> {
+    // Check if already liked
+    const existingLike = await db
+      .select()
+      .from(newsLikes)
+      .where(and(eq(newsLikes.userId, userId), eq(newsLikes.newsId, newsId)));
+
+    if (existingLike.length > 0) {
+      // Unlike
+      await db
+        .delete(newsLikes)
+        .where(and(eq(newsLikes.userId, userId), eq(newsLikes.newsId, newsId)));
+
+      // Decrease like count
+      await db
+        .update(newsArticles)
+        .set({ likesCount: sql`${newsArticles.likesCount} - 1` })
+        .where(eq(newsArticles.id, newsId));
+
+      return false;
+    } else {
+      // Like
+      await db.insert(newsLikes).values({ userId, newsId });
+
+      // Increase like count
+      await db
+        .update(newsArticles)
+        .set({ likesCount: sql`${newsArticles.likesCount} + 1` })
+        .where(eq(newsArticles.id, newsId));
+
+      return true;
+    }
+  }
+
+  async shareNews(userId: string, newsId: string, platform?: string): Promise<NewsShare> {
+    const [newsShare] = await db.insert(newsShares).values({
+      userId,
+      newsId,
+      platform,
+    }).returning();
+
+    // Increase share count
+    await db
+      .update(newsArticles)
+      .set({ sharesCount: sql`${newsArticles.sharesCount} + 1` })
+      .where(eq(newsArticles.id, newsId));
+
+    return newsShare;
+  }
+
+  async getNewsComments(newsId: string): Promise<any[]> {
+    return db
+      .select({
+        id: comments.id,
+        content: comments.content,
+        status: comments.status,
+        createdAt: comments.createdAt,
+        user: {
+          id: users.id,
+          handle: users.handle,
+          userType: users.userType,
+        },
+      })
+      .from(comments)
+      .leftJoin(users, eq(comments.userId, users.id))
+      .where(and(eq(comments.newsId, newsId), eq(comments.status, "APPROVED")))
+      .orderBy(desc(comments.createdAt));
+  }
+
+  async addNewsComment(userId: string, newsId: string, content: string): Promise<Comment> {
+    const [comment] = await db.insert(comments).values({
+      userId,
+      newsId,
+      content,
+      status: "PENDING",
+    }).returning();
+
+    // Increase comment count
+    await db
+      .update(newsArticles)
+      .set({ commentsCount: sql`${newsArticles.commentsCount} + 1` })
+      .where(eq(newsArticles.id, newsId));
+
+    return comment;
+  }
+
+  // GDPR methods
+  async exportUserData(userId: string): Promise<any> {
+    const user = await this.getUser(userId);
+    if (!user) throw new Error("User not found");
+
+    const userData = {
+      user,
+      switchLogs: await this.getUserSwitchLogs(userId),
+      posts: await db.select().from(posts).where(eq(posts.userId, userId)),
+      comments: await db.select().from(comments).where(eq(comments.userId, userId)),
+      likes: await db.select().from(likes).where(eq(likes.userId, userId)),
+      userRewards: await this.getUserRewards(userId),
+      newsLikes: await db.select().from(newsLikes).where(eq(newsLikes.userId, userId)),
+      newsShares: await db.select().from(newsShares).where(eq(newsShares.userId, userId)),
+    };
+
+    return userData;
+  }
+
+  async deleteUserData(userId: string): Promise<boolean> {
+    try {
+      // Delete all user-related data
+      await db.delete(comments).where(eq(comments.userId, userId));
+      await db.delete(likes).where(eq(likes.userId, userId));
+      await db.delete(posts).where(eq(posts.userId, userId));
+      await db.delete(switchLogs).where(eq(switchLogs.userId, userId));
+      await db.delete(userRewards).where(eq(userRewards.userId, userId));
+      await db.delete(newsLikes).where(eq(newsLikes.userId, userId));
+      await db.delete(newsShares).where(eq(newsShares.userId, userId));
+      await db.delete(recoveryKeys).where(eq(recoveryKeys.userId, userId));
+      await db.delete(gdprRequests).where(eq(gdprRequests.userId, userId));
+
+      // Finally delete the user
+      await db.delete(users).where(eq(users.id, userId));
+
+      return true;
+    } catch (error) {
+      console.error("Error deleting user data:", error);
+      return false;
+    }
+  }
+
+  async createGdprRequest(userId: string, requestType: string, requestData?: any): Promise<GdprRequest> {
+    const [gdprRequest] = await db.insert(gdprRequests).values({
+      userId,
+      requestType,
+      requestData,
+      status: "PENDING",
+    }).returning();
+    return gdprRequest;
   }
 
   // Messages
@@ -1425,6 +1859,13 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return post;
+  }
+
+  async getAllModeratorPosts(): Promise<ModeratorPost[]> {
+    return db
+      .select()
+      .from(moderatorPosts)
+      .orderBy(desc(moderatorPosts.createdAt));
   }
 
   async getAllPostsWithDetails(): Promise<any[]> {
@@ -2133,6 +2574,25 @@ export class DatabaseStorage implements IStorage {
   //   }
   // }
 
+  // let imageUrl: string | File = values.image || "";
+
+  // let imageLink: string;
+
+  // // If the image is a File, upload it to MinIO first
+  // if (values.image instanceof File) {
+  //   const uploadResponse = await uploadImage(values.image);
+  //   if (uploadResponse.success && uploadResponse.url) {
+  //     imageUrl = uploadResponse.url; // Convert File to string URL
+  //   } else {
+  //     console.error("Image upload failed:", uploadResponse.error);
+  //     return; // Stop submission if upload fails
+  //   }
+  // }
+  async uploadImage(file: File): Promise<any> {
+    const uploadResponse = await uploadImage(file);
+    return uploadResponse;
+  }
+
   async joinMission(userId: string, missionId: string): Promise<any> {
     try {
       // Check if user already joined this mission
@@ -2181,7 +2641,7 @@ export class DatabaseStorage implements IStorage {
         missionId
       );
       const userMission = await db
-        .select()
+        .select({ id: userMissions.id, status: userMissions.status })
         .from(userMissions)
         .where(
           and(
@@ -2191,7 +2651,7 @@ export class DatabaseStorage implements IStorage {
         )
         .limit(1);
 
-      console.log("Found user mission:", userMission);
+
       if (userMission.length === 0) {
         throw new Error("You must join the mission first");
       }
@@ -2203,9 +2663,10 @@ export class DatabaseStorage implements IStorage {
       // Create switch log with mission reference
       const switchLog = await this.createSwitchLog({
         userId,
-        targetBrandFrom: switchLogData.targetBrandFrom,
-        targetBrandTo: switchLogData.targetBrandTo,
+        toBrandId: switchLogData.targetBrandFrom,
+        fromBrandId: switchLogData.targetBrandTo,
         reason: switchLogData.reason,
+        category: switchLogData.category,
         experience: switchLogData.experience,
         financialImpact: switchLogData.financialImpact,
         evidenceUrl: switchLogData.evidenceUrl,
@@ -2213,7 +2674,13 @@ export class DatabaseStorage implements IStorage {
         status: "PENDING",
       });
 
-      return switchLog;
+      const updateUserMission = await db
+        .update(userMissions)
+        .set({ status: "SUBMITTED" })
+        .where(eq(userMissions.id, userMission[0].id));
+
+
+      return { switchLog, updateUserMission };
     } catch (error) {
       console.error("Error submitting mission switch log:", error);
       throw error;

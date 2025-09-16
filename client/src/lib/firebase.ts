@@ -1,13 +1,13 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import config from "./config";
+import { clientConfig as config } from "@shared/config/client.config";
 
 const firebaseConfig = {
-  apiKey: config.env.firebase.API_KEY,
-  authDomain: `${config.env.firebase.PROJECT_ID}.firebaseapp.com`,
-  projectId: config.env.firebase.PROJECT_ID,
-  storageBucket: `${config.env.firebase.PROJECT_ID}.firebasestorage.app`,
-  appId: config.env.firebase.APP_ID,
+  apiKey: config.env.firebase.apiKey,
+  authDomain: `${config.env.firebase.projectId}.firebaseapp.com`,
+  projectId: config.env.firebase.projectId,
+  storageBucket: `${config.env.firebase.projectId}.firebasestorage.app`,
+  appId: config.env.firebase.appId,
 };
 
 const app = initializeApp(firebaseConfig);

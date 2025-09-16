@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "wouter";
+import { NewsEngagement } from "@/components/NewsEngagement";
 
 interface NewsArticle {
   id: string;
@@ -65,13 +66,15 @@ function NewsCard({ article }: { article: NewsArticle }) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <h2 className="text-xl font-semibold mb-2">{article.title}</h2>
+            <h2 className="text-2xl md:text-2xl font-semibold mb-2">
+              {article.title}
+            </h2>
 
             <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
-              {/* <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1">
                 <User className="w-4 h-4" />
-                <span>Admin</span>
-              </div> */}
+                <span>Jumbo</span>
+              </div>
               <div className="flex items-center gap-1">
                 <Clock className="w-4 h-4" />
                 <span>
@@ -111,7 +114,7 @@ function NewsCard({ article }: { article: NewsArticle }) {
           <div className="bg-gradient-to-r from-red-50 to-green-50 border border-gray-200 rounded-lg p-3 mb-3">
             <div className="flex items-center justify-between text-sm">
               {article.fromBrands && article.fromBrands.length > 0 && (
-                <div className="flex flex-col items-center">
+                <div className="flex flex-col items-center min-w-[100px]">
                   <span className="text-red-600 font-medium mb-1">
                     Switch From:
                   </span>
@@ -133,15 +136,18 @@ function NewsCard({ article }: { article: NewsArticle }) {
                 article.fromBrands.length > 0 &&
                 article.toBrands &&
                 article.toBrands.length > 0 && (
-                  <ArrowRight className="text-gray-400 mx-2" size={16} />
+                  <ArrowRight
+                    className="text-gray-400 mx-2 min-w-[30px]"
+                    size={16}
+                  />
                 )}
 
               {article.toBrands && article.toBrands.length > 0 && (
                 <div className="flex flex-col items-center">
-                  <span className="text-green-600 font-medium mb-1">
+                  <span className="text-green-600 font-medium mb-1 min-w-[100px]">
                     Switch To:
                   </span>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-1 flex-wrap gap-2">
                     {article.toBrands.map((brand: Brand) => (
                       <Badge
                         key={brand.id}
@@ -170,37 +176,15 @@ function NewsCard({ article }: { article: NewsArticle }) {
           </div>
         )}
 
-        {/* <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {article.commentsEnabled && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <MessageCircle className="w-4 h-4 mr-1" />
-                Comments
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <Share2 className="w-4 h-4 mr-1" />
-              Share
-            </Button>
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-blue-600 hover:text-blue-700"
-          >
-            <ExternalLink className="w-4 h-4 mr-1" />
-            View Details
-          </Button>
-        </div> */}
+        {/* News Engagement */}
+        <div className="mt-4">
+          <NewsEngagement
+            newsId={article.id}
+            initialLikes={0}
+            initialShares={0}
+            initialComments={0}
+          />
+        </div>
       </CardContent>
     </Card>
   );
@@ -465,8 +449,8 @@ export default function News() {
         {/* Sidebar */}
         <div className="lg:col-span-1">
           <OngoingMissions />
-          <TrendingTopics />
-          <RecentActivity />
+          {/* <TrendingTopics />
+          <RecentActivity /> */}
         </div>
       </div>
     </div>

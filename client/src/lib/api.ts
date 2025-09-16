@@ -1,5 +1,7 @@
+import { clientConfig as config } from "@shared/config/client.config";
+
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+  config.env.apiBaseUrl;
 
 export const api = {
   forgotPassword: async (email: string) => {
@@ -54,6 +56,24 @@ export const api = {
 
     if (!response.ok) {
       throw new Error(data.error || "Failed to reset password");
+    }
+
+    return data;
+  },
+
+  uploadImage: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(`${API_BASE_URL}/api/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to upload image");
     }
 
     return data;

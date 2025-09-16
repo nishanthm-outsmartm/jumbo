@@ -1,78 +1,92 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Shield, Cookie, X } from "lucide-react";
 
-const COOKIE_KEY = "cookie_consent_accepted";
-
-const CookieConsent = () => {
-  const [visible, setVisible] = useState(false);
+export default function CookieConsent() {
+  const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
-    const consent = localStorage.getItem(COOKIE_KEY);
-    if (!consent) setVisible(true);
+    // Check if user has already consented
+    const hasConsented = localStorage.getItem("cookie-consent");
+    if (!hasConsented) {
+      setShowBanner(true);
+    }
   }, []);
 
-  const acceptCookies = () => {
-    localStorage.setItem(COOKIE_KEY, "true");
-    setVisible(false);
+  const handleAccept = () => {
+    localStorage.setItem("cookie-consent", "accepted");
+    setShowBanner(false);
   };
 
-  const declineCookies = () => {
-    setVisible(false);
+  const handleDecline = () => {
+    localStorage.setItem("cookie-consent", "declined");
+    setShowBanner(false);
   };
 
-  if (!visible) return null;
+  if (!showBanner) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 w-full z-50 flex justify-center px-1 pointer-events-none">
-      <div
-        className="
-          bg-white border border-gray-200 shadow-lg rounded-t-xl
-          w-full max-w-xl
-          flex flex-col xs:flex-row items-center gap-3
-          px-3 py-3 xs:px-4 xs:py-4
-          pointer-events-auto
-        "
-      >
-        <div className="flex-1 text-gray-700 text-xs xs:text-sm text-center xs:text-left">
-          We use cookies to enhance your experience. By continuing to browse,
-          you agree to our use of cookies.{" "}
-          <a
-            href="/privacy"
-            className="underline text-orange-600 hover:text-orange-700"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn more
-          </a>
-        </div>
-        <div className="flex flex-col xs:flex-row gap-2 w-full xs:w-auto">
-          <Button
-            size="sm"
-            className="bg-orange-600 text-white hover:bg-orange-700 w-full xs:w-auto"
-            onClick={acceptCookies}
-          >
-            Accept
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="w-full xs:w-auto"
-            onClick={declineCookies}
-          >
-            Decline
-          </Button>
-        </div>
-        <button
-          className="ml-0 xs:ml-2 text-gray-400 hover:text-gray-600"
-          aria-label="Close"
-          onClick={declineCookies}
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
+    <div className="fixed bottom-0 left-0 right-0 z-50 p-4">
+      <Card className="max-w-4xl mx-auto shadow-lg border-2">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="flex items-center gap-2 text-primary">
+                <Cookie className="h-6 w-6" />
+                <Shield className="h-6 w-6" />
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-3">
+              <div>
+                <h3 className="font-semibold text-lg">
+                  Cookie & Privacy Notice
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  We use essential cookies to store your handle and progress.
+                  You can request your data or delete it anytime. See our
+                  Privacy Policy for more details.
+                </p>
+              </div>
+
+              <Alert>
+                <Shield className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  <strong>Anonymous Users:</strong> Your data is stored locally
+                  on your device and can be recovered using your recovery key.{" "}
+                  <strong>Registered Users:</strong> Your data is stored
+                  securely on our servers and can be exported or deleted at any
+                  time.
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button onClick={handleAccept} className="flex-1">
+                  Accept & Continue
+                </Button>
+                <Button
+                  onClick={handleDecline}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Decline
+                </Button>
+              </div>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleDecline}
+              className="flex-shrink-0 h-8 w-8"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-export default CookieConsent;
+}

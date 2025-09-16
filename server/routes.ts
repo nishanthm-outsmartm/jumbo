@@ -12,8 +12,17 @@ import {
   insertMissionSchema,
 } from "@shared/schema";
 import { z } from "zod";
+import multer from "multer";
+import crypto from "crypto";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  const upload = multer();
+
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   // Auth routes
   app.post("/api/auth/register", async (req, res) => {
     try {
@@ -98,13 +107,149 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: user.id,
           handle: user.handle,
           points: user.points,
+          switch_count: user.switchCount,
           level: user.level,
           role: user.role,
+          userType: user.userType,
         },
       });
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  // Anonymous user routes
+  app.post("/api/auth/anonymous", async (req, res) => {
+    try {
+      const { handle, cookieId } = req.body;
+
+      if (!handle || !cookieId) {
+        return res.status(400).json({ error: "Handle and cookie ID are required" });
+      }
+
+      // Check if handle is available
+      const existingUser = await storage.getUserByHandle(handle);
+      if (existingUser) {
+        return res.status(400).json({ error: "Handle already taken" });
+      }
+
+      // Check if cookie ID already has a user
+      const existingCookieUser = await storage.getUserByCookieId(cookieId);
+      if (existingCookieUser) {
+        return res.json({
+          user: {
+            id: existingCookieUser.id,
+            handle: existingCookieUser.handle,
+            points: existingCookieUser.points,
+            switch_count: existingCookieUser.switchCount,
+            level: existingCookieUser.level,
+            userType: existingCookieUser.userType,
+          },
+        });
+      }
+
+      const user = await storage.createAnonymousUser(handle, cookieId);
+
+      res.json({
+        user: {
+          id: user.id,
+          handle: user.handle,
+          points: user.points,
+          switch_count: user.switchCount,
+          level: user.level,
+          userType: user.userType,
+        },
+      });
+    } catch (error) {
+      console.error("Anonymous user creation error:", error);
+      res.status(500).json({ error: "Failed to create anonymous user" });
+    }
+  });
+
+  app.post("/api/auth/migrate", async (req, res) => {
+    try {
+      const { anonymousUserId, firebaseUid, email, phone } = req.body;
+
+      if (!anonymousUserId || !firebaseUid) {
+        return res.status(400).json({ error: "Anonymous user ID and Firebase UID are required" });
+      }
+
+      const user = await storage.migrateAnonymousToRegistered(anonymousUserId, firebaseUid, email, phone);
+
+      res.json({
+        user: {
+          id: user.id,
+          handle: user.handle,
+          points: user.points,
+          switch_count: user.switchCount,
+          level: user.level,
+          role: user.role,
+          userType: user.userType,
+        },
+      });
+    } catch (error) {
+      console.error("Migration error:", error);
+      res.status(500).json({ error: "Failed to migrate user" });
+    }
+  });
+
+  // Recovery key routes
+  app.post("/api/recovery-key/generate", async (req, res) => {
+    try {
+      const { userId } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      // Generate a unique recovery key
+      const keyDisplay = crypto.randomBytes(16).toString('hex').toUpperCase();
+      const keyHash = crypto.createHash('sha256').update(keyDisplay).digest('hex');
+
+      // Generate QR code data (simplified - in production, use a proper QR library)
+      const qrCodeData = `recovery:${keyDisplay}`;
+
+      const recoveryKey = await storage.createRecoveryKey(userId, keyHash, keyDisplay, qrCodeData);
+
+      res.json({
+        recoveryKey: {
+          id: recoveryKey.id,
+          keyDisplay,
+          qrCodeData,
+          createdAt: recoveryKey.createdAt,
+        },
+      });
+    } catch (error) {
+      console.error("Recovery key generation error:", error);
+      res.status(500).json({ error: "Failed to generate recovery key" });
+    }
+  });
+
+  app.post("/api/recovery-key/use", async (req, res) => {
+    try {
+      const { keyDisplay } = req.body;
+
+      if (!keyDisplay) {
+        return res.status(400).json({ error: "Recovery key is required" });
+      }
+
+      const keyHash = crypto.createHash('sha256').update(keyDisplay).digest('hex');
+      const user = await storage.useRecoveryKey(keyHash);
+
+      res.json({
+        user: {
+          id: user.id,
+          handle: user.handle,
+          points: user.points,
+          switch_count: user.switchCount,
+          level: user.level,
+          userType: user.userType,
+        },
+      });
+    } catch (error) {
+      console.error("Recovery key usage error:", error);
+      res.status(400).json({ error: error.message || "Invalid recovery key" });
     }
   });
 
@@ -183,6 +328,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/upload", upload.single("file"), async (req, res) => {
+    try {
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ error: "File is required" });
+      }
+
+      // Convert Express.Multer.File to a web File object
+      const fileBuffer =
+        file.buffer instanceof Buffer ? file.buffer : Buffer.from(file.buffer);
+      const fileObj = new File(
+        [new Uint8Array(fileBuffer)],
+        file.originalname,
+        { type: file.mimetype }
+      );
+      const uploadResult = await storage.uploadImage(fileObj);
+      if (!uploadResult.success) {
+        return res.status(500).json({ error: uploadResult.error });
+      }
+
+      res.status(200).json({ url: uploadResult.url });
+    } catch (error) {
+      console.error("Image upload error:", error);
+      res.status(500).json({ error: "Failed to upload image" });
+    }
+  });
+
   // Switch logging
   app.post("/api/switches", async (req, res) => {
     try {
@@ -211,6 +384,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  //dashboard-metrics
+  app.get("/api/metrics", async (req, res) => {
+    try {
+      const [active24h, active7d, active30d] = await Promise.all([
+        storage.getActiveUsersLast24h(),
+        storage.getActiveUsersLast7d(),
+        storage.getActiveUsersLast30d(),
+      ]);
+      res.json({ active24h, active7d, active30d });
+    } catch (error) {
+      console.error("Error fetching metrics:", error);
+      res.status(500).json({ error: "Failed to fetch metrics" });
+    }
+  });
+
   // Feed
   app.get("/api/feed", async (req, res) => {
     try {
@@ -227,7 +415,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/leaderboard", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
-      const users = await storage.getLeaderboard(limit);
+      const userType = req.query.userType as string; // 'all', 'registered', 'anonymous'
+
+      let users;
+      if (userType === 'registered') {
+        users = await storage.getLeaderboard(limit, 'REGISTERED');
+      } else if (userType === 'anonymous') {
+        users = await storage.getLeaderboard(limit, 'ANONYMOUS');
+      } else {
+        users = await storage.getLeaderboard(limit); // All users
+      }
+
       res.json({ leaderboard: users });
     } catch (error) {
       console.error("Leaderboard error:", error);
@@ -243,6 +441,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Trending error:", error);
       res.status(500).json({ error: "Failed to load trending" });
+    }
+  });
+
+  //Feedbacks
+  // Zod schema for inserting feedback (adjust types to match your Brand/User types)
+  const insertFeedbackSchema = z.object({
+    userId: z.string(),
+    fromBrands: z.string(),
+    toBrands: z.string(),
+    url: z.string().optional(),
+    message: z.string().min(1, 'Message is required'),
+  });
+
+  // POST: Create new feedback
+  app.post("/api/feedbacks", async (req, res) => {
+    try {
+      const validatedData = insertFeedbackSchema.parse(req.body);
+      const feedback = await storage.createFeedback(validatedData);
+      res.status(201).json({ ...feedback });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error("Validation error:", error);
+        return res.status(400).json({ error: "Invalid feedback data", details: error.errors });
+      }
+      console.error("Feedback creation error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET: List feedbacks (for moderator panel, add auth middleware if needed)
+  // Query params: ?status=pending&page=1&limit=20
+  app.get("/api/feedbacks", async (req, res) => {
+    try {
+      // Optional: Add auth check here, e.g., if (!req.user?.isModerator) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { status = 'PENDING', page = 1, limit = 20, search, sort } = req.query;
+
+      const feedbacks = await storage.getFeedbacks({
+        ...(status !== "ALL" &&
+          { status: status as "PENDING" | "APPROVED" | "REJECTED" | undefined }),
+        ...(search && { search: search as string | undefined }),
+        ...(sort && { sort: sort as "asc" | "desc" | undefined }),
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+      });
+      res.json(feedbacks);
+    } catch (error) {
+      console.error("Error fetching feedbacks:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
@@ -266,7 +513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertBrandSchema.parse(req.body);
       const brand = await storage.createBrand(validatedData);
-      res.json({ brand });
+      res.json({ ...brand });
     } catch (error) {
       console.error("Brand creation error:", error);
       res.status(400).json({ error: "Invalid brand data" });
@@ -647,6 +894,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/moderation/missions", async (req, res) => {
     try {
       const validatedData = insertMissionSchema.parse(req.body);
+
       const mission = await storage.createMission(validatedData);
       res.json(mission);
     } catch (error) {
@@ -679,7 +927,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/moderation/missions/:id", async (req, res) => {
     try {
-      const mission = await storage.updateMission(req.params.id, req.body);
+      const data = {
+        ...req.body, startDate: req.body.startDate
+          ? new Date(req.body.startDate) // ✅ pass Date object, not string
+          : null,
+        endDate: req.body.endDate
+          ? new Date(req.body.endDate) // ✅ pass Date object, not string
+          : null,
+      }
+
+      const mission = await storage.updateMission(req.params.id, data);
       res.json(mission);
     } catch (error) {
       console.error("Error updating mission:", error);
@@ -944,6 +1201,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // News engagement routes
+  app.post("/api/news/:newsId/like", async (req, res) => {
+    try {
+      const { newsId } = req.params;
+      const { userId } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      const liked = await storage.likeNews(userId, newsId);
+      res.json({ liked });
+    } catch (error) {
+      console.error("News like error:", error);
+      res.status(500).json({ error: "Failed to toggle like" });
+    }
+  });
+
+  app.post("/api/news/:newsId/share", async (req, res) => {
+    try {
+      const { newsId } = req.params;
+      const { userId, platform } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      const share = await storage.shareNews(userId, newsId, platform);
+      res.json({ share });
+    } catch (error) {
+      console.error("News share error:", error);
+      res.status(500).json({ error: "Failed to share news" });
+    }
+  });
+
+  app.get("/api/news/:newsId/comments", async (req, res) => {
+    try {
+      const { newsId } = req.params;
+      const comments = await storage.getNewsComments(newsId);
+      res.json({ comments });
+    } catch (error) {
+      console.error("News comments error:", error);
+      res.status(500).json({ error: "Failed to load comments" });
+    }
+  });
+
+  app.post("/api/news/:newsId/comments", async (req, res) => {
+    try {
+      const { newsId } = req.params;
+      const { userId, content } = req.body;
+
+      if (!userId || !content) {
+        return res.status(400).json({ error: "User ID and content are required" });
+      }
+
+      const comment = await storage.addNewsComment(userId, newsId, content);
+      res.json({ comment });
+    } catch (error) {
+      console.error("News comment error:", error);
+      res.status(500).json({ error: "Failed to add comment" });
+    }
+  });
+
+  // Rewards routes
+  app.get("/api/rewards", async (req, res) => {
+    try {
+      const rewards = await storage.getRewards();
+      res.json({ rewards });
+    } catch (error) {
+      console.error("Error fetching rewards:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/rewards/:rewardId/claim", async (req, res) => {
+    try {
+      const { rewardId } = req.params;
+      const { userId } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      const userReward = await storage.claimReward(userId, rewardId);
+      res.json({ userReward });
+    } catch (error) {
+      console.error("Reward claim error:", error);
+      res.status(400).json({ error: error.message || "Failed to claim reward" });
+    }
+  });
+
+  app.get("/api/users/:userId/rewards", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const userRewards = await storage.getUserRewards(userId);
+      res.json({ userRewards });
+    } catch (error) {
+      console.error("Error fetching user rewards:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GDPR routes
+  app.post("/api/gdpr/export", async (req, res) => {
+    try {
+      const { userId } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      const userData = await storage.exportUserData(userId);
+      res.json({ userData });
+    } catch (error) {
+      console.error("Data export error:", error);
+      res.status(500).json({ error: "Failed to export data" });
+    }
+  });
+
+  app.post("/api/gdpr/delete", async (req, res) => {
+    try {
+      const { userId } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      const success = await storage.deleteUserData(userId);
+      res.json({ success });
+    } catch (error) {
+      console.error("Data deletion error:", error);
+      res.status(500).json({ error: "Failed to delete data" });
+    }
+  });
+
+  app.post("/api/gdpr/request", async (req, res) => {
+    try {
+      const { userId, requestType, requestData } = req.body;
+
+      if (!userId || !requestType) {
+        return res.status(400).json({ error: "User ID and request type are required" });
+      }
+
+      const gdprRequest = await storage.createGdprRequest(userId, requestType, requestData);
+      res.json({ gdprRequest });
+    } catch (error) {
+      console.error("GDPR request error:", error);
+      res.status(500).json({ error: "Failed to create GDPR request" });
+    }
+  });
+
   // All Missions API
   app.get("/api/missions", async (req, res) => {
     try {
@@ -971,8 +1379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Get user ID from session/auth - simplified for demo
       const userId =
-        (req.headers["x-user-id"] as string) ||
-        "feed33d3-d444-454d-a413-aefb61d4848b";
+        (req.headers["x-user-id"] as string)
       console.log("Getting user missions for userId:", userId);
 
       const userMissions = await storage.getUserMissions(userId);
@@ -989,8 +1396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Get user ID from session/auth - simplified for demo
       const userId =
-        (req.headers["x-user-id"] as string) ||
-        "feed33d3-d444-454d-a413-aef25c16a5af";
+        (req.headers["x-user-id"] as string)
       const { missionId } = req.params;
 
       const userMission = await storage.joinMission(userId, missionId);
@@ -1007,9 +1413,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/missions/:missionId/submit", async (req, res) => {
     try {
       // Get user ID from session/auth - simplified for demo
-      const userId =
-        (req.headers["x-user-id"] as string) ||
-        "feed33d3-d444-454d-a413-aef25c16a5af";
+      const userId = req.body.userId
+
+      if (!userId) throw new Error;
       const { missionId } = req.params;
 
       const switchLog = await storage.submitMissionSwitchLog(
@@ -1017,7 +1423,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         missionId,
         req.body
       );
-      res.json(switchLog);
+
+      res.json({ success: true });
     } catch (error: any) {
       console.error("Error submitting mission switch log:", error);
       res

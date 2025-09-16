@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import config from "../../client/src/lib/config";
+import { serverConfig as config } from "@shared/config/server.config";
 
 // Helper function to send an email
 export const sendEmail = async ({
@@ -12,12 +12,13 @@ export const sendEmail = async ({
   html: string;
 }): Promise<boolean> => {
   const transporter = nodemailer.createTransport({
-    host: config.env.SMTP_HOST,
-    port: config.env.SMTP_PORT,
-    secure: config.env.SMTP_TLS, // true for 465, false for other ports
+    host: config.env.smtp.host,
+    port: config.env.smtp.port,
+    name: config.env.smtp.fromName,
+    secure: config.env.smtp.tls, // true for 465, false for other ports
     auth: {
-      user: config.env.SMTP_USER,
-      pass: config.env.SMTP_PASS,
+      user: config.env.smtp.user,
+      pass: config.env.smtp.pass,
     },
   });
   try {
@@ -27,7 +28,7 @@ export const sendEmail = async ({
     }
 
     const info = await transporter.sendMail({
-      from: config.env.SMTP_FROM,
+      from: `"${config.env.smtp.fromName}" <${config.env.smtp.from}>`,
       to,
       subject,
       html,

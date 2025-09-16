@@ -1,8 +1,8 @@
 import admin from "firebase-admin";
-import config from "@/lib/config";
+import { serverConfig as config } from "@shared/config/server.config";
 
 const serviceAccount = {
-  projectId: config.env.firebase.PROJECT_ID,
+  projectId: config.env.firebase.projectId,
   privateKey: config.env.firebase.privateKey?.replace(/\\n/g, "\n"),
   clientEmail: config.env.firebase.clientEmail,
 };

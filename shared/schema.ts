@@ -1,4 +1,4 @@
-import { sql, relations } from "drizzle-orm";
+import { sql, relations, desc } from "drizzle-orm";
 import {
   pgTable,
   text,
@@ -19,6 +19,25 @@ export const userRoleEnum = pgEnum("user_role", [
   "MODERATOR",
   "STRATEGIST",
   "ADMIN",
+]);
+export const userTypeEnum = pgEnum("user_type", [
+  "ANONYMOUS",
+  "REGISTERED",
+]);
+export const commentStatusEnum = pgEnum("comment_status", [
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+]);
+export const rewardTypeEnum = pgEnum("reward_type", [
+  "FREEBEE",
+  "COUPON",
+  "PRIZE_ENTRY",
+]);
+export const rewardStatusEnum = pgEnum("reward_status", [
+  "AVAILABLE",
+  "CLAIMED",
+  "EXPIRED",
 ]);
 export const switchCategoryEnum = pgEnum("switch_category", [
   "FOOD_BEVERAGES",
@@ -59,15 +78,17 @@ export const users = pgTable("users", {
   id: varchar("id")
     .primaryKey()
     .default(sql`gen_random_uuid()`),
-  firebaseUid: varchar("firebase_uid").notNull().unique(),
+  firebaseUid: varchar("firebase_uid").unique(), // Made nullable for anonymous users
   phone: varchar("phone"),
   email: varchar("email"),
   handle: varchar("handle").notNull().unique(),
   region: varchar("region"),
   role: userRoleEnum("role").default("MEMBER"),
+  userType: userTypeEnum("user_type").default("REGISTERED"),
   points: integer("points").default(0),
   level: integer("level").default(1),
   switchCount: integer("switch_count").default(0),
+  cookieId: varchar("cookie_id").unique(), // For anonymous users
   createdAt: timestamp("created_at").defaultNow(),
   lastLoginAt: timestamp("last_login_at"),
   isStrategist: boolean("is_strategist").default(false).notNull(),
@@ -83,6 +104,78 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   token: varchar("token", { length: 255 }).unique().notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   used: boolean("used").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Recovery keys for anonymous users
+export const recoveryKeys = pgTable("recovery_keys", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  keyHash: varchar("key_hash").notNull().unique(), // argon2id hash
+  keyDisplay: varchar("key_display").notNull(), // Human-readable key for display
+  qrCodeData: text("qr_code_data"), // QR code data
+  isUsed: boolean("is_used").default(false),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Rewards system
+export const rewards = pgTable("rewards", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  type: rewardTypeEnum("type").notNull(),
+  pointsRequired: integer("points_required").default(0),
+  value: decimal("value", { precision: 10, scale: 2 }), // For coupons/prizes
+  imageUrl: varchar("image_url"),
+  isActive: boolean("is_active").default(true),
+  maxClaims: integer("max_claims"), // Limit on how many can be claimed
+  currentClaims: integer("current_claims").default(0),
+  startDate: timestamp("start_date").defaultNow(),
+  endDate: timestamp("end_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// User reward claims
+export const userRewards = pgTable("user_rewards", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  rewardId: varchar("reward_id")
+    .references(() => rewards.id, { onDelete: "cascade" })
+    .notNull(),
+  status: rewardStatusEnum("status").default("CLAIMED"),
+  claimedAt: timestamp("claimed_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+  redemptionCode: varchar("redemption_code"), // For coupons/prizes
+});
+
+export const evidenceImages = pgTable("evidence_images", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+
+  switchLogsId: varchar("switch_logs_id")
+    .notNull()
+    .references(() => switchLogs.id, { onDelete: "cascade" }),
+
+  objectKey: text("object_key").notNull(),
+
+  uploadedBy: varchar("uploaded_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+
+  imageUrl: text("image_url").notNull(),
+
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -159,11 +252,14 @@ export const communityMembers = pgTable("community_members", {
 export const brands = pgTable("brands", {
   id: varchar("id")
     .primaryKey()
-    .default(sql`gen_random_uuid()`),
+    .default(sql`gen_random_uuid()`)
+    .notNull(),
   name: varchar("name").notNull(),
+  description: text("description"),
   company: varchar("company"),
   country: varchar("country"),
   isIndian: boolean("is_indian").default(false),
+  isFavorable: boolean("is_favorable").default(false),
   category: switchCategoryEnum("category"),
   logoUrl: varchar("logo_url"),
   tags: text("tags").array(), // Array of tag IDs
@@ -181,6 +277,7 @@ export const switchLogs = pgTable("switch_logs", {
   fromBrandId: varchar("from_brand_id").references(() => brands.id),
   toBrandId: varchar("to_brand_id").references(() => brands.id),
   missionId: varchar("mission_id").references(() => missions.id), // For mission-related switch logs
+  newsId: varchar("news_id").references(() => newsArticles.id), // For news-related switch logs
   category: switchCategoryEnum("category"),
   categoryId: varchar("category_id").references(() => categories.id),
   tags: text("tags").array(), // Array of tag IDs
@@ -198,6 +295,24 @@ export const switchLogs = pgTable("switch_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const switchFeedbacks = pgTable("switch_feedbacks", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, {
+    onDelete: "cascade",
+  }),
+  fromBrands: varchar("from_brands"),
+  toBrands: varchar("to_brands"),
+  url: varchar("url"), // e.g., evidence or link related to the feedback
+  message: text("message"), // The feedback message
+  isPublic: boolean("is_public").default(false),
+  status: switchLogStatus("status").default("PENDING"), // Reusing the status enum from switch_logs for consistency
+  moderatorId: varchar("moderator_id").references(() => users.id),
+  moderatorNotes: text("moderator_notes"),
+  approvedAt: timestamp("approved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 // Reactions table for enhanced social interactions
 export const reactions = pgTable("reactions", {
   id: varchar("id")
@@ -320,7 +435,14 @@ export const comments = pgTable("comments", {
   postId: varchar("post_id").references(() => posts.id, {
     onDelete: "cascade",
   }),
+  newsId: varchar("news_id").references(() => newsArticles.id, {
+    onDelete: "cascade",
+  }),
   content: text("content").notNull(),
+  status: commentStatusEnum("status").default("PENDING"),
+  moderatorId: varchar("moderator_id").references(() => users.id),
+  moderatorNotes: text("moderator_notes"),
+  moderatedAt: timestamp("moderated_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -441,7 +563,7 @@ export const missions = pgTable("missions", {
   financialValue: decimal("financial_value", { precision: 10, scale: 2 }),
   imageUrls: text("image_urls").array(), // Multiple image uploads
   pointsReward: integer("points_reward").default(50),
-  startDate: timestamp("start_date").defaultNow(),
+  startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
   status: missionStatusEnum("status").default("DRAFT"),
   communityId: varchar("community_id").references(() => communities.id), // For community-specific missions
@@ -478,11 +600,43 @@ export const newsArticles = pgTable("news_articles", {
   suggestedFromBrandIds: text("suggested_from_brand_ids").array(),
   suggestedToBrandIds: text("suggested_to_brand_ids").array(),
   commentsEnabled: boolean("comments_enabled").default(true),
+  likesCount: integer("likes_count").default(0),
+  sharesCount: integer("shares_count").default(0),
+  commentsCount: integer("comments_count").default(0),
   isPublished: boolean("is_published").default(true),
   publishedAt: timestamp("published_at").defaultNow(),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// News likes
+export const newsLikes = pgTable("news_likes", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, {
+    onDelete: "cascade",
+  }),
+  newsId: varchar("news_id").references(() => newsArticles.id, {
+    onDelete: "cascade",
+  }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// News shares
+export const newsShares = pgTable("news_shares", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, {
+    onDelete: "cascade",
+  }),
+  newsId: varchar("news_id").references(() => newsArticles.id, {
+    onDelete: "cascade",
+  }),
+  platform: varchar("platform"), // 'twitter', 'whatsapp', 'facebook', etc.
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Private messages between members and moderators
@@ -539,6 +693,23 @@ export const contentTags = pgTable("content_tags", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// GDPR compliance - data export/deletion requests
+export const gdprRequests = pgTable("gdpr_requests", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, {
+    onDelete: "cascade",
+  }),
+  requestType: varchar("request_type").notNull(), // 'EXPORT', 'DELETE'
+  status: varchar("status").default("PENDING"), // PENDING, PROCESSING, COMPLETED, FAILED
+  requestData: jsonb("request_data"), // Additional request details
+  processedAt: timestamp("processed_at"),
+  downloadUrl: varchar("download_url"), // For export requests
+  expiresAt: timestamp("expires_at"), // For download links
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Feedback submissions (renamed from target suggestions)
 export const feedbackSubmissions = pgTable("feedback_submissions", {
   id: varchar("id")
@@ -577,6 +748,11 @@ export const usersRelations = relations(users, ({ many }) => ({
   missions: many(missions),
   userMissions: many(userMissions),
   moderatorPosts: many(moderatorPosts),
+  recoveryKeys: many(recoveryKeys),
+  userRewards: many(userRewards),
+  newsLikes: many(newsLikes),
+  newsShares: many(newsShares),
+  gdprRequests: many(gdprRequests),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
@@ -763,6 +939,41 @@ export const contentTagsRelations = relations(contentTags, ({ one }) => ({
   tag: one(tags, { fields: [contentTags.tagId], references: [tags.id] }),
 }));
 
+// New relations for enhanced features
+export const recoveryKeysRelations = relations(recoveryKeys, ({ one }) => ({
+  user: one(users, { fields: [recoveryKeys.userId], references: [users.id] }),
+}));
+
+export const rewardsRelations = relations(rewards, ({ many }) => ({
+  userRewards: many(userRewards),
+}));
+
+export const userRewardsRelations = relations(userRewards, ({ one }) => ({
+  user: one(users, { fields: [userRewards.userId], references: [users.id] }),
+  reward: one(rewards, { fields: [userRewards.rewardId], references: [rewards.id] }),
+}));
+
+export const newsArticlesRelations = relations(newsArticles, ({ one, many }) => ({
+  creator: one(users, { fields: [newsArticles.createdBy], references: [users.id] }),
+  comments: many(comments),
+  likes: many(newsLikes),
+  shares: many(newsShares),
+}));
+
+export const newsLikesRelations = relations(newsLikes, ({ one }) => ({
+  user: one(users, { fields: [newsLikes.userId], references: [users.id] }),
+  news: one(newsArticles, { fields: [newsLikes.newsId], references: [newsArticles.id] }),
+}));
+
+export const newsSharesRelations = relations(newsShares, ({ one }) => ({
+  user: one(users, { fields: [newsShares.userId], references: [users.id] }),
+  news: one(newsArticles, { fields: [newsShares.newsId], references: [newsArticles.id] }),
+}));
+
+export const gdprRequestsRelations = relations(gdprRequests, ({ one }) => ({
+  user: one(users, { fields: [gdprRequests.userId], references: [users.id] }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -827,7 +1038,11 @@ export const insertFeedbackResponseSchema = createInsertSchema(
   createdAt: true,
 });
 
-export const insertMissionSchema = createInsertSchema(missions).omit({
+export const insertMissionSchema = createInsertSchema(missions, {
+  startDate: z.coerce.date(), // 👈 accepts string or Date
+  endDate: z.coerce.date(),
+  financialValue: z.string(), // 👈 decimal maps better as string
+}).omit({
   id: true,
   createdAt: true,
 });
@@ -894,6 +1109,40 @@ export const insertFeedbackSubmissionSchema = createInsertSchema(
   reviewedAt: true,
 });
 
+// New insert schemas for enhanced features
+export const insertRecoveryKeySchema = createInsertSchema(recoveryKeys).omit({
+  id: true,
+  createdAt: true,
+  usedAt: true,
+});
+
+export const insertRewardSchema = createInsertSchema(rewards).omit({
+  id: true,
+  createdAt: true,
+  currentClaims: true,
+});
+
+export const insertUserRewardSchema = createInsertSchema(userRewards).omit({
+  id: true,
+  claimedAt: true,
+});
+
+export const insertNewsLikeSchema = createInsertSchema(newsLikes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertNewsShareSchema = createInsertSchema(newsShares).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertGdprRequestSchema = createInsertSchema(gdprRequests).omit({
+  id: true,
+  createdAt: true,
+  processedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -950,3 +1199,17 @@ export type FeedbackSubmission = typeof feedbackSubmissions.$inferSelect;
 export type InsertFeedbackSubmission = z.infer<
   typeof insertFeedbackSubmissionSchema
 >;
+
+// New types for enhanced features
+export type RecoveryKey = typeof recoveryKeys.$inferSelect;
+export type InsertRecoveryKey = z.infer<typeof insertRecoveryKeySchema>;
+export type Reward = typeof rewards.$inferSelect;
+export type InsertReward = z.infer<typeof insertRewardSchema>;
+export type UserReward = typeof userRewards.$inferSelect;
+export type InsertUserReward = z.infer<typeof insertUserRewardSchema>;
+export type NewsLike = typeof newsLikes.$inferSelect;
+export type InsertNewsLike = z.infer<typeof insertNewsLikeSchema>;
+export type NewsShare = typeof newsShares.$inferSelect;
+export type InsertNewsShare = z.infer<typeof insertNewsShareSchema>;
+export type GdprRequest = typeof gdprRequests.$inferSelect;
+export type InsertGdprRequest = z.infer<typeof insertGdprRequestSchema>;

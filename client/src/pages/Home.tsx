@@ -1,16 +1,158 @@
-import React from "react";
+import React, { useState } from "react";
 import { SocialFeed } from "@/components/SocialFeed";
 import { Leaderboard } from "@/components/Leaderboard";
+import { EnhancedLeaderboard } from "@/components/EnhancedLeaderboard";
 import { UserStats } from "@/components/UserStats";
 import { TrendingContent } from "@/components/TrendingContent";
+import { RewardsSection } from "@/components/RewardsSection";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { Flame, Plus } from "lucide-react";
+import {
+  AlertCircle,
+  Calendar,
+  CheckCircle,
+  Clock,
+  Coins,
+  Flame,
+  Gift,
+  Newspaper,
+  Plus,
+  Target,
+} from "lucide-react";
 import { Link } from "wouter";
+import { toast, useToast } from "@/hooks/use-toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import z from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import LogSwitchDialog from "@/components/LogSwitchDialog";
+import { formatDistanceToNow } from "date-fns";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { Badge } from "@/components/ui/badge";
+import NewsLogSwitchDialog from "@/components/NewsLogSwitchDialog";
 
+interface Brand {
+  id: string;
+  name: string;
+  country: string;
+  isIndian: boolean;
+}
+
+interface Mission {
+  id: string;
+  title: string;
+  description: string;
+  targetCategory: string;
+  pointsReward: number;
+  startDate: string;
+  endDate: string;
+  status: string;
+  impact: string;
+  fromBrands?: Brand[];
+  toBrands?: Brand[];
+}
+
+interface UserMission {
+  id: string;
+  missionId: string;
+  // userId: string;
+  status: string;
+  completedAt?: string;
+  createdAt: string;
+}
+interface NewsArticle {
+  id: string;
+  title: string;
+  description: string;
+  imageUrls: string[] | null;
+  source: string | null;
+  suggestedFromBrandIds: string[] | null;
+  suggestedToBrandIds: string[] | null;
+  commentsEnabled: boolean;
+  isPublished: boolean;
+  publishedAt: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  fromBrands?: Brand[];
+  toBrands?: Brand[];
+}
 export default function Home() {
   const { user } = useAuth();
+
+  const queryClient = useQueryClient();
+  const {
+    data: articles = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["/api/news"],
+    queryFn: async () => {
+      const res = await fetch("/api/news");
+      const data = await res.json();
+      // Ensure data is always an array
+      return Array.isArray(data) ? data : [];
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds for real-time updates
+  });
+  const { data: missions = [], isLoading: missionsLoading } = useQuery({
+    queryKey: ["/api/missions"],
+    queryFn: () => fetch("/api/missions").then((res) => res.json()),
+  });
+
+  const { data: userMissions = [] } = useQuery({
+    queryKey: ["/api/user-missions"],
+    queryFn: () =>
+      fetch("/api/user-missions", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(user && { "x-user-id": user.id }),
+        },
+      }).then((res) => res.json()),
+  });
+
+  const joinMission = useMutation({
+    mutationFn: async (missionId: string) => {
+      const response = await fetch(`/api/missions/${missionId}/join`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(user && { "x-user-id": user.id }),
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Failed to join mission");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Mission joined!",
+        description: "You can now submit switch logs for this mission.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-missions"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to join mission",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleParticipate = (missionId: string) => {
+    joinMission.mutate(missionId);
+  };
 
   const trendingCategories = [
     {
@@ -46,6 +188,7 @@ export default function Home() {
           {/* Left Sidebar - Hidden on mobile */}
           <div className="hidden lg:block lg:col-span-3">
             <UserStats />
+            {/* Missions carousel */}
           </div>
 
           {/* Main Content */}
@@ -61,7 +204,69 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Trending Categories */}
+            {/* Your next actions */}
+            <section className="px-1 pt-4">
+              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                Your next actions
+              </h3>
+              <div className="grid gap-3">
+                {/* Daily 60-sec Switch */}
+                <CardAction
+                  kicker=""
+                  icon={<Target className="text-orange-600" />}
+                  title="Join Mission"
+                  desc="Be part of the movement — choose Indian first."
+                  cta="Do it now"
+                  badge="+50 pts"
+                />
+                {/* Weekly Challenge */}
+                {/* <CardAction
+            kicker="Weekly"
+            icon={<Gift className="text-emerald-600" />}
+            title="Join this week’s Challenge"
+            desc="Complete 3 switches to unlock a surprise reward."
+            cta="Accept challenge"
+            badge="+200 pts"
+          /> */}
+                {/* Continue onboarding */}
+                {/* <CardProgress
+            title="Finish Starter Steps"
+            desc="2 steps left to unlock Leaderboard"
+            progress={0.6}
+            cta="Continue"
+          /> */}
+              </div>
+            </section>
+            <section className="px-1 pt-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  Missions for you
+                </h3>
+                <Link to="/missions">
+                  <button className="text-sm font-medium text-orange-600">
+                    See all
+                  </button>
+                </Link>
+              </div>
+              <div className="grid gap-3">
+                {missions.map((mission: Mission) => {
+                  const userMission = userMissions.find(
+                    (um: UserMission) => um.missionId === mission.id
+                  );
+
+                  return (
+                    <MissionCard
+                      key={mission.id}
+                      mission={mission}
+                      userMission={userMission}
+                      onParticipate={handleParticipate}
+                    />
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* Trending Categories
             <Card className="mb-6">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -90,14 +295,14 @@ export default function Home() {
                       {/* <p className="text-xs text-orange-500">
                         +{category.switches} switches
                       </p> */}
-                    </div>
+            {/* </div>
                   ))}
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
 
             {/* Trending Header */}
-            <Card className="mb-6">
+            {/* <Card className="mb-6">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold text-gray-900 flex items-center">
@@ -135,10 +340,15 @@ export default function Home() {
                   </span>
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
 
             {/* Social Feed */}
-            <SocialFeed />
+            {/* <section className="px-4 pt-4">
+              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Posts</h3>
+              <div className="grid gap-3">
+                  <SocialFeed />
+              </div>
+            </section> */}
 
             {/* Load More */}
             {/* <div className="text-center mt-8">
@@ -151,25 +361,410 @@ export default function Home() {
 
           {/* Right Sidebar */}
           <div className="lg:col-span-3 mb-16">
-            <Leaderboard />
-            {/* <div className="mt-6">
-              <TrendingContent />
-            </div> */}
+            {/* News to act on */}
+            <section className="px-1">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="flex items-center gap-2 text-base font-semibold">
+                  <Newspaper className="text-slate-700" /> Latest News to Act On
+                </h3>
+                <Link to="/news">
+                  <button className="text-sm font-medium text-orange-600">
+                    More
+                  </button>
+                </Link>
+              </div>
+              <div className="grid gap-3">
+                {articles.map((article: NewsArticle) => (
+                  <NewsCard key={article.id} article={article} />
+                ))}
+              </div>
+            </section>
+
+            <div className="mt-6">
+              <EnhancedLeaderboard />
+            </div>
+
+            {/* Rewards Section */}
+            <div className="mt-6">
+              <RewardsSection />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Mobile FAB */}
-      <div className="lg:hidden fixed bottom-20 right-4 z-40">
-        {/* <Link href="/log-switch"> */}
+      {/* <div className="lg:hidden fixed bottom-20 right-4 z-40">
+        <Link href="/log-switch">
         <Button
-          disabled
+          
           size="lg"
           className="bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all p-4"
         >
           <Plus className="h-6 w-6" />
         </Button>
-        {/* </Link> */}
+        </Link>
+      </div> */}
+    </div>
+  );
+}
+
+function CardAction({
+  kicker,
+  icon,
+  title,
+  desc,
+  cta,
+  badge,
+}: {
+  kicker: string;
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+  cta: string;
+  badge?: string;
+}) {
+  return (
+    <div className="rounded-2xl border p-4">
+      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+        {kicker}
+      </div>
+      <div className="mb-2 flex items-center gap-2 text-base font-semibold">
+        {icon} {title}
+      </div>
+      <p className="text-sm text-slate-600">{desc}</p>
+      <div className="mt-3 flex items-center justify-between">
+        <Link to="/missions">
+          <button className="rounded-full bg-slate-900 px-4 py-2 text-sm text-white active:scale-[.99]">
+            {cta}
+          </button>
+        </Link>
+        {badge ? (
+          <span className="rounded-full bg-orange-100 px-2 py-1 text-[11px] font-semibold text-orange-700">
+            {badge}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function CardProgress({
+  title,
+  desc,
+  progress,
+  cta,
+}: {
+  title: string;
+  desc: string;
+  progress: number;
+  cta: string;
+}) {
+  const pct = Math.round(progress * 100);
+  return (
+    <div className="rounded-2xl border p-4">
+      <div className="mb-1 text-base font-semibold">{title}</div>
+      <p className="text-sm text-slate-600">{desc}</p>
+      <div className="mt-3">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-orange-500 to-emerald-500"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <div className="mt-2 flex items-center justify-between">
+          <span className="text-xs text-slate-600">{pct}%</span>
+          <button className="rounded-full bg-slate-900 px-4 py-1.5 text-xs text-white active:scale-[.99]">
+            {cta}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NewsCard({ article }: { article: NewsArticle }) {
+  return (
+    <div className="rounded-2xl border p-4">
+      {/* <div className="text-xs text-slate-500">{article}</div> */}
+      <div className="mt-1 text-base font-semibold">{article.title}</div>
+      <div className="mt-3 flex items-center justify-between text-sm">
+        <button className="rounded-full border px-3 py-1.5">Read</button>
+        <NewsLogSwitchDialog newsId={article.id} />
+        {/* <button className="rounded-full px-4 py-1.5 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white font-medium transition-all">
+          Act on this
+        </button> */}
+      </div>
+    </div>
+  );
+}
+
+function MissionCard({
+  mission,
+  userMission,
+  onParticipate,
+}: {
+  mission: Mission;
+  userMission?: UserMission;
+  onParticipate: (missionId: string) => void;
+}) {
+  const switchLogSchema = z.object({
+    targetBrandFrom: z.string().min(1, "Please select a brand to switch from"),
+    targetBrandTo: z.string().min(1, "Please select a brand to switch to"),
+    reason: z
+      .string()
+      .min(10, "Please provide a reason (at least 10 characters)"),
+    experience: z.string().min(5, "Please describe your experience"),
+    financialImpact: z.string().optional(),
+    evidenceUrl: z.string().min(1, "Please upload evidence image"),
+  });
+
+  type SwitchLogFormData = z.infer<typeof switchLogSchema>;
+
+  const [showSubmitForm, setShowSubmitForm] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const form = useForm<SwitchLogFormData>({
+    resolver: zodResolver(switchLogSchema),
+    defaultValues: {
+      targetBrandFrom: "",
+      targetBrandTo: "",
+      reason: "",
+      experience: "",
+      financialImpact: "",
+      evidenceUrl: "",
+    },
+  });
+  const { user } = useAuth();
+
+  const submitSwitchLog = useMutation({
+    mutationFn: async (data: SwitchLogFormData) => {
+      const response = await fetch(`/api/missions/${mission.id}/submit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(user && { "x-user-id": user.id }),
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to submit switch log");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Switch log submitted!",
+        description: "Your submission is pending moderator verification.",
+      });
+      setShowSubmitForm(false);
+      form.reset();
+      queryClient.invalidateQueries({ queryKey: ["/api/missions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-missions"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Submission failed",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (data: SwitchLogFormData) => {
+    submitSwitchLog.mutate(data);
+  };
+
+  const getStatusColor = (status?: string) => {
+    switch (status) {
+      case "COMPLETED":
+        return "bg-green-100 text-green-800";
+      case "STARTED":
+        return "bg-blue-100 text-blue-800";
+      case "FAILED":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getStatusIcon = (status?: string) => {
+    switch (status) {
+      case "COMPLETED":
+        return <CheckCircle className="w-4 h-4" />;
+      case "STARTED":
+        return <Clock className="w-4 h-4" />;
+      case "FAILED":
+        return <AlertCircle className="w-4 h-4" />;
+      default:
+        return <Target className="w-4 h-4" />;
+    }
+  };
+  return (
+    <div className="min-w-[240px] rounded-2xl border p-4">
+      <div className="text-xs text-slate-500">{mission.targetCategory}</div>
+      <div className="mt-1 text-base font-semibold">{mission.title}</div>
+      <div>
+        {/* Drawer for full details */}
+        <Drawer>
+          <DrawerTrigger asChild>
+            <div className="flex justify-end">
+              <Button
+                variant="link"
+                className="p-0 h-auto text-orange-600 text-xs underline"
+              >
+                View more details
+              </Button>
+            </div>
+          </DrawerTrigger>
+          <DrawerContent className="h-[75vh] max-h-[80vh] ">
+            <div className="px-4 sm:px-8 md:px-12 lg:px-20 py-6 text-left overflow-y-auto">
+              <DrawerHeader className="px-0">
+                <DrawerTitle className="text-xl mb-2 text-left">
+                  {mission.title}
+                </DrawerTitle>
+                <DrawerDescription className="text-gray-700 text-left  break-words overflow-hidden">
+                  {mission.description}
+                </DrawerDescription>
+              </DrawerHeader>
+
+              {/* Badges & Info */}
+              <div className="flex flex-wrap items-center gap-2 my-4">
+                <Badge variant="outline" className="text-xs">
+                  {mission.targetCategory.replace("_", " ")}
+                </Badge>
+                <Badge
+                  variant="secondary"
+                  className="text-xs flex items-center gap-1"
+                >
+                  <Coins className="w-3 h-3" />
+                  {mission.pointsReward} points
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className={`text-xs ${
+                    mission.impact === "HIGH"
+                      ? "border-red-500 text-red-700"
+                      : mission.impact === "MEDIUM"
+                      ? "border-yellow-500 text-yellow-700"
+                      : "border-green-500 text-green-700"
+                  }`}
+                >
+                  {mission.impact} Impact
+                </Badge>
+                {userMission && (
+                  <Badge
+                    className={`text-xs flex items-center gap-1 ${getStatusColor(
+                      userMission.status
+                    )}`}
+                  >
+                    {getStatusIcon(userMission.status)}
+                    {userMission.status}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Brands full list */}
+              {((mission.fromBrands && mission.fromBrands?.length > 0) ||
+                (mission.toBrands && mission.toBrands?.length > 0)) && (
+                <div className="bg-gradient-to-r from-red-50 to-green-50 border border-gray-200 rounded-lg p-3 mb-6">
+                  <div className="flex flex-col gap-4 text-sm">
+                    {mission.fromBrands && mission.fromBrands.length > 0 && (
+                      <div>
+                        <span className="text-red-600 font-medium mb-1 block">
+                          Switch From:
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {mission.fromBrands.map((brand: Brand) => (
+                            <Badge
+                              key={brand.id}
+                              variant="destructive"
+                              className="text-xs"
+                            >
+                              {brand.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {mission.toBrands && mission.toBrands?.length > 0 && (
+                      <div>
+                        <span className="text-green-600 font-medium mb-1 block">
+                          Switch To:
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {mission.toBrands.map((brand: Brand) => (
+                            <Badge
+                              key={brand.id}
+                              className="text-xs bg-green-600 text-white"
+                            >
+                              {brand.name} {brand.isIndian ? "🇮🇳" : ""}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Timeline */}
+              <div className="flex items-center gap-1 text-xs text-gray-500 mb-6">
+                <Calendar className="w-3 h-3" />
+                {mission.endDate
+                  ? `Ends ${formatDistanceToNow(
+                      new Date(mission.endDate)
+                    )} from now`
+                  : "Always"}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                {!userMission ? (
+                  <button
+                    className="flex-1 rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 font-medium transition-all px-4 py-2 text-sm text-white active:scale-[.99]"
+                    onClick={() => onParticipate(mission.id)}
+                  >
+                    <Target className="w-4 h-4 mr-2" />
+                    Join Mission
+                  </button>
+                ) : userMission.status === "STARTED" ? (
+                  <LogSwitchDialog missionId={mission.id} />
+                ) : (
+                  <Button className="bg-gradient-to-r w-full from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600">
+                    {userMission.status === "COMPLETED"
+                      ? "Mission Completed!"
+                      : "Pending verification..."}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      </div>
+      <div className="mt-3 flex items-center justify-between">
+        {!userMission ? (
+          <button
+            className="rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 font-medium transition-all px-4 py-2 text-sm text-white active:scale-[.99]"
+            onClick={() => onParticipate(mission.id)}
+          >
+            Join Mission
+          </button>
+        ) : userMission.status === "STARTED" ? (
+          <div>
+            <LogSwitchDialog missionId={mission.id} />
+          </div>
+        ) : (
+          <button className="rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 font-medium transition-all px-4 py-2 text-sm text-white active:scale-[.99]">
+            {userMission.status === "COMPLETED"
+              ? "Mission Completed!"
+              : "Pending verification..."}
+          </button>
+        )}
+
+        <span className="rounded-full bg-orange-100 px-2 py-1 text-[11px] font-semibold text-orange-700">
+          +{mission.pointsReward} pts
+        </span>
       </div>
     </div>
   );

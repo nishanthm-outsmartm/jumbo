@@ -18,6 +18,9 @@ import {
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import Navbar from "@/components/landing/navbar";
+import { AnonymousRegistration } from "@/components/auth/AnonymousRegistration";
+import { QuickAnonymousJoin } from "@/components/auth/QuickAnonymousJoin";
+import { useAuth } from "@/context/AuthContext";
 
 interface NewsArticle {
   id: string;
@@ -180,37 +183,63 @@ function HeroSection() {
             className="bg-white/20 text-white hover:bg-white/30 text-base px-4 py-2"
           >
             <Users className="w-5 h-5 mr-2" />
-            <span className="animate-pulse">0 </span> Patriots
+            <span className="animate-pulse">0 </span>&nbsp;Patriots
           </Badge>
           <Badge
             variant="secondary"
             className="bg-white/20 text-white hover:bg-white/30 text-base px-4 py-2"
           >
             <TrendingUp className="w-5 h-5 mr-2" />
-            <span className="animate-pulse">0 </span> Switches
+            <span className="animate-pulse">0 </span>&nbsp;Switches
           </Badge>
           <Badge
             variant="secondary"
             className="bg-white/20 text-white hover:bg-white/30 text-base px-4 py-2"
           >
             <Target className="w-5 h-5 mr-2" />
-            <span className="animate-pulse">₹0 </span> Impact
+            <span className="animate-pulse">₹0</span>&nbsp;Impact
           </Badge>
         </div>
 
         <p className="mb-4">
-          Sign up for the full feed & weekly challenges — Switch with Pride
+          Sign up or log in to access the full feed & weekly challenges — Switch
+          with Pride
         </p>
 
-        <Link href="/login">
-          <Button
-            size="lg"
-            className="bg-white text-orange-600 hover:bg-gray-100 font-semibold text-lg px-8 py-3"
-          >
-            Sign up Now
-            <ArrowRight className="w-6 h-6 ml-2" />
-          </Button>
-        </Link>
+        <div className="flex flex-col gap-6 justify-center items-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link href="/login">
+              <Button
+                size="lg"
+                className="relative overflow-hidden bg-white text-orange-600 hover:bg-gray-100 font-semibold text-lg px-8 py-3"
+              >
+                <span className="relative z-10 flex items-center">
+                  Login / Sign Up
+                  <ArrowRight className="w-6 h-6 ml-2" />
+                </span>
+
+                {/* Shining effect */}
+                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shine" />
+              </Button>
+            </Link>
+          </div>
+
+          <div className="text-center">
+            <p className="text-sm opacity-80 mb-4">or try it out anonymously</p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+              <QuickAnonymousJoin
+                onSuccess={() => window.location.reload()}
+                variant="outline"
+                size="lg"
+                className="bg-white/20 text-white border-white/30 hover:bg-white/30"
+              />
+              <span className="text-sm opacity-60">or</span>
+              <AnonymousRegistration
+                onSuccess={() => window.location.reload()}
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -255,6 +284,7 @@ export default function LandingPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
+        <Navbar />
         <HeroSection />
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

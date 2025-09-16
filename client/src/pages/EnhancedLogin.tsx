@@ -157,25 +157,42 @@ export default function EnhancedLogin() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-green-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <div className="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-green-600">
+          {/* <div className="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-green-600">
             <Zap className="h-10 w-10 text-white" />
-          </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Welcome to JumboJolt
+          </div> */}
+          <h2 className=" text-center text-3xl font-extrabold text-gray-900">
+            {`Welcome ${!isSignUp ? "back " : ""}to JumboJolt`}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Join India's largest community switching to quality Indian products
+            {isSignUp
+              ? "Join India's largest community switching to quality Indian products"
+              : "Continue discovering and supporting quality Indian products."}
           </p>
         </div>
 
-        <Card className="shadow-xl">
+        <Card className="">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-center justify-center">
-              <Shield className="h-5 w-5 text-orange-600" />
-              Sign In to Continue
+              {/* <Shield className="h-5 w-5 text-orange-600" /> */}
+              {isSignUp ? "Sign Up" : "Log In"}
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-12 text-lg"
+              onClick={handleGoogleAuth}
+              disabled={loading}
+            >
+              <Chrome className="h-5 w-5 mr-3" />
+              {"Continue with Google"}
+            </Button>
+            <div className="flex items-center my-6">
+              <div className="flex-grow border-t border-gray-300"></div>
+              <span className="px-4 text-gray-500 text-sm font-medium">OR</span>
+              <div className="flex-grow border-t border-gray-300"></div>
+            </div>
             {error && (
               <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
@@ -183,7 +200,7 @@ export default function EnhancedLogin() {
               </Alert>
             )}
 
-            <Tabs defaultValue="email" className="space-y-4">
+            {/* <Tabs defaultValue="email" className="space-y-4">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="email">
                   <Mail className="h-4 w-4 mr-2" />
@@ -193,39 +210,40 @@ export default function EnhancedLogin() {
                   <Chrome className="h-4 w-4 mr-2" />
                   Google
                 </TabsTrigger>
-              </TabsList>
+              </TabsList> */}
 
-              <TabsContent value="email" className="space-y-4">
-                <form onSubmit={handleEmailAuth} className="space-y-4">
-                  <div>
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="your@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="mt-1"
-                      minLength={6}
-                    />
-                  </div>
+            <div className="space-y-4">
+              <form onSubmit={handleEmailAuth} className="space-y-4">
+                <div>
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="mt-1"
+                    minLength={6}
+                  />
+                </div>
 
-                  {/* foreget password */}
+                {/* forget password */}
 
-                  <div className="text-sm text-blue-600 hover:text-gray-900 hover:underline pr-2 cursor-pointer text-right self-end">
+                <div className="text-sm text-blue-600 hover:text-gray-900 hover:underline pr-2 cursor-pointer text-right self-end">
+                  {!isSignUp && (
                     <Button
                       variant="link"
                       className="px-0 font-normal text-sm"
@@ -233,36 +251,37 @@ export default function EnhancedLogin() {
                     >
                       Forgot your password?
                     </Button>
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-orange-500 to-green-600 hover:from-orange-600 hover:to-green-700 "
-                    disabled={loading}
-                  >
-                    {loading
-                      ? "Processing..."
-                      : isSignUp
-                      ? "Create Account"
-                      : "Sign In"}
-                  </Button>
+                  )}
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-orange-500 to-green-600 hover:from-orange-600 hover:to-green-700 "
+                  disabled={loading}
+                >
+                  {loading
+                    ? "Processing..."
+                    : isSignUp
+                    ? "Create Account"
+                    : "Log In"}
+                </Button>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      setIsSignUp(!isSignUp);
-                      setError("");
-                    }}
-                  >
-                    {isSignUp
-                      ? "Already have an account? Sign In"
-                      : "Need an account? Sign Up"}
-                  </Button>
-                </form>
-              </TabsContent>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setError("");
+                  }}
+                >
+                  {isSignUp
+                    ? "Already have an account? Log In"
+                    : "Need an account? Sign Up"}
+                </Button>
+              </form>
+            </div>
 
-              <TabsContent value="google" className="space-y-4">
+            {/* <TabsContent value="google" className="space-y-4">
                 <Button
                   type="button"
                   variant="outline"
@@ -276,8 +295,8 @@ export default function EnhancedLogin() {
                 <p className="text-xs text-gray-500 text-center">
                   Quick and secure sign-in with your Google account
                 </p>
-              </TabsContent>
-            </Tabs>
+              </TabsContent> */}
+            {/* </Tabs> */}
           </CardContent>
         </Card>
       </div>

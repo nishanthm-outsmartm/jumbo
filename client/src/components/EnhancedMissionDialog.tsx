@@ -53,6 +53,7 @@ interface EnhancedMissionDialogProps {
   onOpenChange: (open: boolean) => void;
   onMissionCreated?: () => void;
   mission?: Mission | null;
+  action?: "create" | "edit";
 }
 
 export function EnhancedMissionDialog({
@@ -60,6 +61,7 @@ export function EnhancedMissionDialog({
   onOpenChange,
   onMissionCreated,
   mission,
+  action,
 }: EnhancedMissionDialogProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -174,8 +176,6 @@ export function EnhancedMissionDialog({
         setSelectedFromBrands([]);
         setSelectedToBrands([]);
       }
-    } else if (open && !mission) {
-      resetForm();
     }
   }, [open, mission, allBrands]);
 
@@ -188,12 +188,13 @@ export function EnhancedMissionDialog({
       targetCategory: missionData.category,
       fromBrandIds: selectedFromBrands.map((b) => b.id),
       toBrandIds: selectedToBrands.map((b) => b.id),
+      financialValue: missionData.financialValue.toString(), // ✅ must be string
       createdBy: user?.id,
       startDate: missionData.startDate
-        ? new Date(missionData.startDate).toString()
+        ? new Date(missionData.startDate).toISOString() // ✅ pass Date object, not string
         : null,
       endDate: missionData.endDate
-        ? new Date(missionData.endDate).toString()
+        ? new Date(missionData.endDate).toISOString() // ✅ pass Date object, not string
         : null,
     };
 
@@ -223,6 +224,16 @@ export function EnhancedMissionDialog({
     SPORTS: "Sports & Fitness",
     BOOKS_MEDIA: "Books & Education",
     OTHER: "Other",
+  };
+
+  const handleSelectedFromBrands = (brands: Brand[]) => {
+    queryClient.invalidateQueries({ queryKey: ["/api/brands/all"] });
+    setSelectedFromBrands(brands);
+  };
+
+  const handleSelectedToBrands = (brands: Brand[]) => {
+    queryClient.invalidateQueries({ queryKey: ["/api/brands/all"] });
+    setSelectedToBrands(brands);
   };
 
   return (
@@ -294,7 +305,7 @@ export function EnhancedMissionDialog({
           <div className="space-y-4">
             <BrandSelector
               selectedBrands={selectedFromBrands}
-              onBrandsChange={setSelectedFromBrands}
+              onBrandsChange={handleSelectedFromBrands}
               label="Brands to Switch FROM (Foreign/Target Brands)"
               placeholder="Search foreign brands to switch from..."
               maxSelections={5}
@@ -302,7 +313,7 @@ export function EnhancedMissionDialog({
 
             <BrandSelector
               selectedBrands={selectedToBrands}
-              onBrandsChange={setSelectedToBrands}
+              onBrandsChange={handleSelectedToBrands}
               label="Indian Alternative Brands (Switch TO)"
               placeholder="Search Indian brands to recommend..."
               maxSelections={10}

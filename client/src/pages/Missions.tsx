@@ -48,6 +48,16 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import NotFound from "./not-found";
+import { Link } from "wouter";
+import LogSwitchDialog from "@/components/LogSwitchDialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 
 interface Brand {
   id: string;
@@ -73,11 +83,18 @@ interface Mission {
 interface UserMission {
   id: string;
   missionId: string;
-  userId: string;
+  // userId: string;
   status: string;
   completedAt?: string;
   createdAt: string;
 }
+// type userMissions ={
+//     id: string;
+//     missionId: string | null;
+//     status: string | null;
+//     completedAt: Date | null;
+//     createdAt: Date | null;
+// }[]
 
 const switchLogSchema = z.object({
   targetBrandFrom: z.string().min(1, "Please select a brand to switch from"),
@@ -124,7 +141,7 @@ function MissionCard({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // "x-user-id": user.id,
+          ...(user && { "x-user-id": user.id }),
         },
         body: JSON.stringify(data),
       });
@@ -183,11 +200,13 @@ function MissionCard({
   };
 
   return (
-    <Card className="h-full">
+    <Card className="max-h-[420px]">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-lg mb-2">{mission.title}</CardTitle>
+            <CardTitle className="text-lg mb-2 line-clamp-2 min-h-[30px]">
+              {mission.title}
+            </CardTitle>
             <div className="flex items-center gap-2 mb-2">
               <Badge variant="outline" className="text-xs">
                 {mission.targetCategory.replace("_", " ")}
@@ -213,87 +232,189 @@ function MissionCard({
               </Badge>
             </div>
           </div>
-          {userMission && (
-            <Badge
-              className={`text-xs flex items-center gap-1 ${getStatusColor(
-                userMission.status
-              )}`}
-            >
-              {getStatusIcon(userMission.status)}
-              {userMission.status}
-            </Badge>
-          )}
         </div>
       </CardHeader>
 
       <CardContent>
-        <p className="text-sm text-gray-600 mb-4">{mission.description}</p>
+        {/* Short Preview */}
+        <p className="text-sm text-gray-600 mb-3 line-clamp-3  break-all overflow-hidden">
+          {mission.description}
+        </p>
 
-        {/* Brand Information */}
-        {(mission.fromBrands?.length > 0 || mission.toBrands?.length > 0) && (
-          <div className="bg-gradient-to-r from-red-50 to-green-50 border border-gray-200 rounded-lg p-3 mb-4">
-            <div className="flex items-center justify-between text-sm">
-              {mission.fromBrands && mission.fromBrands.length > 0 && (
-                <div className="flex flex-col">
-                  <span className="text-red-600 font-medium mb-1">
-                    Switch From:
+        {/* Show only first brand inline */}
+        {((mission.fromBrands && mission.fromBrands.length > 0) ||
+          (mission.toBrands && mission.toBrands.length > 0)) && (
+          <div className="flex items-center gap-2 mb-4">
+            {mission.fromBrands && mission.fromBrands.length > 0 && (
+              <>
+                <span className="text-red-600 font-medium text-xs">From:</span>
+                <Badge variant="destructive" className="text-xs">
+                  {mission.fromBrands[0].name}
+                </Badge>
+                {mission.fromBrands.length > 1 && (
+                  <span className="text-gray-400 text-xs">
+                    +{mission.fromBrands.length - 1} more
                   </span>
-                  <div className="flex flex-wrap gap-1">
-                    {mission.fromBrands.map((brand: Brand) => (
-                      <Badge
-                        key={brand.id}
-                        variant="destructive"
-                        className="text-xs"
-                      >
-                        {brand.name}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {(mission.fromBrands?.length || 0) > 0 &&
-                (mission.toBrands?.length || 0) > 0 && (
-                  <ArrowRight className="text-gray-400 mx-2" size={16} />
                 )}
-
-              {mission.toBrands && mission.toBrands.length > 0 && (
-                <div className="flex flex-col">
-                  <span className="text-green-600 font-medium mb-1">
-                    Switch To:
+              </>
+            )}
+            {mission.toBrands && mission.toBrands.length > 0 && (
+              <>
+                <span className="text-green-600 font-medium text-xs">To:</span>
+                <Badge className="text-xs bg-green-600 text-white">
+                  {mission.toBrands[0].name}{" "}
+                  {mission.toBrands[0].isIndian ? "🇮🇳" : ""}
+                </Badge>
+                {mission.toBrands.length > 1 && (
+                  <span className="text-gray-400 text-xs">
+                    +{mission.toBrands.length - 1} more
                   </span>
-                  <div className="flex flex-wrap gap-1">
-                    {mission.toBrands.map((brand: Brand) => (
-                      <Badge
-                        key={brand.id}
-                        variant="default"
-                        className="text-xs bg-green-600"
-                      >
-                        {brand.name} {brand.isIndian ? "🇮🇳" : ""}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </>
+            )}
           </div>
         )}
 
-        <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
-          <span className="flex items-center gap-1">
-            <Calendar className="w-3 h-3" />
-            Ends {formatDistanceToNow(new Date(mission.endDate))} from now
-          </span>
-        </div>
+        {/* Drawer for full details */}
+        <Drawer>
+          <DrawerTrigger asChild>
+            <div className="flex justify-end">
+              <Button
+                variant="link"
+                className="p-0 h-auto text-orange-600 text-xs underline"
+              >
+                View more details
+              </Button>
+            </div>
+          </DrawerTrigger>
+          <DrawerContent className="h-[75vh] max-h-[80vh] ">
+            <div className="px-4 sm:px-8 md:px-12 lg:px-20 py-6 text-left overflow-y-auto">
+              <DrawerHeader className="px-0">
+                <DrawerTitle className="text-xl mb-2 text-left">
+                  {mission.title}
+                </DrawerTitle>
+                <DrawerDescription className="text-gray-700 text-left  break-words overflow-hidden">
+                  {mission.description}
+                </DrawerDescription>
+              </DrawerHeader>
 
+              {/* Badges & Info */}
+              <div className="flex flex-wrap items-center gap-2 my-4">
+                <Badge variant="outline" className="text-xs">
+                  {mission.targetCategory.replace("_", " ")}
+                </Badge>
+                <Badge
+                  variant="secondary"
+                  className="text-xs flex items-center gap-1"
+                >
+                  <Coins className="w-3 h-3" />
+                  {mission.pointsReward} points
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className={`text-xs ${
+                    mission.impact === "HIGH"
+                      ? "border-red-500 text-red-700"
+                      : mission.impact === "MEDIUM"
+                      ? "border-yellow-500 text-yellow-700"
+                      : "border-green-500 text-green-700"
+                  }`}
+                >
+                  {mission.impact} Impact
+                </Badge>
+                {userMission && (
+                  <Badge
+                    className={`text-xs flex items-center gap-1 ${getStatusColor(
+                      userMission.status
+                    )}`}
+                  >
+                    {getStatusIcon(userMission.status)}
+                    {userMission.status}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Brands full list */}
+              {((mission.fromBrands && mission.fromBrands?.length > 0) ||
+                (mission.toBrands && mission.toBrands?.length > 0)) && (
+                <div className="bg-gradient-to-r from-red-50 to-green-50 border border-gray-200 rounded-lg p-3 mb-6">
+                  <div className="flex flex-col gap-4 text-sm">
+                    {mission.fromBrands && mission.fromBrands.length > 0 && (
+                      <div>
+                        <span className="text-red-600 font-medium mb-1 block">
+                          Switch From:
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {mission.fromBrands.map((brand: Brand) => (
+                            <Badge
+                              key={brand.id}
+                              variant="destructive"
+                              className="text-xs"
+                            >
+                              {brand.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {mission.toBrands && mission.toBrands?.length > 0 && (
+                      <div>
+                        <span className="text-green-600 font-medium mb-1 block">
+                          Switch To:
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {mission.toBrands.map((brand: Brand) => (
+                            <Badge
+                              key={brand.id}
+                              className="text-xs bg-green-600 text-white"
+                            >
+                              {brand.name} {brand.isIndian ? "🇮🇳" : ""}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Timeline */}
+              <div className="flex items-center gap-1 text-xs text-gray-500 mb-6">
+                <Calendar className="w-3 h-3" />
+                {mission.endDate
+                  ? `Ends ${formatDistanceToNow(
+                      new Date(mission.endDate)
+                    )} from now`
+                  : "Always"}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                {!userMission ? (
+                  <Button
+                    onClick={() => onParticipate(mission.id)}
+                    className="flex-1"
+                    size="sm"
+                  >
+                    <Target className="w-4 h-4 mr-2" />
+                    Join Mission
+                  </Button>
+                ) : userMission.status === "STARTED" ? (
+                  <LogSwitchDialog missionId={mission.id} />
+                ) : (
+                  <Button className="bg-gradient-to-r w-full from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600">
+                    {userMission.status === "COMPLETED"
+                      ? "Mission Completed!"
+                      : "Pending verification..."}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </DrawerContent>
+        </Drawer>
         {/* Action Buttons */}
-        <div className="flex gap-2">
-          <Button className="flex-1" size="sm" disabled>
-            <Target className="w-4 h-4 mr-2" />
-            Join Mission
-          </Button>
-
-          {/* {!userMission ? (
+        <div className="flex gap-2 mt-2">
+          {!userMission ? (
             <Button
               onClick={() => onParticipate(mission.id)}
               className="flex-1"
@@ -303,209 +424,14 @@ function MissionCard({
               Join Mission
             </Button>
           ) : userMission.status === "STARTED" ? (
-            <Dialog open={showSubmitForm} onOpenChange={setShowSubmitForm}>
-              <DialogTrigger asChild>
-                <Button className="flex-1" size="sm">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Submit Switch Log
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Submit Switch Log</DialogTitle>
-                </DialogHeader>
-                <Form {...form}>
-                  <form
-                    onSubmit={form.handleSubmit(handleSubmit)}
-                    className="space-y-4"
-                  >
-                    <FormField
-                      control={form.control}
-                      name="targetBrandFrom"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Brand Switched From</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select brand you switched from" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {mission.fromBrands?.map((brand) => (
-                                <SelectItem key={brand.id} value={brand.id}>
-                                  {brand.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="targetBrandTo"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Brand Switched To</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select Indian brand you switched to" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {mission.toBrands?.map((brand) => (
-                                <SelectItem key={brand.id} value={brand.id}>
-                                  {brand.name} 🇮🇳
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="reason"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Reason for Switch</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Why did you make this switch?"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="experience"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Experience</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="How was your experience with the Indian brand?"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="financialImpact"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Financial Impact (Optional)</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="e.g., Saved ₹500 per month"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="evidenceUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Evidence Image (Required)</FormLabel>
-                          <FormControl>
-                            <div className="space-y-2">
-                              <Input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    // For demo purposes, use a placeholder URL
-                                    // In production, this would upload to object storage
-                                    const reader = new FileReader();
-                                    reader.onload = (e) => {
-                                      field.onChange(
-                                        e.target?.result as string,
-                                      );
-                                    };
-                                    reader.readAsDataURL(file);
-                                  }
-                                }}
-                                className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
-                              />
-                              <p className="text-xs text-gray-500">
-                                Upload a photo showing your purchase/switch
-                                (receipt, product image, etc.)
-                              </p>
-                              {field.value && (
-                                <div className="mt-2">
-                                  <img
-                                    src={field.value}
-                                    alt="Evidence preview"
-                                    className="w-20 h-20 object-cover rounded border"
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setShowSubmitForm(false)}
-                        className="flex-1"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="submit"
-                        disabled={submitSwitchLog.isPending}
-                        className="flex-1"
-                      >
-                        {submitSwitchLog.isPending ? "Submitting..." : "Submit"}
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
+            <LogSwitchDialog missionId={mission.id} />
           ) : (
-            <div className="flex-1 text-center text-sm text-gray-500">
-              {userMission.status === "COMPLETED" ? (
-                <span className="flex items-center justify-center gap-1 text-green-600">
-                  <Award className="w-4 h-4" />
-                  Mission Completed!
-                </span>
-              ) : (
-                "Pending verification..."
-              )}
-            </div>
-          )} */}
+            <Button className="bg-gradient-to-r w-full from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600">
+              {userMission.status === "COMPLETED"
+                ? "Mission Completed!"
+                : "Pending verification..."}
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -525,7 +451,14 @@ export default function Missions() {
 
   const { data: userMissions = [] } = useQuery({
     queryKey: ["/api/user-missions"],
-    queryFn: () => fetch("/api/user-missions").then((res) => res.json()),
+    queryFn: () =>
+      fetch("/api/user-missions", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(user && { "x-user-id": user.id }),
+        },
+      }).then((res) => res.json()),
   });
 
   const joinMission = useMutation({
@@ -534,7 +467,7 @@ export default function Missions() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-user-id": user.id,
+          ...(user && { "x-user-id": user.id }),
         },
       });
       if (!response.ok) {
@@ -605,6 +538,7 @@ export default function Missions() {
             const userMission = userMissions.find(
               (um: UserMission) => um.missionId === mission.id
             );
+
             return (
               <MissionCard
                 key={mission.id}

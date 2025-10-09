@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { SocialFeed } from "@/components/SocialFeed";
 import { Leaderboard } from "@/components/Leaderboard";
 import { EnhancedLeaderboard } from "@/components/EnhancedLeaderboard";
 import { UserStats } from "@/components/UserStats";
+import { EnhancedAnonymousRegistration } from "@/components/auth/EnhancedAnonymousRegistration";
+import { SecretKeyLogin } from "@/components/auth/SecretKeyLogin";
 import { TrendingContent } from "@/components/TrendingContent";
 import { RewardsSection } from "@/components/RewardsSection";
 import { Card, CardContent } from "@/components/ui/card";
@@ -87,6 +89,17 @@ interface NewsArticle {
 }
 export default function Home() {
   const { user } = useAuth();
+  const [showAnonymousRegistration, setShowAnonymousRegistration] =
+    useState(false);
+
+  // Debug modal state changes
+  useEffect(() => {
+    console.log(
+      "Home.tsx: showAnonymousRegistration changed to:",
+      showAnonymousRegistration
+    );
+  }, [showAnonymousRegistration]);
+  const [showSecretLogin, setShowSecretLogin] = useState(false);
 
   const queryClient = useQueryClient();
   const {
@@ -94,9 +107,9 @@ export default function Home() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["/api/news"],
+    queryKey: ["/api/news", "limit=5"],
     queryFn: async () => {
-      const res = await fetch("/api/news");
+      const res = await fetch("/api/news?limit=5");
       const data = await res.json();
       // Ensure data is always an array
       return Array.isArray(data) ? data : [];
@@ -104,8 +117,8 @@ export default function Home() {
     refetchInterval: 30000, // Refresh every 30 seconds for real-time updates
   });
   const { data: missions = [], isLoading: missionsLoading } = useQuery({
-    queryKey: ["/api/missions"],
-    queryFn: () => fetch("/api/missions").then((res) => res.json()),
+    queryKey: ["/api/missions", "limit=3"],
+    queryFn: () => fetch("/api/missions?limit=3").then((res) => res.json()),
   });
 
   const { data: userMissions = [] } = useQuery({
@@ -186,8 +199,51 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Sidebar - Hidden on mobile */}
-          <div className="hidden lg:block lg:col-span-3">
-            <UserStats />
+          <div className=" lg:block lg:col-span-3">
+            {user ? (
+              <UserStats isLoggedIn={!!user} />
+            ) : (
+              <div className="space-y-6">
+                <div className="text-center p-6 bg-white rounded-lg border">
+                  <div className="w-16 h-16 bg-gray-300 rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <span className="text-gray-500 text-xl">👤</span>
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">
+                    Join the Movement
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Create an account to start earning points and competing on
+                    the leaderboard.
+                  </p>
+                  <div className="space-y-2">
+                    <button
+                      className="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                      onClick={() => (window.location.href = "/signup")}
+                    >
+                      Create Account
+                    </button>
+                    <button
+                      className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                      onClick={() => setShowAnonymousRegistration(true)}
+                    >
+                      Join Anonymously
+                    </button>
+                    <button
+                      className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                      onClick={() => setShowSecretLogin(true)}
+                    >
+                      Login with Secret
+                    </button>
+                    {/* <button
+                      className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                      onClick={() => setShowAnonymousRegistration(true)}
+                    >
+                      Join Anonymously
+                    </button> */}
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Missions carousel */}
           </div>
 
@@ -195,64 +251,105 @@ export default function Home() {
           <div className="lg:col-span-6">
             {/* Welcome Banner */}
             <div className="bg-gradient-to-r from-orange-500 to-green-600 rounded-xl p-6 mb-6 text-white">
-              <h2 className="text-2xl font-bold mb-2">
-                Welcome back, {user?.handle}!
-              </h2>
-              <p className="opacity-90">
-                You're making a difference. See what others are switching to
-                today.
-              </p>
+              {user ? (
+                <>
+                  <h2 className="text-2xl font-bold mb-2">
+                    Welcome back, {user.handle}!
+                  </h2>
+                  <p className="opacity-90">
+                    You're making a difference. See what others are switching to
+                    today.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-bold mb-2">
+                    Welcome to JumboJolt!
+                  </h2>
+                  <p className="opacity-90">
+                    Join India's movement to support quality Indian products.
+                    See the latest missions and news below.
+                  </p>
+                </>
+              )}
             </div>
 
             {/* Your next actions */}
-            <section className="px-1 pt-4">
-              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                Your next actions
-              </h3>
-              <div className="grid gap-3">
-                {/* Daily 60-sec Switch */}
-                <CardAction
-                  kicker=""
-                  icon={<Target className="text-orange-600" />}
-                  title="Join Mission"
-                  desc="Be part of the movement — choose Indian first."
-                  cta="Do it now"
-                  badge="+50 pts"
-                />
-                {/* Weekly Challenge */}
-                {/* <CardAction
-            kicker="Weekly"
-            icon={<Gift className="text-emerald-600" />}
-            title="Join this week’s Challenge"
-            desc="Complete 3 switches to unlock a surprise reward."
-            cta="Accept challenge"
-            badge="+200 pts"
-          /> */}
-                {/* Continue onboarding */}
-                {/* <CardProgress
-            title="Finish Starter Steps"
-            desc="2 steps left to unlock Leaderboard"
-            progress={0.6}
-            cta="Continue"
-          /> */}
-              </div>
-            </section>
+            {user && (
+              <section className="px-1 pt-4">
+                <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  Your next actions
+                </h3>
+                <div className="grid gap-3">
+                  {/* Daily 60-sec Switch */}
+                  <CardAction
+                    kicker=""
+                    icon={<Target className="text-orange-600" />}
+                    title="Support Mission"
+                    desc="Be part of the movement — choose Indian first."
+                    cta="Do it now"
+                    badge="+50 pts"
+                  />
+                </div>
+              </section>
+            )}
+
+            {/* Call to action for non-logged users */}
+            {!user && (
+              <section className="px-1 pt-4">
+                <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  Get Started
+                </h3>
+                <div className="grid gap-3">
+                  <div className="rounded-2xl border p-4">
+                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Choose Your Path
+                    </div>
+                    <div className="mb-2 flex items-center gap-2 text-base font-semibold">
+                      <Target className="text-orange-600" /> Join the Movement
+                    </div>
+                    <p className="text-sm text-slate-600 mb-3">
+                      Create an account or try anonymously to start earning
+                      points.
+                    </p>
+                    <div className="space-y-2">
+                      <button
+                        className="w-full rounded-full bg-slate-900 px-4 py-2 text-sm text-white active:scale-[.99]"
+                        onClick={() => (window.location.href = "/signup")}
+                      >
+                        Create Account
+                      </button>
+                      <button
+                        className="w-full rounded-full border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 active:scale-[.99]"
+                        onClick={() => setShowAnonymousRegistration(true)}
+                      >
+                        Join Anonymously
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
             <section className="px-1 pt-4">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Missions for you
+                  {user ? "Missions for you" : "Latest Missions"}
                 </h3>
-                <Link to="/missions">
-                  <button className="text-sm font-medium text-orange-600">
-                    See all
-                  </button>
-                </Link>
+                {user && (
+                  <Link to="/missions">
+                    <button className="text-sm font-medium text-orange-600">
+                      See all
+                    </button>
+                  </Link>
+                )}
               </div>
               <div className="grid gap-3">
                 {missions.map((mission: Mission) => {
-                  const userMission = userMissions.find(
-                    (um: UserMission) => um.missionId === mission.id
-                  );
+                  const userMission = user
+                    ? userMissions.find(
+                        (um: UserMission) => um.missionId === mission.id
+                      )
+                    : undefined;
 
                   return (
                     <MissionCard
@@ -260,6 +357,7 @@ export default function Home() {
                       mission={mission}
                       userMission={userMission}
                       onParticipate={handleParticipate}
+                      isLoggedIn={!!user}
                     />
                   );
                 })}
@@ -365,29 +463,36 @@ export default function Home() {
             <section className="px-1">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="flex items-center gap-2 text-base font-semibold">
-                  <Newspaper className="text-slate-700" /> Latest News to Act On
+                  <Newspaper className="text-slate-700" />
+                  {user ? "Latest News to Act On" : "Latest News"}
                 </h3>
-                <Link to="/news">
-                  <button className="text-sm font-medium text-orange-600">
-                    More
-                  </button>
-                </Link>
+                {user && (
+                  <Link to="/news">
+                    <button className="text-sm font-medium text-orange-600">
+                      More
+                    </button>
+                  </Link>
+                )}
               </div>
               <div className="grid gap-3">
                 {articles.map((article: NewsArticle) => (
-                  <NewsCard key={article.id} article={article} />
+                  <NewsCard
+                    key={article.id}
+                    article={article}
+                    isLoggedIn={!!user}
+                  />
                 ))}
               </div>
             </section>
 
-            <div className="mt-6">
-              <EnhancedLeaderboard />
-            </div>
+            {/* <div className="mt-6">
+              <EnhancedLeaderboard isLoggedIn={!!user} />
+            </div> */}
 
             {/* Rewards Section */}
-            <div className="mt-6">
+            {/* <div className="mt-6">
               <RewardsSection />
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
@@ -404,6 +509,43 @@ export default function Home() {
         </Button>
         </Link>
       </div> */}
+
+      {/* Anonymous Registration Modal */}
+      {showAnonymousRegistration && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <EnhancedAnonymousRegistration
+              onSuccess={(user) => {
+                console.log("Home.tsx: onSuccess called with user:", user);
+                console.log(
+                  "Home.tsx: User has confirmed secret key - closing modal and reloading page"
+                );
+                setShowAnonymousRegistration(false);
+                window.location.reload();
+              }}
+              onCancel={() => {
+                console.log("Home.tsx: onCancel called");
+                setShowAnonymousRegistration(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Secret Key Login Modal */}
+      {showSecretLogin && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <SecretKeyLogin
+              onSuccess={() => {
+                setShowSecretLogin(false);
+                window.location.reload();
+              }}
+              onCancel={() => setShowSecretLogin(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -482,17 +624,32 @@ function CardProgress({
   );
 }
 
-function NewsCard({ article }: { article: NewsArticle }) {
+function NewsCard({
+  article,
+  isLoggedIn,
+}: {
+  article: NewsArticle;
+  isLoggedIn: boolean;
+}) {
   return (
     <div className="rounded-2xl border p-4">
       {/* <div className="text-xs text-slate-500">{article}</div> */}
       <div className="mt-1 text-base font-semibold">{article.title}</div>
       <div className="mt-3 flex items-center justify-between text-sm">
         <button className="rounded-full border px-3 py-1.5">Read</button>
-        <NewsLogSwitchDialog newsId={article.id} />
-        {/* <button className="rounded-full px-4 py-1.5 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white font-medium transition-all">
-          Act on this
-        </button> */}
+        {isLoggedIn ? (
+          <NewsLogSwitchDialog newsId={article.id} />
+        ) : (
+          <button
+            className="rounded-full px-4 py-1.5 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white font-medium transition-all"
+            onClick={() => {
+              // Show login prompt
+              window.location.href = "/login";
+            }}
+          >
+            Login to Act
+          </button>
+        )}
       </div>
     </div>
   );
@@ -502,10 +659,12 @@ function MissionCard({
   mission,
   userMission,
   onParticipate,
+  isLoggedIn,
 }: {
   mission: Mission;
   userMission?: UserMission;
   onParticipate: (missionId: string) => void;
+  isLoggedIn: boolean;
 }) {
   const switchLogSchema = z.object({
     targetBrandFrom: z.string().min(1, "Please select a brand to switch from"),
@@ -523,6 +682,7 @@ function MissionCard({
   const [showSubmitForm, setShowSubmitForm] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const form = useForm<SwitchLogFormData>({
     resolver: zodResolver(switchLogSchema),
@@ -535,7 +695,6 @@ function MissionCard({
       evidenceUrl: "",
     },
   });
-  const { user } = useAuth();
 
   const submitSwitchLog = useMutation({
     mutationFn: async (data: SwitchLogFormData) => {
@@ -720,7 +879,18 @@ function MissionCard({
 
               {/* Action Buttons */}
               <div className="flex gap-2">
-                {!userMission ? (
+                {!isLoggedIn ? (
+                  <button
+                    className="flex-1 rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 font-medium transition-all px-4 py-2 text-sm text-white active:scale-[.99]"
+                    onClick={() => {
+                      // Show login prompt
+                      window.location.href = "/login";
+                    }}
+                  >
+                    <Target className="w-4 h-4 mr-2" />
+                    Login to Join
+                  </button>
+                ) : !userMission ? (
                   <button
                     className="flex-1 rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 font-medium transition-all px-4 py-2 text-sm text-white active:scale-[.99]"
                     onClick={() => onParticipate(mission.id)}
@@ -743,7 +913,17 @@ function MissionCard({
         </Drawer>
       </div>
       <div className="mt-3 flex items-center justify-between">
-        {!userMission ? (
+        {!isLoggedIn ? (
+          <button
+            className="rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 font-medium transition-all px-4 py-2 text-sm text-white active:scale-[.99]"
+            onClick={() => {
+              // Show login prompt
+              window.location.href = "/login";
+            }}
+          >
+            Login to Join
+          </button>
+        ) : !userMission ? (
           <button
             className="rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 font-medium transition-all px-4 py-2 text-sm text-white active:scale-[.99]"
             onClick={() => onParticipate(mission.id)}

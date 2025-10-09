@@ -1,12 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -16,9 +14,9 @@ import {
 } from "@/components/ui/select";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowRight, Camera, Globe, Eye, EyeOff } from "lucide-react";
+import { ArrowRight, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { api } from "@/lib/api"; // Import the API module
+import { api } from "@/lib/api";
 import BrandSelectComboBox from "@/components/BrandSelectComboBox";
 
 const categories = [
@@ -54,34 +52,14 @@ export default function LogSwitch() {
     category: "",
     reason: "",
     isPublic: false,
-    evidenceUrl: "", // Added imageUrl to formData
+    evidenceUrl: "",
   });
 
-  const [fromBrandSearch, setFromBrandSearch] = useState("");
-  const [toBrandSearch, setToBrandSearch] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null); // State for selected file
-
-  // Search brands for autocomplete
-  const { data: fromBrandsData } = useQuery({
-    queryKey: ["/api/brands/search", { q: fromBrandSearch }],
-    enabled: fromBrandSearch.length > 2,
-  });
-
-  const { data: toBrandsData } = useQuery({
-    queryKey: ["/api/brands/search", { q: toBrandSearch }],
-    enabled: toBrandSearch.length > 2,
-  });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const { data: brands = [] } = useQuery<Brand[]>({
     queryKey: ["/api/brands"],
     enabled: !!user,
-  });
-
-  const createBrandMutation = useMutation({
-    mutationFn: async (brandData: any) => {
-      const response = await apiRequest("POST", "/api/brands", brandData);
-      return response.json();
-    },
   });
 
   const logSwitchMutation = useMutation({
@@ -109,7 +87,7 @@ export default function LogSwitch() {
       setSelectedFile(null);
       navigate("/");
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Error logging switch",
         description: "Please try again later.",
@@ -118,90 +96,99 @@ export default function LogSwitch() {
     },
   });
 
-  // Handle file selection
+  // Auto-set category when brand selected
+  useEffect(() => {
+    const selectedFromBrand = brands.find((b) => b.id === formData.fromBrand);
+    const selectedToBrand = brands.find((b) => b.id === formData.toBrand);
+
+    if (selectedFromBrand) {
+      setFormData((prev) => ({
+        ...prev,
+        category: selectedFromBrand.category,
+      }));
+    } else if (selectedToBrand) {
+      setFormData((prev) => ({
+        ...prev,
+        category: selectedToBrand.category,
+      }));
+    }
+  }, [formData.fromBrand, formData.toBrand, brands]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type and size
-      const validTypes = ["image/jpeg", "image/png"];
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (!validTypes.includes(file.type)) {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload a JPG or PNG file.",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (file.size > maxSize) {
-        toast({
-          title: "File too large",
-          description: "Please upload a file smaller than 5MB.",
-          variant: "destructive",
-        });
-        setSelectedFile(null);
-        return;
-      }
-      setSelectedFile(file);
+    if (!file) return;
+
+    const validTypes = ["image/jpeg", "image/png"];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a JPG or PNG file.",
+        variant: "destructive",
+      });
+      return;
     }
+    if (file.size > maxSize) {
+      toast({
+        title: "File too large",
+        description: "Please upload a file smaller than 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSelectedFile(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
+    // Validation
+    if (!formData.fromBrand) {
+      toast({
+        title: "Missing required field",
+        description: "Please select a brand to switch from.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.toBrand) {
+      toast({
+        title: "Missing required field",
+        description: "Please select a brand to switch to.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.fromBrand === formData.toBrand) {
+      toast({
+        title: "Invalid selection",
+        description: "From and To brands cannot be the same.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.category) {
+      toast({
+        title: "Missing required field",
+        description: "Please select or confirm a product category.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       let evidenceUrl = "";
-      // Upload image if selected
       if (selectedFile) {
         const uploadResult = await api.uploadImage(selectedFile);
-        evidenceUrl = uploadResult.url; // Assuming the API returns { url: string }
+        evidenceUrl = uploadResult.url;
         setFormData({ ...formData, evidenceUrl });
       }
 
-      if (!formData.fromBrand) {
-        toast({
-          title: "Please select a brand to switch from",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (!formData.toBrand) {
-        toast({
-          title: "Please select a brand to switch to",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (formData.fromBrand === formData.toBrand) {
-        toast({
-          title: "From and To brands cannot be the same",
-          variant: "destructive",
-        });
-        return;
-      }
-      // Create brands if they don't exist
-      // let fromBrandId = null;
-      // let toBrandId = null;
-
-      // // Create "from" brand
-      // const fromBrandResult = await createBrandMutation.mutateAsync({
-      //   name: formData.fromBrand,
-      //   category: formData.category,
-      //   isIndian: false,
-      // });
-      // fromBrandId = fromBrandResult.brand.id;
-
-      // // Create "to" brand
-      // const toBrandResult = await createBrandMutation.mutateAsync({
-      //   name: formData.toBrand,
-      //   category: formData.category,
-      //   isIndian: true,
-      // });
-      // toBrandId = toBrandResult.brand.id;
-
-      // Log the switch
       await logSwitchMutation.mutateAsync({
         userId: user.id,
         fromBrandId: formData.fromBrand,
@@ -210,13 +197,13 @@ export default function LogSwitch() {
         reason: formData.reason,
         isPublic: formData.isPublic,
         points: 25,
-        evidenceUrl, // Include imageUrl in the switch data
+        evidenceUrl,
       });
     } catch (error) {
       console.error("Error logging switch:", error);
       toast({
-        title: "Error logging switch",
-        description: "Please try again later.",
+        title: "Submission failed",
+        description: "Something went wrong while logging your switch.",
         variant: "destructive",
       });
     }
@@ -250,36 +237,9 @@ export default function LogSwitch() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                   {/* From Brand */}
                   <div className="text-center">
-                    <Label className="text-red-600 font-medium">
-                      Switching FROM
+                    <Label>
+                      Switching FROM <span className="text-red-500">*</span>
                     </Label>
-                    {/* <Input
-                      placeholder="e.g., Coca Cola"
-                      value={formData.fromBrand}
-                      onChange={(e) =>
-                        setFormData({ ...formData, fromBrand: e.target.value })
-                      }
-                      className="mt-2 border-red-200 focus:border-red-400"
-                      required
-                    /> */}
-                    {/* <Select
-                      value={formData.fromBrand}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, fromBrand: value })
-                      }
-                      required
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Select brand" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {brands.map((brand) => (
-                          <SelectItem key={brand.id} value={brand.id}>
-                            {brand.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select> */}
                     <BrandSelectComboBox
                       value={formData.fromBrand}
                       brands={brands.filter((brand) => !brand.isIndian)}
@@ -299,21 +259,18 @@ export default function LogSwitch() {
 
                   {/* To Brand */}
                   <div className="text-center">
-                    <Label className="text-green-600 font-medium">
-                      Switching TO
+                    <Label>
+                      Switching TO <span className="text-red-500">*</span>
                     </Label>
-                    {/* <Input
-                      placeholder="e.g., Thums Up"
-                      value={formData.toBrand}
-                      onChange={(e) =>
-                        setFormData({ ...formData, toBrand: e.target.value })
-                      }
-                      className="mt-2 border-green-200 focus:border-green-400"
-                    /> */}
                     <BrandSelectComboBox
                       value={formData.toBrand}
                       brands={brands.filter(
-                        (brand) => brand.isIndian || brand.isFavorable
+                        (brand) =>
+                          (brand.isIndian || brand.isFavorable) &&
+                          (!formData.fromBrand ||
+                            brand.category ===
+                              brands.find((b) => b.id === formData.fromBrand)
+                                ?.category)
                       )}
                       onValueChange={(value: string) =>
                         setFormData({ ...formData, toBrand: value })
@@ -328,16 +285,27 @@ export default function LogSwitch() {
 
               {/* Category */}
               <div>
-                <Label>Product Category</Label>
+                <Label>
+                  Product Category <span className="text-red-500">*</span>
+                </Label>
                 <Select
                   value={formData.category}
                   onValueChange={(value) =>
                     setFormData({ ...formData, category: value })
                   }
                   required
+                  disabled={!!formData.category} // disable if auto-filled
                 >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select category" />
+                  <SelectTrigger className="mt-1 bg-gray-50 disabled:opacity-75 disabled:cursor-not-allowed">
+                    <SelectValue
+                      placeholder={
+                        formData.category
+                          ? categories.find(
+                              (cat) => cat.value === formData.category
+                            )?.label
+                          : "Select category"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((cat) => (
@@ -347,13 +315,21 @@ export default function LogSwitch() {
                     ))}
                   </SelectContent>
                 </Select>
+                {formData.category && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Category auto-selected based on your brand choice
+                  </p>
+                )}
               </div>
 
               {/* Reason */}
               <div>
-                <Label>Why did you make this switch?</Label>
+                <Label>
+                  Why did you make this switch?{" "}
+                  <span className="text-gray-400 text-xs">(optional)</span>
+                </Label>
                 <Textarea
-                  placeholder="Share your experience... Quality? Price? Supporting local business? Taste? etc."
+                  placeholder="Share your experience..."
                   value={formData.reason}
                   onChange={(e) =>
                     setFormData({ ...formData, reason: e.target.value })
@@ -369,13 +345,13 @@ export default function LogSwitch() {
                 <div className="mt-1 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-400 transition-colors">
                   <Camera className="mx-auto h-8 w-8 text-gray-400" />
                   <p className="text-sm text-gray-600 mt-2">
-                    Upload a photo of your new product or purchase receipt
+                    Upload a photo of your new product or receipt
                   </p>
                   <input
                     type="file"
                     accept="image/jpeg,image/png"
                     onChange={handleFileChange}
-                    className="mt-2 text-sm text-gray-600 text-wrap"
+                    className="mt-2 text-sm text-gray-600"
                   />
                   <p className="text-xs text-gray-400 mt-1">
                     JPG, PNG up to 5MB
@@ -408,6 +384,7 @@ export default function LogSwitch() {
                 </div>
               </div>
 
+              {/* Buttons */}
               <div className="flex space-x-4">
                 <Button
                   type="button"

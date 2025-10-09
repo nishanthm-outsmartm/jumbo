@@ -7,22 +7,17 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { Navigation } from "@/components/Navigation";
 
 // Import pages
+import AdminProfile from "@/pages/admin/Profile";
 import Home from "@/pages/Home";
-import Login from "@/pages/Login";
+
 import Register from "@/pages/Register";
 import LogSwitch from "@/pages/LogSwitch";
 import AdminPanel from "@/pages/AdminPanel";
-import ModeratorPanel from "@/pages/ModeratorPanel";
-import EnhancedHome from "@/pages/EnhancedHome";
 import EnhancedLogin from "@/pages/EnhancedLogin";
-import EnhancedMemberDashboard from "@/pages/EnhancedMemberDashboard";
 import EnhancedModeratorPanel from "@/pages/EnhancedModeratorPanel";
-import MemberRegistration from "@/pages/MemberRegistration";
-import ModeratorRegistration from "@/pages/ModeratorRegistration";
 import News from "@/pages/News";
 import Missions from "@/pages/Missions";
 import NotFound from "@/pages/not-found";
-import LandingPage from "@/pages/LandingPage";
 import CookieConsent from "./components/landing/CookieConsent";
 import ModeratorFeedbackPage from "./pages/moderator/ModeratorFeedbackPage";
 import Rewards from "@/pages/Rewards";
@@ -97,7 +92,7 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
 function AppRouter() {
   const { user, loading } = useAuth();
 
-  // Show landing page for non-authenticated users
+  // Show home page for all users (authenticated and non-authenticated)
   const HomePage = () => {
     if (loading) {
       return (
@@ -110,7 +105,7 @@ function AppRouter() {
       );
     }
 
-    return user ? <Home /> : <LandingPage />;
+    return <Home />;
   };
 
   return (
@@ -119,7 +114,12 @@ function AppRouter() {
       <AnonymousUserBanner />
       <CookieConsent />
       <Switch>
-        <Route path="/login" component={EnhancedLogin} />
+        <Route path="/login" >
+         <EnhancedLogin />
+        </Route>
+        <Route path="/signup" >
+         <EnhancedLogin mode="signup"/>
+        </Route>
         {/* <Route path="/old-login" component={Login} /> */}
         <Route path="/register" component={Register} />
         {/* <Route path="/register/moderator" component={EnhancedLogin} /> */}

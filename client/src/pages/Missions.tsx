@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePaginatedData } from "@/hooks/usePaginatedData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ import {
   ArrowRight,
   Upload,
   Award,
+  Loader2,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import NotFound from "./not-found";
@@ -390,7 +392,16 @@ function MissionCard({
 
               {/* Action Buttons */}
               <div className="flex gap-2">
-                {!userMission ? (
+                {!user ? (
+                  <Button
+                    onClick={() => (window.location.href = "/login")}
+                    className="flex-1"
+                    size="sm"
+                  >
+                    <Target className="w-4 h-4 mr-2" />
+                    Login to Join
+                  </Button>
+                ) : !userMission ? (
                   <Button
                     onClick={() => onParticipate(mission.id)}
                     className="flex-1"
@@ -414,7 +425,16 @@ function MissionCard({
         </Drawer>
         {/* Action Buttons */}
         <div className="flex gap-2 mt-2">
-          {!userMission ? (
+          {!user ? (
+            <Button
+              onClick={() => (window.location.href = "/login")}
+              className="flex-1"
+              size="sm"
+            >
+              <Target className="w-4 h-4 mr-2" />
+              Login to Join
+            </Button>
+          ) : !userMission ? (
             <Button
               onClick={() => onParticipate(mission.id)}
               className="flex-1"
@@ -444,9 +464,21 @@ export default function Missions() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: missions = [], isLoading: missionsLoading } = useQuery({
-    queryKey: ["/api/missions"],
-    queryFn: () => fetch("/api/missions").then((res) => res.json()),
+  const {
+    data: missions,
+    isLoading: missionsLoading,
+    hasMore,
+    loadMore,
+    error,
+  } = usePaginatedData({
+    fetchFunction: async (page: number, limit: number) => {
+      const response = await fetch(`/api/missions?page=${page}&limit=${limit}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch missions");
+      }
+      return response.json();
+    },
+    initialLimit: 12,
   });
 
   const { data: userMissions = [] } = useQuery({
@@ -459,6 +491,11 @@ export default function Missions() {
           ...(user && { "x-user-id": user.id }),
         },
       }).then((res) => res.json()),
+    staleTime: 1000 * 60 * 5, // 5 minutes, adjust as needed
+    gcTime: 1000 * 60 * 10, // cache data for 10 minutes
+    refetchOnWindowFocus: false, // don’t refetch every time you focus the tab
+    refetchOnReconnect: false, // don’t refetch when network reconnects
+    refetchInterval: false, // disable polling
   });
 
   const joinMission = useMutation({
@@ -495,7 +532,7 @@ export default function Missions() {
     joinMission.mutate(missionId);
   };
 
-  if (missionsLoading) {
+  if (missionsLoading && missions.length === 0) {
     return (
       <div className="container mx-auto p-6">
         <div className="animate-pulse space-y-6">
@@ -522,7 +559,18 @@ export default function Missions() {
         </p>
       </div>
 
-      {missions.length === 0 ? (
+      {error && (
+        <div className="text-center py-12">
+          <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Failed to Load Missions
+          </h3>
+          <p className="text-gray-500 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
+        </div>
+      )}
+
+      {!error && missions.length === 0 && !missionsLoading ? (
         <div className="text-center py-12">
           <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -533,22 +581,44 @@ export default function Missions() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {missions.map((mission: Mission) => {
-            const userMission = userMissions.find(
-              (um: UserMission) => um.missionId === mission.id
-            );
+        <>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {missions.map((mission: Mission) => {
+              const userMission = userMissions.find(
+                (um: UserMission) => um.missionId === mission.id
+              );
 
-            return (
-              <MissionCard
-                key={mission.id}
-                mission={mission}
-                userMission={userMission}
-                onParticipate={handleParticipate}
-              />
-            );
-          })}
-        </div>
+              return (
+                <MissionCard
+                  key={mission.id}
+                  mission={mission}
+                  userMission={userMission}
+                  onParticipate={handleParticipate}
+                />
+              );
+            })}
+          </div>
+
+          {hasMore && (
+            <div className="text-center mt-8">
+              <Button
+                onClick={loadMore}
+                disabled={missionsLoading}
+                variant="outline"
+                className="px-8"
+              >
+                {missionsLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  "Load More Missions"
+                )}
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

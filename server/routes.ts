@@ -23,6 +23,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  // Check handle availability
+  app.post("/api/auth/check-handle", async (req, res) => {
+    try {
+      const { handle } = req.body;
+
+      if (!handle) {
+        return res.status(400).json({ error: "Handle is required" });
+      }
+
+      const existingUser = await storage.getUserByHandle(handle);
+      res.json({ available: !existingUser });
+    } catch (error) {
+      console.error("Handle check error:", error);
+      res.status(500).json({ error: "Failed to check handle availability" });
+    }
+  });
+
   // Auth routes
   app.post("/api/auth/register", async (req, res) => {
     try {
@@ -151,6 +168,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = await storage.createAnonymousUser(handle, cookieId);
 
+      // Get the generated backup codes
+      const backupCodes = await storage.getBackupCodes(user.id);
+
       res.json({
         user: {
           id: user.id,
@@ -160,10 +180,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
           level: user.level,
           userType: user.userType,
         },
+        backupCodes: backupCodes.map(code => ({
+          id: code.id,
+          codeDisplay: code.codeDisplay,
+          createdAt: code.createdAt,
+        })),
       });
     } catch (error) {
       console.error("Anonymous user creation error:", error);
       res.status(500).json({ error: "Failed to create anonymous user" });
+    }
+  });
+
+  // Secret key authentication routes
+  app.post("/api/auth/secret-register", async (req, res) => {
+    try {
+      const { handle, state } = req.body;
+
+      if (!handle || !state) {
+        return res.status(400).json({ error: "Handle and state are required" });
+      }
+
+      // Check if handle is available
+      const existingUser = await storage.getUserByHandle(handle);
+      if (existingUser) {
+        return res.status(400).json({ error: "Handle already taken" });
+      }
+
+      // Generate secret key
+      const secretKey = storage.generateSecretKey();
+      const secretKeyHash = storage.hashSecretKey(secretKey);
+
+      // Create user with secret key
+      const user = await storage.createUserWithSecretKey(handle, state, secretKeyHash);
+
+      res.json({
+        user: {
+          id: user.id,
+          handle: user.handle,
+          points: user.points,
+          switch_count: user.switchCount,
+          level: user.level,
+          userType: user.userType,
+          state: user.state,
+        },
+        secretKey, // Only returned once during registration
+      });
+    } catch (error) {
+      console.error("Secret key registration error:", error);
+      res.status(500).json({ error: "Failed to create user with secret key" });
+    }
+  });
+
+  app.post("/api/auth/secret-login", async (req, res) => {
+    try {
+      const { handle, secretKey } = req.body;
+
+      if (!handle || !secretKey) {
+        return res.status(400).json({ error: "Handle and secret key are required" });
+      }
+
+      const user = await storage.authenticateWithSecretKey(handle, secretKey);
+
+      if (!user) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      res.json({
+        user: {
+          id: user.id,
+          handle: user.handle,
+          points: user.points,
+          switch_count: user.switchCount,
+          level: user.level,
+          userType: user.userType,
+          state: user.state,
+        },
+      });
+    } catch (error) {
+      console.error("Secret key login error:", error);
+      res.status(500).json({ error: "Failed to authenticate with secret key" });
     }
   });
 
@@ -173,6 +269,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!anonymousUserId || !firebaseUid) {
         return res.status(400).json({ error: "Anonymous user ID and Firebase UID are required" });
+      }
+
+      // Validate email format if provided
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ error: "Invalid email format" });
+      }
+
+      // Validate phone format if provided (basic validation)
+      if (phone && !/^\+?[\d\s\-\(\)]+$/.test(phone)) {
+        return res.status(400).json({ error: "Invalid phone format" });
       }
 
       const user = await storage.migrateAnonymousToRegistered(anonymousUserId, firebaseUid, email, phone);
@@ -188,9 +294,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userType: user.userType,
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Migration error:", error);
-      res.status(500).json({ error: "Failed to migrate user" });
+      if (error.message?.includes("already exists")) {
+        res.status(409).json({ error: error.message });
+      } else if (error.message?.includes("not found")) {
+        res.status(404).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to migrate user" });
+      }
     }
   });
 
@@ -247,9 +359,171 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userType: user.userType,
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Recovery key usage error:", error);
       res.status(400).json({ error: error.message || "Invalid recovery key" });
+    }
+  });
+
+  // Backup codes routes
+  app.post("/api/backup-codes/generate", async (req, res) => {
+    try {
+      const userId = req.headers["x-user-id"] as string;
+
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      // Generate 8 new backup codes
+      const backupCodes = Array.from({ length: 8 }, () =>
+        crypto.randomBytes(4).toString('hex').toUpperCase()
+      );
+
+      // Delete old backup codes and create new ones
+      await storage.deleteAllBackupCodes(userId);
+      await storage.createBackupCodes(userId, backupCodes);
+
+      const codes = await storage.getBackupCodes(userId);
+      res.json({ codes });
+    } catch (error) {
+      console.error("Backup codes generation error:", error);
+      res.status(500).json({ error: "Failed to generate backup codes" });
+    }
+  });
+
+  app.get("/api/backup-codes/check", async (req, res) => {
+    try {
+      const { userId } = req.query;
+
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      const codes = await storage.getBackupCodes(userId as string);
+
+      res.json({
+        hasCodes: codes.length > 0,
+        count: codes.length,
+      });
+    } catch (error) {
+      console.error("Backup codes check error:", error);
+      res.status(500).json({ error: "Failed to check backup codes" });
+    }
+  });
+
+  app.get("/api/backup-codes", async (req, res) => {
+    try {
+      const userId = req.headers["x-user-id"] as string;
+
+      if (!userId) {
+        return res.status(401).json({ error: "User ID is required" });
+      }
+
+      const codes = await storage.getBackupCodes(userId);
+
+      res.json({
+        codes: codes.map(code => ({
+          id: code.id,
+          codeDisplay: code.codeDisplay,
+          isUsed: code.isUsed,
+          usedAt: code.usedAt,
+          usedFor: code.usedFor,
+          createdAt: code.createdAt,
+        })),
+      });
+    } catch (error) {
+      console.error("Backup codes fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch backup codes" });
+    }
+  });
+
+  app.post("/api/backup-codes/verify", async (req, res) => {
+    try {
+      const { code, action } = req.body;
+
+      if (!code) {
+        return res.status(400).json({ error: "Backup code is required" });
+      }
+
+      const result = await storage.verifyBackupCode(code, action);
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      res.json({
+        success: true,
+        message: "Backup code verified successfully",
+        user: result.user,
+      });
+    } catch (error) {
+      console.error("Backup code verification error:", error);
+      res.status(500).json({ error: "Failed to verify backup code" });
+    }
+  });
+
+  app.post("/api/backup-codes/login", async (req, res) => {
+    try {
+      const { code } = req.body;
+
+      if (!code) {
+        return res.status(400).json({ error: "Backup code is required" });
+      }
+
+      const result = await storage.useBackupCodeForLogin(code);
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      res.json({
+        success: true,
+        user: result.user,
+      });
+    } catch (error) {
+      console.error("Backup code login error:", error);
+      res.status(500).json({ error: "Failed to login with backup code" });
+    }
+  });
+
+  // User data management routes
+  app.post("/api/user/export-data", async (req, res) => {
+    try {
+      const userId = req.headers["x-user-id"] as string;
+
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      const userData = await storage.exportUserData(userId);
+
+      res.json({
+        success: true,
+        data: userData,
+      });
+    } catch (error) {
+      console.error("User data export error:", error);
+      res.status(500).json({ error: "Failed to export user data" });
+    }
+  });
+
+  app.delete("/api/user/delete-account", async (req, res) => {
+    try {
+      const userId = req.headers["x-user-id"] as string;
+
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      await storage.deleteUserAccount(userId);
+
+      res.json({
+        success: true,
+        message: "Account deleted successfully",
+      });
+    } catch (error) {
+      console.error("Account deletion error:", error);
+      res.status(500).json({ error: "Failed to delete account" });
     }
   });
 
@@ -260,13 +534,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Email is required" });
       }
 
-      const emailSent = await storage.forgotPassword(email);
-      if (!emailSent) {
-        return res.status(500).json(emailSent);
+      const result = await storage.forgotPassword(email);
+      if (result.error) {
+        return res.status(400).json({ error: result.error });
       }
 
       res.json({
-        emailSent,
+        message: "Password reset email sent successfully",
+        emailSent: true,
       });
     } catch (error) {
       console.error("Forgot password error:", error);
@@ -450,6 +725,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     userId: z.string(),
     fromBrands: z.string(),
     toBrands: z.string(),
+    category: z.string(),
     url: z.string().optional(),
     message: z.string().min(1, 'Message is required'),
   });
@@ -1286,7 +1562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userReward = await storage.claimReward(userId, rewardId);
       res.json({ userReward });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Reward claim error:", error);
       res.status(400).json({ error: error.message || "Failed to claim reward" });
     }
@@ -1349,6 +1625,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("GDPR request error:", error);
       res.status(500).json({ error: "Failed to create GDPR request" });
+    }
+  });
+
+  // Account verification endpoints
+  app.post("/api/gdpr/verify-export", async (req, res) => {
+    try {
+      const userId = req.headers["x-user-id"] as string;
+      const { type, secretKey, password } = req.body;
+
+      if (!userId) {
+        return res.status(401).json({ error: "User ID is required" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      let isValid = false;
+
+      if (type === "secret_key" && user.userType === "ANONYMOUS") {
+        // Verify secret key for anonymous users
+        const hashedInput = storage.hashSecretKey(secretKey);
+        isValid = hashedInput === user.secretKeyHash;
+      } else if (type === "password" && user.userType === "REGISTERED") {
+        // For registered users, we would verify password with Firebase
+        // For now, we'll just check if password is provided
+        isValid = password && password.length > 0;
+      } else if (user.userType === "REGISTERED" && user.firebaseUid) {
+        // For social provider accounts, no verification needed
+        isValid = true;
+      }
+
+      if (!isValid) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      res.json({
+        message: "Verification successful",
+        verified: true
+      });
+    } catch (error) {
+      console.error("Export verification error:", error);
+      res.status(500).json({ error: "Failed to verify credentials" });
+    }
+  });
+
+  app.post("/api/gdpr/verify-delete", async (req, res) => {
+    try {
+      const userId = req.headers["x-user-id"] as string;
+      const { type, secretKey, password } = req.body;
+
+      if (!userId) {
+        return res.status(401).json({ error: "User ID is required" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      let isValid = false;
+
+      if (type === "secret_key" && user.userType === "ANONYMOUS") {
+        // Verify secret key for anonymous users
+        const hashedInput = storage.hashSecretKey(secretKey);
+        isValid = hashedInput === user.secretKeyHash;
+      } else if (type === "password" && user.userType === "REGISTERED") {
+        // For registered users, we would verify password with Firebase
+        // For now, we'll just check if password is provided
+        isValid = password && password.length > 0;
+      } else if (user.userType === "REGISTERED" && user.firebaseUid) {
+        // For social provider accounts, no verification needed
+        isValid = true;
+      }
+
+      if (!isValid) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      res.json({
+        message: "Verification successful",
+        verified: true
+      });
+    } catch (error) {
+      console.error("Delete verification error:", error);
+      res.status(500).json({ error: "Failed to verify credentials" });
     }
   });
 

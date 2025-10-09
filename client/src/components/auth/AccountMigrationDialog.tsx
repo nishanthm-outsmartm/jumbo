@@ -27,6 +27,8 @@ import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  fetchSignInMethodsForEmail,
+  signOut,
 } from "firebase/auth";
 
 interface AccountMigrationDialogProps {
@@ -40,15 +42,25 @@ export function AccountMigrationDialog({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [step, setStep] = useState<
-    "method" | "email" | "email-new" | "email-existing" | "google" | "success"
-  >("method");
+  const [step, setStep] = useState<"method" | "email" | "google" | "success">(
+    "method"
+  );
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     confirmPassword: "",
     phone: "",
   });
+
+  const checkEmailExists = async (email: string): Promise<boolean> => {
+    try {
+      const signInMethods = await fetchSignInMethodsForEmail(auth, email);
+      return signInMethods && signInMethods.length > 0;
+    } catch (error) {
+      console.error("Error checking email existence:", error);
+      return false;
+    }
+  };
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +80,16 @@ export function AccountMigrationDialog({
     setError("");
 
     try {
+      // Check if email already exists in Firebase
+      const emailExists = await checkEmailExists(formData.email);
+      if (emailExists) {
+        setError(
+          "This email is already registered. Please sign in normally with your existing account instead of using this migration flow, or use a different email address."
+        );
+        setLoading(false);
+        return;
+      }
+
       // Create Firebase user with email and password
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -88,75 +110,19 @@ export function AccountMigrationDialog({
       console.error("Account migration error:", error);
       if (error.code === "auth/email-already-in-use") {
         setError(
-          "This email is already registered. Please use 'Connect Existing Account' instead or use a different email."
+          "This email is already registered. Please sign in normally with your existing account instead of using this migration flow, or use a different email address."
         );
       } else if (error.code === "auth/invalid-email") {
         setError("Invalid email address. Please check your email.");
       } else if (error.code === "auth/weak-password") {
         setError("Password is too weak. Please choose a stronger password.");
+      } else if (error.message?.includes("already exists")) {
+        setError(
+          "This email is already registered. Please sign in normally with your existing account instead of using this migration flow, or use a different email address."
+        );
       } else {
         setError(
-          error.message || "Failed to connect account. Please try again."
-        );
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEmailLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-
-    setLoading(true);
-    setError("");
-
-    try {
-      // Sign in with existing email and password
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        formData.email,
-        formData.password
-      );
-
-      // Check if this Firebase user already has an account in our system
-      try {
-        // Try to login with the existing account first
-        await migrateToRegistered(userCredential.user.uid, formData.email);
-        setStep("success");
-        toast({
-          title: "Account Connected!",
-          description:
-            "Your anonymous account has been successfully connected to your existing account.",
-        });
-      } catch (migrationError: any) {
-        // If migration fails, it might be because the account already exists
-        // In this case, we should inform the user that they already have an account
-        if (
-          migrationError.message?.includes("already exists") ||
-          migrationError.message?.includes("User already registered")
-        ) {
-          setError(
-            "This email is already registered. Please sign in with your existing account or use a different email to create a new account."
-          );
-        } else {
-          throw migrationError;
-        }
-      }
-    } catch (error: any) {
-      console.error("Account migration error:", error);
-      if (error.code === "auth/user-not-found") {
-        setError(
-          "No account found with this email. Please create a new account or check your email address."
-        );
-      } else if (error.code === "auth/wrong-password") {
-        setError("Incorrect password. Please try again.");
-      } else if (error.code === "auth/invalid-email") {
-        setError("Invalid email address. Please check your email.");
-      } else {
-        setError(
-          error.message ||
-            "Failed to connect account. Please check your credentials."
+          error.message || "Failed to create account. Please try again."
         );
       }
     } finally {
@@ -175,9 +141,26 @@ export function AccountMigrationDialog({
       const result = await signInWithPopup(auth, provider);
       const firebaseUser = result.user;
 
+      // Check if the Google account email already exists in Firebase
+      if (firebaseUser.email) {
+        const emailExists = await checkEmailExists(firebaseUser.email);
+        if (emailExists) {
+          // Sign the user back out since they accidentally signed into an existing account
+          await signOut(auth);
+          setError(
+            "This email is already registered. Please sign in normally with your existing account instead of using this migration flow, or use a different email address."
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
       // Migrate anonymous user to registered user
       try {
-        await migrateToRegistered(firebaseUser.uid, firebaseUser.email);
+        await migrateToRegistered(
+          firebaseUser.uid,
+          firebaseUser.email || undefined
+        );
         setStep("success");
         toast({
           title: "Account Connected!",
@@ -188,10 +171,13 @@ export function AccountMigrationDialog({
         // If migration fails, it might be because the account already exists
         if (
           migrationError.message?.includes("already exists") ||
-          migrationError.message?.includes("User already registered")
+          migrationError.message?.includes("User already registered") ||
+          migrationError.message?.includes("Firebase UID already exists")
         ) {
+          // Sign the user back out since they accidentally signed into an existing account
+          await signOut(auth);
           setError(
-            "This Google account is already registered. Please sign in with your existing account or use a different Google account."
+            "This Google account is already registered. Please sign in normally with your existing account instead of using this migration flow, or use a different Google account."
           );
         } else {
           throw migrationError;
@@ -206,6 +192,10 @@ export function AccountMigrationDialog({
       ) {
         setError(
           "An account already exists with this email using a different sign-in method."
+        );
+      } else if (error.message?.includes("already exists")) {
+        setError(
+          "This Google account is already registered. Please sign in normally with your existing account instead of using this migration flow, or use a different Google account."
         );
       } else {
         setError(error.message || "Google authentication failed");
@@ -270,16 +260,16 @@ export function AccountMigrationDialog({
                 onClick={() => setStep("email")}
               >
                 <Mail className="h-4 w-4 mr-2" />
-                Connect with Email
+                Create Account with Email
               </Button>
-              <Button
+              {/* <Button
                 variant="outline"
                 className="w-full justify-start"
                 onClick={() => setStep("google")}
               >
                 <Chrome className="h-4 w-4 mr-2" />
-                Connect with Google
-              </Button>
+                Create Account with Google
+              </Button> */}
             </div>
           </div>
         )}
@@ -294,176 +284,93 @@ export function AccountMigrationDialog({
               >
                 ← Back
               </Button>
-              <span>Connect with Email</span>
+              <span>Create Account with Email</span>
             </div>
 
-            <div className="space-y-3">
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Important:</strong> If you already have an account with
+                this email, please sign in normally instead of using this
+                migration flow. This will create a new account and may cause
+                conflicts.
+              </AlertDescription>
+            </Alert>
+
+            <form onSubmit={handleEmailSignup} className="space-y-4">
               <div className="space-y-2">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => setStep("email-new")}
-                >
-                  Create New Account
-                </Button>
-                <p className="text-xs text-muted-foreground ml-2">
-                  I don't have an account yet
-                </p>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      email: e.target.value,
+                    }))
+                  }
+                  placeholder="Enter your email"
+                  required
+                />
               </div>
+
               <div className="space-y-2">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => setStep("email-existing")}
-                >
-                  Connect Existing Account
-                </Button>
-                <p className="text-xs text-muted-foreground ml-2">
-                  I already have an account with this email
-                </p>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      password: e.target.value,
+                    }))
+                  }
+                  placeholder="Create a password"
+                  required
+                />
               </div>
-            </div>
 
-            {step === "email-new" && (
-              <form onSubmit={handleEmailSignup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        email: e.target.value,
-                      }))
-                    }
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={formData.confirmPassword}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      confirmPassword: e.target.value,
+                    }))
+                  }
+                  placeholder="Confirm your password"
+                  required
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        password: e.target.value,
-                      }))
-                    }
-                    placeholder="Create a password"
-                    required
-                  />
-                </div>
+              {error && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        confirmPassword: e.target.value,
-                      }))
-                    }
-                    placeholder="Confirm your password"
-                    required
-                  />
-                </div>
-
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setStep("email")}
-                    className="flex-1"
-                  >
-                    Back
-                  </Button>
-                  <Button type="submit" disabled={loading} className="flex-1">
-                    {loading && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Create Account
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {step === "email-existing" && (
-              <form onSubmit={handleEmailLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        email: e.target.value,
-                      }))
-                    }
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        password: e.target.value,
-                      }))
-                    }
-                    placeholder="Enter your password"
-                    required
-                  />
-                </div>
-
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setStep("email")}
-                    className="flex-1"
-                  >
-                    Back
-                  </Button>
-                  <Button type="submit" disabled={loading} className="flex-1">
-                    {loading && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Connect Account
-                  </Button>
-                </div>
-              </form>
-            )}
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStep("method")}
+                  className="flex-1"
+                >
+                  Back
+                </Button>
+                <Button type="submit" disabled={loading} className="flex-1">
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Create Account
+                </Button>
+              </div>
+            </form>
           </div>
         )}
 
@@ -482,6 +389,16 @@ export function AccountMigrationDialog({
 
             <Alert>
               <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Important:</strong> If you already have an account with
+                this Google account, please sign in normally instead of using
+                this migration flow. This will create a new account and may
+                cause conflicts.
+              </AlertDescription>
+            </Alert>
+
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
               <AlertDescription>
                 <strong>Current Status:</strong> You're logged in as{" "}
                 <strong>{user.handle}</strong> with {user.points} points.
@@ -524,19 +441,26 @@ export function AccountMigrationDialog({
             <div>
               <h3 className="font-semibold">Account Connected Successfully!</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Your anonymous account has been connected. You will now be
-                signed out to complete the process.
+                Your anonymous account has been connected to your registered
+                account. Your progress has been preserved and you can now access
+                your account from any device.
               </p>
             </div>
-            <Button
-              onClick={async () => {
-                await logout();
-                handleOpenChange(false);
-              }}
-              className="w-full"
-            >
-              Sign Out & Continue
-            </Button>
+            <div className="space-y-2">
+              <Button
+                onClick={() => {
+                  handleOpenChange(false);
+                  // Refresh the page to update the user state
+                  window.location.reload();
+                }}
+                className="w-full"
+              >
+                Continue
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Your account is now protected and accessible from any device
+              </p>
+            </div>
           </div>
         )}
       </DialogContent>

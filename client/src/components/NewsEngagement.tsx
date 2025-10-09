@@ -53,6 +53,7 @@ export function NewsEngagement({
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [userLiked, setUserLiked] = useState(false);
+  const [userShared, setUserShared] = useState(false);
 
   useEffect(() => {
     if (showComments) {
@@ -119,6 +120,15 @@ export function NewsEngagement({
       return;
     }
 
+    if (userShared) {
+      toast({
+        title: "Already shared",
+        description: "You have already shared this article.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await fetch(`/api/news/${newsId}/share`, {
@@ -129,12 +139,23 @@ export function NewsEngagement({
 
       if (response.ok) {
         setShares((prev) => prev + 1);
+        setUserShared(true);
         toast({
           title: "Shared!",
           description: "Thank you for sharing this article.",
         });
       } else {
-        throw new Error("Failed to share");
+        const errorData = await response.json();
+        if (response.status === 409) {
+          setUserShared(true);
+          toast({
+            title: "Already shared",
+            description: "You have already shared this article.",
+            variant: "destructive",
+          });
+        } else {
+          throw new Error(errorData.error || "Failed to share");
+        }
       }
     } catch (error: any) {
       toast({
@@ -237,10 +258,12 @@ export function NewsEngagement({
           variant="ghost"
           size="sm"
           onClick={() => handleShare()}
-          disabled={loading}
-          className="flex items-center gap-2"
+          disabled={loading || userShared}
+          className={`flex items-center gap-2 ${
+            userShared ? "text-green-500" : ""
+          }`}
         >
-          <Share2 className="h-4 w-4" />
+          <Share2 className={`h-4 w-4 ${userShared ? "fill-current" : ""}`} />
           {shares}
         </Button>
       </div>

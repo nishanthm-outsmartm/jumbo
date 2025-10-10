@@ -124,7 +124,9 @@ function AppRouter() {
         <Route path="/register" component={Register} />
         {/* <Route path="/register/moderator" component={EnhancedLogin} /> */}
         {/* <Route path="/old-register" component={Register} /> */}
-        <Route path="/reset-password" component={EnhancedLogin} />
+        <Route path="/reset-password" >
+         <EnhancedLogin mode="signup"/>
+        </Route>
         <Route
           path="/moderator/suggested-feedbacks"
           component={ModeratorFeedbackPage}

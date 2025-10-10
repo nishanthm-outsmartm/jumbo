@@ -92,13 +92,7 @@ export default function Home() {
   const [showAnonymousRegistration, setShowAnonymousRegistration] =
     useState(false);
 
-  // Debug modal state changes
-  useEffect(() => {
-    console.log(
-      "Home.tsx: showAnonymousRegistration changed to:",
-      showAnonymousRegistration
-    );
-  }, [showAnonymousRegistration]);
+ 
   const [showSecretLogin, setShowSecretLogin] = useState(false);
 
   const queryClient = useQueryClient();

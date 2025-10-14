@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -20,7 +20,7 @@ import ResetPasswordForm from "@/components/auth/ResetPasswordForm";
 
 type AuthView = "login" | "forgot-password" | "reset-password";
 
-export default function EnhancedLogin() {
+export default function EnhancedLogin(mode: { mode?: "login" | "signup" }) {
   const [currentView, setCurrentView] = useState<AuthView>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,6 +29,13 @@ export default function EnhancedLogin() {
   const [isSignUp, setIsSignUp] = useState(false);
   const { login } = useAuth();
   const [, navigate] = useLocation();
+
+  useLayoutEffect(() => {
+    if (mode.mode === "signup") {
+      setIsSignUp(true);
+    }
+  }, [mode.mode]);
+
 
   // Get token from URL parameters manually
   const getUrlParameter = (name: string) => {
@@ -72,7 +79,15 @@ export default function EnhancedLogin() {
         await login(user.uid);
         navigate("/");
       } catch (error) {
-        navigate("/register");
+        if (isSignUp) {
+          // If signing up and user not found in backend, redirect to register
+          navigate("/register");
+        } else {
+          // If signing in and user not found in backend, show error
+          setError(
+            "Account exists in Firebase but not registered. Please sign up first."
+          );
+        }
       }
     } catch (error: any) {
       console.error("Email auth error:", error);
@@ -108,8 +123,10 @@ export default function EnhancedLogin() {
         await login(user.uid);
         navigate("/");
       } catch (error) {
-        // User not registered, redirect to registration
-        navigate("/register");
+        // Only redirect to registration if this is a new user
+        setError(
+          "Account exists in Google but not registered. Please sign up first."
+        );
       }
     } catch (error: any) {
       console.error("Google auth error:", error);

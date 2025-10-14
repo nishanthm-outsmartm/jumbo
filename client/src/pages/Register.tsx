@@ -14,6 +14,7 @@ import {
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { User, MapPin, Hash } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 const indianStates = [
   "Andhra Pradesh",
@@ -112,6 +113,25 @@ export default function Register() {
 
     if (!firebaseUser) return;
 
+    // Validate required fields
+    if (!handle.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a handle",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!region.trim()) {
+      toast({
+        title: "Error",
+        description: "Please select your state/region",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -119,12 +139,16 @@ export default function Register() {
         firebaseUid: firebaseUser.uid,
         phone: firebaseUser.phoneNumber,
         email: firebaseUser.email,
-        handle,
-        region,
+        handle: handle.trim(),
+        region: region.trim(),
+      });
+
+      toast({
+        title: "Account created successfully!",
+        description: `You can now login to your account`,
       });
 
       // Registration successful, redirect to home
-
       navigate("/login");
     } catch (error) {
       console.error("Registration error:", error);

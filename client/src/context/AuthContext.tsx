@@ -3,7 +3,8 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { apiRequest } from "@/lib/queryClient";
 
-interface User {
+// Example User type/interface
+export type User = {
   id: string;
   handle: string;
   points: number;
@@ -11,7 +12,7 @@ interface User {
   level: number;
   role?: string;
   userType?: "ANONYMOUS" | "REGISTERED";
-}
+};
 
 interface AuthContextType {
   user: User | null;
@@ -19,7 +20,15 @@ interface AuthContextType {
   loading: boolean;
   login: (firebaseUid: string) => Promise<User>;
   logout: () => Promise<void>;
-  createAnonymousUser: (handle: string) => Promise<User>;
+  createAnonymousUser: (
+    handle: string
+  ) => Promise<{ user: User; backupCodes?: any[] }>;
+  createUserWithSecretKey: (
+    handle: string,
+    state: string
+  ) => Promise<{ user: User; secretKey: string }>;
+  confirmSecretKeyUser: (user: User) => void;
+  loginWithSecretKey: (handle: string, secretKey: string) => Promise<User>;
   migrateToRegistered: (
     firebaseUid: string,
     email?: string,
@@ -116,7 +125,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("anonymousCookieId");
   };
 
-  const createAnonymousUser = async (handle: string): Promise<User> => {
+  const createAnonymousUser = async (
+    handle: string
+  ): Promise<{ user: User; backupCodes?: any[] }> => {
     try {
       const cookieId = generateCookieId();
       console.log("Anonymous user created successfully:", { handle, cookieId });
@@ -129,10 +140,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Store anonymous user data and cookie ID in localStorage for persistence
       localStorage.setItem("anonymousUser", JSON.stringify(data.user));
       localStorage.setItem("anonymousCookieId", cookieId);
-      return data.user;
+      return data;
     } catch (error: any) {
       console.error("Anonymous user creation failed:", error);
       throw new Error(error.message || "Failed to create anonymous user");
+    }
+  };
+
+  const createUserWithSecretKey = async (
+    handle: string,
+    state: string
+  ): Promise<{ user: User; secretKey: string }> => {
+    try {
+      console.log("AuthContext: Creating user with secret key", {
+        handle,
+        state,
+      });
+      const response = await apiRequest("POST", "/api/auth/secret-register", {
+        handle,
+        state,
+      });
+      console.log("AuthContext: API response received", response);
+      const data = await response.json();
+      console.log("AuthContext: Parsed response data", data);
+
+      if (!data.secretKey) {
+        console.error("AuthContext: No secret key in response", data);
+        throw new Error("No secret key received from server");
+      }
+
+      // DON'T set the user immediately - wait for confirmation
+      // setUser(data.user);
+      // DON'T store in localStorage yet - wait for confirmation
+      // localStorage.setItem("anonymousUser", JSON.stringify(data.user));
+      return data;
+    } catch (error: any) {
+      console.error("AuthContext: Secret key user creation failed:", error);
+      throw new Error(error.message || "Failed to create user with secret key");
+    }
+  };
+
+  const confirmSecretKeyUser = (user: User) => {
+    console.log(
+      "AuthContext: Confirming secret key user and setting as active:",
+      user
+    );
+    setUser(user);
+    // Store anonymous user data in localStorage for persistence
+    localStorage.setItem("anonymousUser", JSON.stringify(user));
+  };
+
+  const loginWithSecretKey = async (
+    handle: string,
+    secretKey: string
+  ): Promise<User> => {
+    try {
+      const response = await apiRequest("POST", "/api/auth/secret-login", {
+        handle,
+        secretKey,
+      });
+      const data = await response.json();
+      setUser(data.user);
+      // Store user data in localStorage for persistence
+      localStorage.setItem("anonymousUser", JSON.stringify(data.user));
+      return data.user;
+    } catch (error: any) {
+      console.error("Secret key login failed:", error);
+      throw new Error(error.message || "Failed to login with secret key");
     }
   };
 
@@ -195,6 +269,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         createAnonymousUser,
+        createUserWithSecretKey,
+        confirmSecretKeyUser,
+        loginWithSecretKey,
         migrateToRegistered,
         generateRecoveryKey,
         useRecoveryKey,

@@ -24,11 +24,15 @@ interface LeaderboardData {
   leaderboard: LeaderboardUser[];
 }
 
-export function EnhancedLeaderboard() {
+export function EnhancedLeaderboard({ isLoggedIn }: { isLoggedIn: boolean }) {
   const [allUsers, setAllUsers] = useState<LeaderboardUser[]>([]);
   const [registeredUsers, setRegisteredUsers] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
+  const [userPosition, setUserPosition] = useState<{
+    position: number;
+    user: LeaderboardUser;
+  } | null>(null);
 
   useEffect(() => {
     fetchLeaderboard();
@@ -36,16 +40,25 @@ export function EnhancedLeaderboard() {
 
   const fetchLeaderboard = async () => {
     try {
-      const [allResponse, registeredResponse] = await Promise.all([
-        fetch("/api/leaderboard?limit=20"),
-        fetch("/api/leaderboard?limit=20&userType=registered"),
-      ]);
+      const [allResponse, registeredResponse, userPositionResponse] =
+        await Promise.all([
+          fetch("/api/leaderboard?limit=20&minPoints=100"),
+          fetch("/api/leaderboard?limit=20&userType=registered&minPoints=100"),
+          isLoggedIn
+            ? fetch("/api/leaderboard/user-position")
+            : Promise.resolve(null),
+        ]);
 
       const allData: LeaderboardData = await allResponse.json();
       const registeredData: LeaderboardData = await registeredResponse.json();
 
       setAllUsers(allData.leaderboard || []);
       setRegisteredUsers(registeredData.leaderboard || []);
+
+      if (userPositionResponse) {
+        const userPositionData = await userPositionResponse.json();
+        setUserPosition(userPositionData);
+      }
     } catch (error) {
       console.error("Failed to fetch leaderboard:", error);
     } finally {
@@ -158,15 +171,48 @@ export function EnhancedLeaderboard() {
       <div className="text-center">
         <h2 className="text-3xl font-bold">Leaderboard</h2>
         <p className="text-muted-foreground mt-2">
-          See who's making the biggest impact
+          {isLoggedIn
+            ? "See who's making the biggest impact"
+            : "Top performers (100+ points required)"}
         </p>
       </div>
+
+      {/* User Position for Anonymous Users */}
+      {!isLoggedIn && userPosition && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                  <span className="text-orange-600 font-bold">
+                    #{userPosition.position}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-orange-900">
+                    Your Position
+                  </h3>
+                  <p className="text-sm text-orange-700">
+                    {userPosition.user.points} points
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-orange-600">Anonymous</p>
+                <p className="text-xs text-orange-500">
+                  Create account to compete publicly
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="all" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            All Participants
+            {isLoggedIn ? "All Participants" : "Top Performers"}
           </TabsTrigger>
           <TabsTrigger value="registered" className="flex items-center gap-2">
             <UserCheck className="h-4 w-4" />
@@ -179,11 +225,12 @@ export function EnhancedLeaderboard() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                All Participants
+                {isLoggedIn ? "All Participants" : "Top Performers"}
               </CardTitle>
               <CardDescription>
-                Everyone participating in the platform, including anonymous
-                users
+                {isLoggedIn
+                  ? "Everyone participating in the platform, including anonymous users"
+                  : "Users with 100+ points who are making the biggest impact"}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -200,7 +247,9 @@ export function EnhancedLeaderboard() {
                 Registered Users Only
               </CardTitle>
               <CardDescription>
-                Registered users eligible for prizes and rewards
+                {isLoggedIn
+                  ? "Registered users eligible for prizes and rewards"
+                  : "Registered users with 100+ points eligible for prizes"}
               </CardDescription>
             </CardHeader>
             <CardContent>

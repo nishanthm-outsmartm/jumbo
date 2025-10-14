@@ -136,13 +136,22 @@ export function QuickAnonymousJoin({
       const randomHandle = generateRandomHandle();
       console.log("Creating anonymous user with handle:", randomHandle);
 
-      const user = await createAnonymousUser(randomHandle);
-      console.log("Anonymous user created successfully:", user);
+      const response = await createAnonymousUser(randomHandle);
+      console.log("Anonymous user created successfully:", response);
 
-      toast({
-        title: "Welcome!",
-        description: `You're now logged in as ${randomHandle}. You can connect your account later to protect your progress.`,
-      });
+      // Show backup codes if they were generated
+      if (response.backupCodes && response.backupCodes.length > 0) {
+        toast({
+          title: "Welcome! Backup codes generated",
+          description: `You're now logged in as ${randomHandle}. Your 8 backup codes have been generated - click "Generate Backup Codes" in your account status to view them.`,
+          duration: 8000,
+        });
+      } else {
+        toast({
+          title: "Welcome!",
+          description: `You're now logged in as ${randomHandle}. You can connect your account later to protect your progress.`,
+        });
+      }
 
       onSuccess?.();
     } catch (err: any) {

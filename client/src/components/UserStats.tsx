@@ -9,8 +9,68 @@ import { Link } from "wouter";
 import FeedbackSwitchDialog from "./home/FeedbackSwitchDialog";
 import { UserStatusCard } from "./auth/UserStatusCard";
 
-export function UserStats() {
+export function UserStats({ isLoggedIn }: { isLoggedIn: boolean }) {
   const { user } = useAuth();
+
+  if (!isLoggedIn) {
+    return (
+      <Card className="relative">
+        <div className="absolute inset-0 bg-gray-100/80 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
+          <div className="text-center p-6">
+            <div className="w-16 h-16 bg-gray-300 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <span className="text-gray-500 text-xl">👤</span>
+            </div>
+            <h3 className="font-semibold text-gray-600 mb-2">User Stats</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Login to view your progress
+            </p>
+            <button
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+              onClick={() => (window.location.href = "/login")}
+            >
+              Login
+            </button>
+          </div>
+        </div>
+        <CardContent className="p-6 opacity-30">
+          <div className="text-center">
+            <div className="bg-gradient-to-r from-green-500 to-orange-500 p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+              <span className="text-white font-bold text-xl">XX</span>
+            </div>
+            <h3 className="font-semibold text-gray-900 text-lg">Username</h3>
+            <p className="text-sm text-gray-500 mb-4">Level X Switcher</p>
+            <div className="mb-4">
+              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                <span>Progress to Level X</span>
+                <span>XXX/XXX XP</span>
+              </div>
+              <div className="h-2 bg-gray-200 rounded-full">
+                <div className="h-full bg-gradient-to-r from-orange-500 to-emerald-500 rounded-full w-1/3"></div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <p className="text-2xl font-bold text-orange-500">XXX</p>
+                <p className="text-xs text-gray-500">Total Points</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-green-600">XX</p>
+                <p className="text-xs text-gray-500">Switches</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <button className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-medium py-2 rounded-lg">
+                Log New Switch
+              </button>
+              <button className="w-full border border-gray-300 text-gray-700 py-2 rounded-lg">
+                Suggest Idea
+              </button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!user) {
     return null;
@@ -25,11 +85,11 @@ export function UserStats() {
   return (
     <>
       {/* Show UserStatusCard for anonymous users */}
-      {user.userType === "ANONYMOUS" && (
+      {user.userType === "ANONYMOUS" ? (
         <div className="mb-6">
           <UserStatusCard />
         </div>
-      )}
+     ) : (
 
       <Card>
         <CardContent className="p-6">
@@ -113,7 +173,7 @@ export function UserStats() {
           </div>
         </CardContent>
       </Card>
-
+)}
       {/* Feedback Dialog */}
       <FeedbackSwitchDialog
         open={feedbackOpen}

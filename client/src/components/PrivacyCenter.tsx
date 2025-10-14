@@ -25,13 +25,20 @@ import {
   FileText,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { AccountVerification } from "@/components/auth/AccountVerification";
 
 export function PrivacyCenter() {
   const { user, logout } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showExportVerification, setShowExportVerification] = useState(false);
+  const [showDeleteVerification, setShowDeleteVerification] = useState(false);
 
-  const handleExportData = async () => {
+  const handleExportData = () => {
+    setShowExportVerification(true);
+  };
+
+  const handleExportAfterVerification = async () => {
     if (!user) return;
 
     setLoading(true);
@@ -75,10 +82,15 @@ export function PrivacyCenter() {
       });
     } finally {
       setLoading(false);
+      setShowExportVerification(false);
     }
   };
 
-  const handleDeleteData = async () => {
+  const handleDeleteData = () => {
+    setShowDeleteVerification(true);
+  };
+
+  const handleDeleteAfterVerification = async () => {
     if (!user) return;
 
     setLoading(true);
@@ -111,7 +123,7 @@ export function PrivacyCenter() {
       });
     } finally {
       setLoading(false);
-      setShowDeleteDialog(false);
+      setShowDeleteVerification(false);
     }
   };
 
@@ -281,6 +293,34 @@ export function PrivacyCenter() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Verification Dialog */}
+      <Dialog
+        open={showExportVerification}
+        onOpenChange={setShowExportVerification}
+      >
+        <DialogContent className="max-w-md">
+          <AccountVerification
+            action="export"
+            onSuccess={handleExportAfterVerification}
+            onCancel={() => setShowExportVerification(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Verification Dialog */}
+      <Dialog
+        open={showDeleteVerification}
+        onOpenChange={setShowDeleteVerification}
+      >
+        <DialogContent className="max-w-md">
+          <AccountVerification
+            action="delete"
+            onSuccess={handleDeleteAfterVerification}
+            onCancel={() => setShowDeleteVerification(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>

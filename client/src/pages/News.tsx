@@ -1,5 +1,7 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
+import { usePaginatedData } from "@/hooks/usePaginatedData";
+import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +18,7 @@ import {
   Award,
   ArrowRight,
   Coins,
+  Loader2,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "wouter";
@@ -60,7 +63,13 @@ interface Mission {
   toBrands?: Brand[];
 }
 
-function NewsCard({ article }: { article: NewsArticle }) {
+function NewsCard({
+  article,
+  isLoggedIn,
+}: {
+  article: NewsArticle;
+  isLoggedIn: boolean;
+}) {
   return (
     <Card className="mb-6 hover:shadow-md transition-shadow duration-200">
       <CardHeader className="pb-3">
@@ -178,12 +187,27 @@ function NewsCard({ article }: { article: NewsArticle }) {
 
         {/* News Engagement */}
         <div className="mt-4">
-          <NewsEngagement
-            newsId={article.id}
-            initialLikes={0}
-            initialShares={0}
-            initialComments={0}
-          />
+          {isLoggedIn ? (
+            <NewsEngagement
+              newsId={article.id}
+              initialLikes={0}
+              initialShares={0}
+              initialComments={0}
+            />
+          ) : (
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600">
+                Login to engage with this news
+              </p>
+              <Button
+                size="sm"
+                onClick={() => (window.location.href = "/login")}
+                className="bg-orange-500 hover:bg-orange-600"
+              >
+                Login
+              </Button>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -359,22 +383,27 @@ function RecentActivity() {
 }
 
 export default function News() {
+  const { user } = useAuth();
+
   const {
-    data: articles = [],
+    data: articles,
     isLoading,
+    hasMore,
+    loadMore,
     error,
-  } = useQuery({
-    queryKey: ["/api/news"],
-    queryFn: async () => {
-      const res = await fetch("/api/news");
-      const data = await res.json();
-      // Ensure data is always an array
+  } = usePaginatedData({
+    fetchFunction: async (page: number, limit: number) => {
+      const response = await fetch(`/api/news?page=${page}&limit=${limit}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch news");
+      }
+      const data = await response.json();
       return Array.isArray(data) ? data : [];
     },
-    refetchInterval: 30000, // Refresh every 30 seconds for real-time updates
+    initialLimit: 10,
   });
 
-  if (isLoading) {
+  if (isLoading && articles.length === 0) {
     return (
       <div className="max-w-4xl mx-auto p-6">
         <h1 className="text-3xl font-bold mb-8">News & Articles</h1>
@@ -396,21 +425,6 @@ export default function News() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="max-w-4xl mx-auto p-6">
-        <h1 className="text-3xl font-bold mb-8">News & Articles</h1>
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-gray-500">
-              Failed to load news articles. Please try again later.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-6xl mx-auto p-6">
       {/* Header */}
@@ -425,7 +439,19 @@ export default function News() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2">
-          {articles.length === 0 ? (
+          {error ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <h3 className="text-lg font-semibold mb-2 text-red-600">
+                  Failed to Load News
+                </h3>
+                <p className="text-gray-500 mb-4">{error}</p>
+                <Button onClick={() => window.location.reload()}>
+                  Try Again
+                </Button>
+              </CardContent>
+            </Card>
+          ) : articles.length === 0 && !isLoading ? (
             <Card>
               <CardContent className="p-8 text-center">
                 <h3 className="text-lg font-semibold mb-2">
@@ -440,8 +466,32 @@ export default function News() {
           ) : (
             <div>
               {articles.map((article: NewsArticle) => (
-                <NewsCard key={article.id} article={article} />
+                <NewsCard
+                  key={article.id}
+                  article={article}
+                  isLoggedIn={!!user}
+                />
               ))}
+
+              {hasMore && (
+                <div className="text-center mt-8">
+                  <Button
+                    onClick={loadMore}
+                    disabled={isLoading}
+                    variant="outline"
+                    className="px-8"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      "Load More Articles"
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>

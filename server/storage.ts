@@ -26,11 +26,13 @@ import {
   feedbackSubmissions,
   // New anonymous user features
   recoveryKeys,
+  backupCodes,
   rewards,
   userRewards,
   newsLikes,
   newsShares,
   gdprRequests,
+  recoveryMethods,
   type User,
   type InsertUser,
   type SwitchLog,
@@ -78,6 +80,8 @@ import {
   // New anonymous user types
   type RecoveryKey,
   type InsertRecoveryKey,
+  type BackupCode,
+  type InsertBackupCode,
   type Reward,
   type InsertReward,
   type UserReward,
@@ -117,6 +121,19 @@ export interface IStorage {
   getRecoveryKeyByHash(keyHash: string): Promise<any>;
   useRecoveryKey(keyHash: string): Promise<User>;
 
+  // Secret key authentication methods
+  generateSecretKey(): string;
+  hashSecretKey(secretKey: string): string;
+  createUserWithSecretKey(handle: string, state: string, secretKeyHash: string): Promise<User>;
+  authenticateWithSecretKey(handle: string, secretKey: string): Promise<User | null>;
+  updateUserSecretKey(userId: string, secretKeyHash: string): Promise<User>;
+
+  // Backup codes methods
+  createBackupCodes(userId: string, codes: string[]): Promise<any[]>;
+  getBackupCodes(userId: string): Promise<any[]>;
+  verifyBackupCode(code: string, action?: string): Promise<{ success: boolean; error?: string; user?: User }>;
+  useBackupCodeForLogin(code: string): Promise<{ success: boolean; error?: string; user?: User }>;
+
   // Rewards methods
   getRewards(): Promise<any[]>;
   claimReward(userId: string, rewardId: string): Promise<any>;
@@ -132,6 +149,12 @@ export interface IStorage {
   exportUserData(userId: string): Promise<any>;
   deleteUserData(userId: string): Promise<boolean>;
   createGdprRequest(userId: string, requestType: string, requestData?: any): Promise<any>;
+
+  // Recovery methods
+  addRecoveryMethod(userId: string, methodType: string, providerId: string, providerData?: any): Promise<any>;
+  getRecoveryMethods(userId: string): Promise<any[]>;
+  removeRecoveryMethod(userId: string, methodId: string): Promise<boolean>;
+  authenticateWithRecoveryMethod(methodType: string, providerId: string): Promise<User | null>;
 
   // Switch log methods
   createSwitchLog(switchLog: InsertSwitchLog): Promise<SwitchLog>;
@@ -353,10 +376,111 @@ export class DatabaseStorage implements IStorage {
       userType: "ANONYMOUS",
       firebaseUid: null,
     }).returning();
+
+    // Generate 8 backup codes for the new anonymous user
+    const backupCodes = Array.from({ length: 8 }, () =>
+      crypto.randomBytes(4).toString('hex').toUpperCase()
+    );
+
+    await this.createBackupCodes(user.id, backupCodes);
+
+    return user;
+  }
+
+  // Secret key authentication methods
+  generateSecretKey(): string {
+    // Generate 256-bit (32 bytes) secret key and encode as base64url
+    return crypto.randomBytes(32).toString('base64url');
+  }
+
+  hashSecretKey(secretKey: string): string {
+    // Use argon2id for secure hashing (you might want to use a proper argon2 library)
+    // For now, using PBKDF2 with high iteration count
+    return crypto.pbkdf2Sync(secretKey, 'jumbo-jolt-secret-salt', 100000, 64, 'sha512').toString('base64');
+  }
+
+  async createUserWithSecretKey(handle: string, state: string, secretKeyHash: string): Promise<User> {
+    const [user] = await db.insert(users).values({
+      handle,
+      state,
+      secretKeyHash,
+      userType: "ANONYMOUS",
+      firebaseUid: null,
+    }).returning();
+
+    // No backup codes generated for secret key users
+    // Secret key is the primary authentication method
+
+    return user;
+  }
+
+  async authenticateWithSecretKey(handle: string, secretKey: string): Promise<User | null> {
+    const [user] = await db.select().from(users).where(eq(users.handle, handle));
+
+    if (!user || !user.secretKeyHash) {
+      return null;
+    }
+
+    const hashedInput = this.hashSecretKey(secretKey);
+    if (hashedInput === user.secretKeyHash) {
+      // Update last login
+      await db.update(users)
+        .set({ lastLoginAt: new Date() })
+        .where(eq(users.id, user.id));
+
+      return user;
+    }
+
+    return null;
+  }
+
+  async updateUserSecretKey(userId: string, secretKeyHash: string): Promise<User> {
+    const [user] = await db.update(users)
+      .set({ secretKeyHash })
+      .where(eq(users.id, userId))
+      .returning();
+
     return user;
   }
 
   async migrateAnonymousToRegistered(anonymousUserId: string, firebaseUid: string, email?: string, phone?: string): Promise<User> {
+    // Check if Firebase UID already exists
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.firebaseUid, firebaseUid))
+      .limit(1);
+
+    if (existingUser.length > 0) {
+      throw new Error("User with this Firebase UID already exists");
+    }
+
+    // Check if email already exists (if provided)
+    if (email) {
+      const existingEmailUser = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (existingEmailUser.length > 0) {
+        throw new Error("User with this email already exists");
+      }
+    }
+
+    // Check if phone already exists (if provided)
+    if (phone) {
+      const existingPhoneUser = await db
+        .select()
+        .from(users)
+        .where(eq(users.phone, phone))
+        .limit(1);
+
+      if (existingPhoneUser.length > 0) {
+        throw new Error("User with this phone number already exists");
+      }
+    }
+
     const [user] = await db
       .update(users)
       .set({
@@ -368,6 +492,11 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(users.id, anonymousUserId))
       .returning();
+
+    if (!user) {
+      throw new Error("Anonymous user not found");
+    }
+
     return user;
   }
 
@@ -431,6 +560,133 @@ export class DatabaseStorage implements IStorage {
     }
 
     return user;
+  }
+
+  // Backup codes methods
+  async createBackupCodes(userId: string, codes: string[]): Promise<BackupCode[]> {
+    const backupCodesData = codes.map(code => ({
+      userId,
+      codeHash: crypto.createHash('sha256').update(code).digest('hex'),
+      codeDisplay: code,
+    }));
+
+    const createdCodes = await db.insert(backupCodes).values(backupCodesData).returning();
+    return createdCodes;
+  }
+
+  async getBackupCodes(userId: string): Promise<BackupCode[]> {
+    return await db
+      .select()
+      .from(backupCodes)
+      .where(eq(backupCodes.userId, userId));
+  }
+
+  async deleteAllBackupCodes(userId: string): Promise<void> {
+    await db
+      .delete(backupCodes)
+      .where(eq(backupCodes.userId, userId));
+  }
+
+  async getBackupCodeByHash(codeHash: string): Promise<BackupCode | undefined> {
+    const [backupCode] = await db
+      .select()
+      .from(backupCodes)
+      .where(eq(backupCodes.codeHash, codeHash));
+    return backupCode || undefined;
+  }
+
+  async verifyBackupCode(code: string, action?: string): Promise<{ success: boolean; error?: string; user?: User }> {
+    const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+    const backupCode = await this.getBackupCodeByHash(codeHash);
+
+    if (!backupCode) {
+      return { success: false, error: "Invalid backup code" };
+    }
+
+    if (backupCode.isUsed) {
+      return { success: false, error: "Backup code has already been used" };
+    }
+
+    // Mark the code as used
+    await db
+      .update(backupCodes)
+      .set({
+        isUsed: true,
+        usedAt: new Date(),
+        usedFor: action || "verification"
+      })
+      .where(eq(backupCodes.id, backupCode.id));
+
+    // Get the user
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, backupCode.userId));
+
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
+    return { success: true, user };
+  }
+
+  async useBackupCodeForLogin(code: string): Promise<{ success: boolean; error?: string; user?: User }> {
+    return await this.verifyBackupCode(code, "login");
+  }
+
+  async exportUserData(userId: string): Promise<any> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Get user's switch logs
+    const userSwitchLogs = await db
+      .select()
+      .from(switchLogs)
+      .where(eq(switchLogs.userId, userId));
+
+    // Get user's missions
+    const userMissionsData = await db
+      .select()
+      .from(userMissions)
+      .where(eq(userMissions.userId, userId));
+
+    // Get user's posts
+    const userPosts = await db
+      .select()
+      .from(posts)
+      .where(eq(posts.userId, userId));
+
+    return {
+      user: {
+        id: user.id,
+        handle: user.handle,
+        email: user.email,
+        phone: user.phone,
+        region: user.region,
+        role: user.role,
+        userType: user.userType,
+        points: user.points,
+        level: user.level,
+        switchCount: user.switchCount,
+        createdAt: user.createdAt,
+        lastLoginAt: user.lastLoginAt,
+      },
+      switchLogs: userSwitchLogs,
+      missions: userMissionsData,
+      posts: userPosts,
+      exportedAt: new Date().toISOString(),
+    };
+  }
+
+  async deleteUserAccount(userId: string): Promise<void> {
+    // Delete user and all related data (cascade will handle most of it)
+    await db.delete(users).where(eq(users.id, userId));
   }
 
   async createSwitchLog(insertSwitchLog: InsertSwitchLog): Promise<SwitchLog> {
@@ -515,6 +771,15 @@ export class DatabaseStorage implements IStorage {
     userId: string;
     fromBrands: string;
     toBrands: string;
+    category: "FOOD_BEVERAGES" |
+    "ELECTRONICS" |
+    "FASHION" |
+    "BEAUTY" |
+    "HOME_GARDEN" |
+    "AUTOMOTIVE" |
+    "SPORTS" |
+    "BOOKS_MEDIA" |
+    "OTHER";
     url?: string; // Optional, as in the schema
     message: string;
     isPublic?: boolean; // Optional, defaults to false in schema
@@ -686,13 +951,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLeaderboard(limit: number = 10, userType?: string): Promise<User[]> {
-    let query = db.select().from(users);
-
     if (userType) {
-      query = query.where(eq(users.userType, userType as any));
+      return await db
+        .select()
+        .from(users)
+        .where(eq(users.userType, userType as "ANONYMOUS" | "REGISTERED"))
+        .orderBy(desc(users.points))
+        .limit(limit);
     }
 
-    return query.orderBy(desc(users.points)).limit(limit);
+    return await db
+      .select()
+      .from(users)
+      .orderBy(desc(users.points))
+      .limit(limit);
   }
 
   async getTrendingBrands(): Promise<any[]> {
@@ -1457,23 +1729,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   // GDPR methods
-  async exportUserData(userId: string): Promise<any> {
-    const user = await this.getUser(userId);
-    if (!user) throw new Error("User not found");
-
-    const userData = {
-      user,
-      switchLogs: await this.getUserSwitchLogs(userId),
-      posts: await db.select().from(posts).where(eq(posts.userId, userId)),
-      comments: await db.select().from(comments).where(eq(comments.userId, userId)),
-      likes: await db.select().from(likes).where(eq(likes.userId, userId)),
-      userRewards: await this.getUserRewards(userId),
-      newsLikes: await db.select().from(newsLikes).where(eq(newsLikes.userId, userId)),
-      newsShares: await db.select().from(newsShares).where(eq(newsShares.userId, userId)),
-    };
-
-    return userData;
-  }
 
   async deleteUserData(userId: string): Promise<boolean> {
     try {
@@ -1506,6 +1761,51 @@ export class DatabaseStorage implements IStorage {
       status: "PENDING",
     }).returning();
     return gdprRequest;
+  }
+
+  // Recovery methods
+  async addRecoveryMethod(userId: string, methodType: string, providerId: string, providerData?: any): Promise<any> {
+    const [recoveryMethod] = await db.insert(recoveryMethods).values({
+      userId,
+      methodType,
+      providerId,
+      providerData,
+    }).returning();
+    return recoveryMethod;
+  }
+
+  async getRecoveryMethods(userId: string): Promise<any[]> {
+    return await db.select().from(recoveryMethods).where(eq(recoveryMethods.userId, userId));
+  }
+
+  async removeRecoveryMethod(userId: string, methodId: string): Promise<boolean> {
+    const result = await db.delete(recoveryMethods)
+      .where(and(
+        eq(recoveryMethods.id, methodId),
+        eq(recoveryMethods.userId, userId)
+      ));
+    return result.rowCount > 0;
+  }
+
+  async authenticateWithRecoveryMethod(methodType: string, providerId: string): Promise<User | null> {
+    const [recoveryMethod] = await db.select()
+      .from(recoveryMethods)
+      .where(and(
+        eq(recoveryMethods.methodType, methodType),
+        eq(recoveryMethods.providerId, providerId)
+      ));
+
+    if (!recoveryMethod) {
+      return null;
+    }
+
+    // Update last used timestamp
+    await db.update(recoveryMethods)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(recoveryMethods.id, recoveryMethod.id));
+
+    // Get the user
+    return await this.getUser(recoveryMethod.userId);
   }
 
   // Messages

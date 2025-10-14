@@ -83,12 +83,14 @@ export const users = pgTable("users", {
   email: varchar("email"),
   handle: varchar("handle").notNull().unique(),
   region: varchar("region"),
+  state: varchar("state"), // Added for state selection
   role: userRoleEnum("role").default("MEMBER"),
   userType: userTypeEnum("user_type").default("REGISTERED"),
   points: integer("points").default(0),
   level: integer("level").default(1),
   switchCount: integer("switch_count").default(0),
   cookieId: varchar("cookie_id").unique(), // For anonymous users
+  secretKeyHash: varchar("secret_key_hash"), // For secret key authentication
   createdAt: timestamp("created_at").defaultNow(),
   lastLoginAt: timestamp("last_login_at"),
   isStrategist: boolean("is_strategist").default(false).notNull(),
@@ -120,6 +122,22 @@ export const recoveryKeys = pgTable("recovery_keys", {
   qrCodeData: text("qr_code_data"), // QR code data
   isUsed: boolean("is_used").default(false),
   usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Backup codes for anonymous users
+export const backupCodes = pgTable("backup_codes", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  codeHash: varchar("code_hash").notNull(), // argon2id hash of the backup code
+  codeDisplay: varchar("code_display").notNull(), // Human-readable code for display
+  isUsed: boolean("is_used").default(false),
+  usedAt: timestamp("used_at"),
+  usedFor: varchar("used_for"), // What action the code was used for (e.g., "login", "export_data", "delete_account")
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -304,6 +322,7 @@ export const switchFeedbacks = pgTable("switch_feedbacks", {
   }),
   fromBrands: varchar("from_brands"),
   toBrands: varchar("to_brands"),
+  category: switchCategoryEnum("category"),
   url: varchar("url"), // e.g., evidence or link related to the feedback
   message: text("message"), // The feedback message
   isPublic: boolean("is_public").default(false),
@@ -710,6 +729,21 @@ export const gdprRequests = pgTable("gdpr_requests", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Recovery methods table for OAuth and WebAuthn
+export const recoveryMethods = pgTable("recovery_methods", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  methodType: varchar("method_type").notNull(), // "OAUTH_GOOGLE", "WEBAUTHN"
+  providerId: varchar("provider_id"), // Google ID, WebAuthn credential ID
+  providerData: jsonb("provider_data"), // Additional provider-specific data
+  createdAt: timestamp("created_at").defaultNow(),
+  lastUsedAt: timestamp("last_used_at"),
+});
+
 // Feedback submissions (renamed from target suggestions)
 export const feedbackSubmissions = pgTable("feedback_submissions", {
   id: varchar("id")
@@ -749,6 +783,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   userMissions: many(userMissions),
   moderatorPosts: many(moderatorPosts),
   recoveryKeys: many(recoveryKeys),
+  backupCodes: many(backupCodes),
   userRewards: many(userRewards),
   newsLikes: many(newsLikes),
   newsShares: many(newsShares),
@@ -944,6 +979,10 @@ export const recoveryKeysRelations = relations(recoveryKeys, ({ one }) => ({
   user: one(users, { fields: [recoveryKeys.userId], references: [users.id] }),
 }));
 
+export const backupCodesRelations = relations(backupCodes, ({ one }) => ({
+  user: one(users, { fields: [backupCodes.userId], references: [users.id] }),
+}));
+
 export const rewardsRelations = relations(rewards, ({ many }) => ({
   userRewards: many(userRewards),
 }));
@@ -972,6 +1011,10 @@ export const newsSharesRelations = relations(newsShares, ({ one }) => ({
 
 export const gdprRequestsRelations = relations(gdprRequests, ({ one }) => ({
   user: one(users, { fields: [gdprRequests.userId], references: [users.id] }),
+}));
+
+export const recoveryMethodsRelations = relations(recoveryMethods, ({ one }) => ({
+  user: one(users, { fields: [recoveryMethods.userId], references: [users.id] }),
 }));
 
 // Insert schemas
@@ -1143,6 +1186,12 @@ export const insertGdprRequestSchema = createInsertSchema(gdprRequests).omit({
   processedAt: true,
 });
 
+export const insertRecoveryMethodSchema = createInsertSchema(recoveryMethods).omit({
+  id: true,
+  createdAt: true,
+  lastUsedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -1203,6 +1252,8 @@ export type InsertFeedbackSubmission = z.infer<
 // New types for enhanced features
 export type RecoveryKey = typeof recoveryKeys.$inferSelect;
 export type InsertRecoveryKey = z.infer<typeof insertRecoveryKeySchema>;
+export type BackupCode = typeof backupCodes.$inferSelect;
+export type InsertBackupCode = typeof backupCodes.$inferInsert;
 export type Reward = typeof rewards.$inferSelect;
 export type InsertReward = z.infer<typeof insertRewardSchema>;
 export type UserReward = typeof userRewards.$inferSelect;

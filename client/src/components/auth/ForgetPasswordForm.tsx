@@ -51,7 +51,7 @@ export default function ForgotPasswordForm({
 
     try {
       const response = await api.forgotPassword(email);
-      setMessage(response.message);
+      setMessage(response.message || "Password reset email sent successfully");
       setEmailSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -67,7 +67,7 @@ export default function ForgotPasswordForm({
 
     try {
       const response = await api.forgotPassword(email);
-      setMessage("Reset email sent again!");
+      setMessage(response.message || "Reset email sent again!");
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {

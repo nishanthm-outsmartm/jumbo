@@ -15,6 +15,14 @@ import { MessageSquare } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast"; // Assuming shadcn/ui toast for feedback; adjust if using different notification system
 import { useAuth } from "@/context/AuthContext";
+import { Label } from "../ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 interface FeedbackSwitchDialogProps {
   open: boolean;
@@ -25,6 +33,7 @@ interface FeedbackSwitchDialogProps {
 interface FeedbackData {
   fromBrands: string;
   toBrands: string;
+  category: string;
   url: string;
   message: string;
   userId: string;
@@ -44,6 +53,18 @@ const submitFeedback = async (data: FeedbackData) => {
   return response.json();
 };
 
+const categories = [
+  { value: "FOOD_BEVERAGES", label: "Food & Beverages" },
+  { value: "ELECTRONICS", label: "Electronics" },
+  { value: "FASHION", label: "Fashion" },
+  { value: "BEAUTY", label: "Beauty" },
+  { value: "HOME_GARDEN", label: "Home & Garden" },
+  { value: "AUTOMOTIVE", label: "Automotive" },
+  { value: "SPORTS", label: "Sports" },
+  { value: "BOOKS_MEDIA", label: "Books & Media" },
+  { value: "OTHER", label: "Other" },
+];
+
 export default function FeedbackSwitchDialog({
   open,
   onClose,
@@ -51,6 +72,7 @@ export default function FeedbackSwitchDialog({
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [url, setUrl] = useState("");
+  const [category, setCategory] = useState("");
   const [message, setMessage] = useState("");
   const { user } = useAuth();
 
@@ -67,6 +89,7 @@ export default function FeedbackSwitchDialog({
       setFrom("");
       setTo("");
       setUrl("");
+      setCategory("");
       setMessage("");
       onClose();
     },
@@ -80,21 +103,60 @@ export default function FeedbackSwitchDialog({
   });
 
   const handleSubmit = () => {
-    if (!user) return;
-    const userId = user.id;
-    if (!from || !to || !message) {
+    if (!user) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields (From, To, Message).",
+        description: "Please log in to submit feedback.",
         variant: "destructive",
       });
       return;
     }
+    
+    const userId = user.id;
+    
+    // Validate required fields
+    if (!from.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter the brand you want to switch from.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!to.trim()) {
+      toast({
+        title: "Error", 
+        description: "Please enter the brand you want to switch to.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!message.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide your feedback message explaining why this switch is beneficial.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!category) {
+      toast({
+        title: "Error",
+        description: "Please select a product category.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     mutation.mutate({
-      fromBrands: from,
-      toBrands: to,
-      url,
-      message,
+      fromBrands: from.trim(),
+      toBrands: to.trim(),
+      category,
+      url: url.trim(),
+      message: message.trim(),
       userId,
     });
   };
@@ -137,6 +199,26 @@ export default function FeedbackSwitchDialog({
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />
+          {/* Category */}
+          <div>
+            <Label>Product Category</Label>
+            <Select
+              value={category}
+              onValueChange={(value) => setCategory(value)}
+              required
+            >
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Textarea
             placeholder="Your feedback message"
             value={message}

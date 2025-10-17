@@ -3,9 +3,6 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { serverConfig } from "@shared/config/server.config";
 
-
-
-
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -55,8 +52,10 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
+    console.log("running in development mode");
     await setupVite(app, server);
   } else {
+    console.log("running in production mode");
     serveStatic(app);
   }
 

@@ -16,6 +16,7 @@ import AdminPanel from "@/pages/AdminPanel";
 import EnhancedLogin from "@/pages/EnhancedLogin";
 import EnhancedModeratorPanel from "@/pages/EnhancedModeratorPanel";
 import News from "@/pages/News";
+import NewsDetails from "@/pages/NewsDetails";
 import Missions from "@/pages/Missions";
 import NotFound from "@/pages/not-found";
 import CookieConsent from "./components/landing/CookieConsent";
@@ -180,6 +181,12 @@ function AppRouter() {
         <Route path="/news">
           <ProtectedRoute>
             <News />
+          </ProtectedRoute>
+        </Route>
+
+        <Route path="/news/:slug">
+          <ProtectedRoute>
+            <NewsDetails />
           </ProtectedRoute>
         </Route>
 

@@ -29,7 +29,7 @@ import {
   backupCodes,
   rewards,
   userRewards,
-  newsLikes,
+  newsVotes,
   newsShares,
   gdprRequests,
   recoveryMethods,
@@ -140,8 +140,10 @@ export interface IStorage {
   getUserRewards(userId: string): Promise<any[]>;
 
   // News engagement methods
-  likeNews(userId: string, newsId: string): Promise<boolean>;
-  shareNews(userId: string, newsId: string, platform?: string): Promise<any>;
+  voteNews(userId: string, newsId: string, voteType: 'upvote' | 'downvote'): Promise<{ voted: boolean; voteType: string | null; upvotesCount: number; downvotesCount: number }>;
+  getUserVote(userId: string, newsId: string): Promise<{ voteType: string } | null>;
+  getUserShare(userId: string, newsId: string): Promise<any>;
+  shareNews(userId: string, newsId: string, platform?: string): Promise<{ share: NewsShare; isNewShare: boolean }>;
   getNewsComments(newsId: string): Promise<any[]>;
   addNewsComment(userId: string, newsId: string, content: string): Promise<any>;
 
@@ -253,6 +255,8 @@ export interface IStorage {
   // News article methods
   createNewsArticle(newsArticle: InsertNewsArticle): Promise<NewsArticle>;
   getNewsArticles(): Promise<NewsArticle[]>;
+  getNewsArticleById(id: string): Promise<NewsArticle | undefined>;
+  getNewsArticleBySlug(slug: string): Promise<NewsArticle | undefined>;
   updateNewsArticle(
     id: string,
     updates: Partial<NewsArticle>
@@ -1581,6 +1585,22 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(newsArticles.publishedAt));
   }
 
+  async getNewsArticleById(id: string): Promise<NewsArticle | undefined> {
+    const [article] = await db
+      .select()
+      .from(newsArticles)
+      .where(eq(newsArticles.id, id));
+    return article || undefined;
+  }
+
+  async getNewsArticleBySlug(slug: string): Promise<NewsArticle | undefined> {
+    const [article] = await db
+      .select()
+      .from(newsArticles)
+      .where(eq(newsArticles.slug, slug));
+    return article || undefined;
+  }
+
   async updateNewsArticle(
     id: string,
     updates: Partial<NewsArticle>
@@ -1642,41 +1662,129 @@ export class DatabaseStorage implements IStorage {
   }
 
   // News engagement methods
-  async likeNews(userId: string, newsId: string): Promise<boolean> {
-    // Check if already liked
-    const existingLike = await db
+  async voteNews(userId: string, newsId: string, voteType: 'upvote' | 'downvote'): Promise<{ voted: boolean; voteType: string | null; upvotesCount: number; downvotesCount: number }> {
+    // Check if user already voted
+    const existingVote = await db
       .select()
-      .from(newsLikes)
-      .where(and(eq(newsLikes.userId, userId), eq(newsLikes.newsId, newsId)));
+      .from(newsVotes)
+      .where(and(eq(newsVotes.userId, userId), eq(newsVotes.newsId, newsId)));
 
-    if (existingLike.length > 0) {
-      // Unlike
-      await db
-        .delete(newsLikes)
-        .where(and(eq(newsLikes.userId, userId), eq(newsLikes.newsId, newsId)));
+    if (existingVote.length > 0) {
+      const currentVote = existingVote[0];
+      
+      if (currentVote.voteType === voteType) {
+        // Remove vote (unvote)
+        await db
+          .delete(newsVotes)
+          .where(and(eq(newsVotes.userId, userId), eq(newsVotes.newsId, newsId)));
 
-      // Decrease like count
-      await db
-        .update(newsArticles)
-        .set({ likesCount: sql`${newsArticles.likesCount} - 1` })
-        .where(eq(newsArticles.id, newsId));
+        // Update counts
+        const countField = voteType === 'upvote' ? 'upvotesCount' : 'downvotesCount';
+        await db
+          .update(newsArticles)
+          .set({ [countField]: sql`${newsArticles[countField]} - 1` })
+          .where(eq(newsArticles.id, newsId));
 
-      return false;
+        // Get updated counts
+        const [article] = await db
+          .select({ upvotesCount: newsArticles.upvotesCount, downvotesCount: newsArticles.downvotesCount })
+          .from(newsArticles)
+          .where(eq(newsArticles.id, newsId));
+
+        return {
+          voted: false,
+          voteType: null,
+          upvotesCount: article?.upvotesCount || 0,
+          downvotesCount: article?.downvotesCount || 0,
+        };
+      } else {
+        // Change vote type
+        await db
+          .update(newsVotes)
+          .set({ voteType, updatedAt: new Date() })
+          .where(and(eq(newsVotes.userId, userId), eq(newsVotes.newsId, newsId)));
+
+        // Update counts - decrease old vote, increase new vote
+        const oldCountField = currentVote.voteType === 'upvote' ? 'upvotesCount' : 'downvotesCount';
+        const newCountField = voteType === 'upvote' ? 'upvotesCount' : 'downvotesCount';
+        
+        await db
+          .update(newsArticles)
+          .set({
+            [oldCountField]: sql`${newsArticles[oldCountField]} - 1`,
+            [newCountField]: sql`${newsArticles[newCountField]} + 1`,
+          })
+          .where(eq(newsArticles.id, newsId));
+
+        // Get updated counts
+        const [article] = await db
+          .select({ upvotesCount: newsArticles.upvotesCount, downvotesCount: newsArticles.downvotesCount })
+          .from(newsArticles)
+          .where(eq(newsArticles.id, newsId));
+
+        return {
+          voted: true,
+          voteType,
+          upvotesCount: article?.upvotesCount || 0,
+          downvotesCount: article?.downvotesCount || 0,
+        };
+      }
     } else {
-      // Like
-      await db.insert(newsLikes).values({ userId, newsId });
+      // New vote
+      await db.insert(newsVotes).values({ userId, newsId, voteType });
 
-      // Increase like count
+      // Update count
+      const countField = voteType === 'upvote' ? 'upvotesCount' : 'downvotesCount';
       await db
         .update(newsArticles)
-        .set({ likesCount: sql`${newsArticles.likesCount} + 1` })
+        .set({ [countField]: sql`${newsArticles[countField]} + 1` })
         .where(eq(newsArticles.id, newsId));
 
-      return true;
+      // Get updated counts
+      const [article] = await db
+        .select({ upvotesCount: newsArticles.upvotesCount, downvotesCount: newsArticles.downvotesCount })
+        .from(newsArticles)
+        .where(eq(newsArticles.id, newsId));
+
+      return {
+        voted: true,
+        voteType,
+        upvotesCount: article?.upvotesCount || 0,
+        downvotesCount: article?.downvotesCount || 0,
+      };
     }
   }
 
-  async shareNews(userId: string, newsId: string, platform?: string): Promise<NewsShare> {
+  async getUserVote(userId: string, newsId: string): Promise<{ voteType: string } | null> {
+    const [vote] = await db
+      .select({ voteType: newsVotes.voteType })
+      .from(newsVotes)
+      .where(and(eq(newsVotes.userId, userId), eq(newsVotes.newsId, newsId)));
+    
+    return vote || null;
+  }
+
+  async getUserShare(userId: string, newsId: string): Promise<any> {
+    const [share] = await db
+      .select()
+      .from(newsShares)
+      .where(and(eq(newsShares.userId, userId), eq(newsShares.newsId, newsId)));
+    
+    return share || null;
+  }
+
+  async shareNews(userId: string, newsId: string, platform?: string): Promise<{ share: NewsShare; isNewShare: boolean }> {
+    // Check if user has already shared this news
+    const existingShare = await db
+      .select()
+      .from(newsShares)
+      .where(and(eq(newsShares.userId, userId), eq(newsShares.newsId, newsId)));
+
+    if (existingShare.length > 0) {
+      // User has already shared, return existing share
+      return { share: existingShare[0], isNewShare: false };
+    }
+
     const [newsShare] = await db.insert(newsShares).values({
       userId,
       newsId,
@@ -1689,7 +1797,7 @@ export class DatabaseStorage implements IStorage {
       .set({ sharesCount: sql`${newsArticles.sharesCount} + 1` })
       .where(eq(newsArticles.id, newsId));
 
-    return newsShare;
+    return { share: newsShare, isNewShare: true };
   }
 
   async getNewsComments(newsId: string): Promise<any[]> {
@@ -1707,7 +1815,11 @@ export class DatabaseStorage implements IStorage {
       })
       .from(comments)
       .leftJoin(users, eq(comments.userId, users.id))
-      .where(and(eq(comments.newsId, newsId), eq(comments.status, "APPROVED")))
+      .where(
+        and(
+        eq(comments.newsId, newsId), 
+        // eq(comments.status, "APPROVED")
+      ))
       .orderBy(desc(comments.createdAt));
   }
 
@@ -1738,7 +1850,7 @@ export class DatabaseStorage implements IStorage {
       await db.delete(posts).where(eq(posts.userId, userId));
       await db.delete(switchLogs).where(eq(switchLogs.userId, userId));
       await db.delete(userRewards).where(eq(userRewards.userId, userId));
-      await db.delete(newsLikes).where(eq(newsLikes.userId, userId));
+      await db.delete(newsVotes).where(eq(newsVotes.userId, userId));
       await db.delete(newsShares).where(eq(newsShares.userId, userId));
       await db.delete(recoveryKeys).where(eq(recoveryKeys.userId, userId));
       await db.delete(gdprRequests).where(eq(gdprRequests.userId, userId));
@@ -1784,7 +1896,7 @@ export class DatabaseStorage implements IStorage {
         eq(recoveryMethods.id, methodId),
         eq(recoveryMethods.userId, userId)
       ));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   async authenticateWithRecoveryMethod(methodType: string, providerId: string): Promise<User | null> {
@@ -1805,7 +1917,8 @@ export class DatabaseStorage implements IStorage {
       .where(eq(recoveryMethods.id, recoveryMethod.id));
 
     // Get the user
-    return await this.getUser(recoveryMethod.userId);
+    const user = await this.getUser(recoveryMethod.userId);
+    return user || null;
   }
 
   // Messages

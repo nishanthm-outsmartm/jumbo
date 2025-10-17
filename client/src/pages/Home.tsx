@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 export default function Home() {
   const [, navigate] = useLocation();
 
-  // Responsive logo height
+  // Responsive logo height and font
   const logoHeight = window.innerWidth < 480 ? 80 : 90;
   const logoFontSize = window.innerWidth < 480 ? 20 : 32;
 
@@ -32,7 +32,7 @@ export default function Home() {
           overflow: "hidden",
         }}
       >
-        {/* Logo + Text Button */}
+        {/* Logo + Text */}
         <button
           onClick={() => (window.location.href = "/")}
           style={{
@@ -69,7 +69,7 @@ export default function Home() {
           </span>
         </button>
 
-        {/* Pick a Handle Button */}
+        {/* Pick a Handle */}
         <button
           onClick={() => navigate("/oldhome")}
           style={{
@@ -88,37 +88,36 @@ export default function Home() {
       </div>
 
       {/* Banner */}
-<div
-  style={{
-    background: "#fff8e1",
-    borderBottom: "2px solid #00cfff",
-    padding: "16px 20px",
-  }}
->
-  <div
-    style={{
-      fontWeight: 700,
-      fontSize: 22,
-      marginBottom: 4,
-      lineHeight: 1.3,
-    }}
-  >
-    Make the switch.{" "}
-    <span
-      style={{
-        color: "#ff9900",
-        display: window.innerWidth < 480 ? "block" : "inline",
-      }}
-    >
-      Grow India’s impact.
-    </span>
-  </div>
-  <div style={{ color: "#444", fontSize: 15 }}>
-    Start with a nickname—no sign-in needed. Log switches, see news, and
-    earn impact points.
-  </div>
-</div>
-
+      <div
+        style={{
+          background: "#fff8e1",
+          borderBottom: "2px solid #00cfff",
+          padding: "16px 20px",
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: 22,
+            marginBottom: 4,
+            lineHeight: 1.3,
+          }}
+        >
+          Make the switch.{" "}
+          <span
+            style={{
+              color: "#ff9900",
+              display: window.innerWidth < 480 ? "block" : "inline",
+            }}
+          >
+            Grow India’s impact.
+          </span>
+        </div>
+        <div style={{ color: "#444", fontSize: 15 }}>
+          Start with a nickname—no sign-in needed. Log switches, see news, and
+          earn impact points.
+        </div>
+      </div>
 
       {/* Stats */}
       <div
@@ -236,7 +235,7 @@ export default function Home() {
         </ul>
       </div>
 
-      {/* Bottom Nav */}
+      {/* Bottom Navigation */}
       <div
         style={{
           position: "fixed",
@@ -251,7 +250,7 @@ export default function Home() {
           zIndex: 10,
         }}
       >
-        <NavButton label="Home" active />
+        <NavButton label="Home" />
         <NavButton label="Missions" />
         <NavButton label="News" />
         <NavButton label="Rewards" />
@@ -301,7 +300,9 @@ function NewsCard({ tag, title }: { tag: string; title: string }) {
       }}
     >
       <div style={{ fontSize: 13, color: "#888", marginBottom: 4 }}>{tag}</div>
-      <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 10 }}>{title}</div>
+      <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 10 }}>
+        {title}
+      </div>
       <div>
         <span style={{ marginRight: 10, cursor: "pointer" }}>👍</span>
         <span style={{ marginRight: 10, cursor: "pointer" }}>👎</span>
@@ -312,7 +313,15 @@ function NewsCard({ tag, title }: { tag: string; title: string }) {
   );
 }
 
-function MissionCard({ title, from, points }: { title: string; from: string; points: string }) {
+function MissionCard({
+  title,
+  from,
+  points,
+}: {
+  title: string;
+  from: string;
+  points: string;
+}) {
   return (
     <div
       style={{
@@ -329,7 +338,9 @@ function MissionCard({ title, from, points }: { title: string; from: string; poi
       <div>
         <div style={{ fontWeight: 600, fontSize: 16 }}>{title}</div>
         <div style={{ color: "#888", fontSize: 14 }}>{from}</div>
-        <div style={{ color: "#00cfff", fontWeight: 600, fontSize: 14 }}>{points}</div>
+        <div style={{ color: "#00cfff", fontWeight: 600, fontSize: 14 }}>
+          {points}
+        </div>
       </div>
       <button
         style={{
@@ -349,14 +360,40 @@ function MissionCard({ title, from, points }: { title: string; from: string; poi
   );
 }
 
-function NavButton({ label, active }: { label: string; active?: boolean }) {
+// 🚀 Updated NavButton with navigation support
+function NavButton({ label }: { label: string }) {
+  const [, navigate] = useLocation();
+
+  const handleClick = () => {
+    switch (label) {
+      case "Home":
+        navigate("/oldhome");
+        break;
+      case "Missions":
+        navigate("/missions");
+        break;
+      case "News":
+        navigate("/news");
+        break;
+      case "Rewards":
+        navigate("/rewards");
+        break;
+      case "Profile":
+        window.location.href = "http://localhost:5173/signup";
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <button
+      onClick={handleClick}
       style={{
         background: "none",
         border: "none",
-        color: active ? "#00cfff" : "#222",
-        fontWeight: active ? 700 : 500,
+        color: "#222",
+        fontWeight: 500,
         fontSize: 16,
         cursor: "pointer",
       }}

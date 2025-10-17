@@ -9,6 +9,7 @@ import { Navigation } from "@/components/Navigation";
 // Import pages
 import AdminProfile from "@/pages/admin/Profile";
 import Home from "@/pages/Home";
+import OldHome from "@/pages/OldHome"; // ✅ Added for /oldhome route
 
 import Register from "@/pages/Register";
 import LogSwitch from "@/pages/LogSwitch";
@@ -23,6 +24,10 @@ import ModeratorFeedbackPage from "./pages/moderator/ModeratorFeedbackPage";
 import Rewards from "@/pages/Rewards";
 import PrivacyCenterPage from "@/pages/PrivacyCenter";
 import { AnonymousUserBanner } from "./components/auth/AnonymousUserBanner";
+
+// ========================
+// Protected Routes
+// ========================
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -44,6 +49,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   return <div className="mb-16">{children}</div>;
 }
+
 function ProtectedModeratorRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
@@ -67,6 +73,7 @@ function ProtectedModeratorRoute({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
+
 function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
@@ -89,10 +96,13 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// ========================
+// App Router
+// ========================
+
 function AppRouter() {
   const { user, loading } = useAuth();
 
-  // Show home page for all users (authenticated and non-authenticated)
   const HomePage = () => {
     if (loading) {
       return (
@@ -114,26 +124,31 @@ function AppRouter() {
       <AnonymousUserBanner />
       <CookieConsent />
       <Switch>
-        <Route path="/login" >
-         <EnhancedLogin />
+        {/* Authentication Routes */}
+        <Route path="/login">
+          <EnhancedLogin />
         </Route>
-        <Route path="/signup" >
-         <EnhancedLogin mode="signup"/>
+
+        <Route path="/signup">
+          <EnhancedLogin mode="signup" />
         </Route>
-        {/* <Route path="/old-login" component={Login} /> */}
+
         <Route path="/register" component={Register} />
-        {/* <Route path="/register/moderator" component={EnhancedLogin} /> */}
-        {/* <Route path="/old-register" component={Register} /> */}
-        <Route path="/reset-password" >
-         <EnhancedLogin mode="signup"/>
+
+        <Route path="/reset-password">
+          <EnhancedLogin mode="signup" />
         </Route>
+
         <Route
           path="/moderator/suggested-feedbacks"
           component={ModeratorFeedbackPage}
         />
 
-        {/* Home Route - Landing page for non-auth, Home for authenticated users */}
+        {/* Public Routes */}
         <Route path="/" component={HomePage} />
+
+        {/* ✅ Added OldHome route */}
+        <Route path="/oldhome" component={OldHome} />
 
         {/* Protected Routes */}
         <Route path="/home">
@@ -159,23 +174,12 @@ function AppRouter() {
             <EnhancedModeratorPanel />
           </ProtectedModeratorRoute>
         </Route>
+
         <Route path="/moderator/suggested-feedbacks">
           <ProtectedModeratorRoute>
             <ModeratorFeedbackPage />
           </ProtectedModeratorRoute>
         </Route>
-
-        {/* <Route path="/dashboard">
-          <ProtectedRoute>
-            <EnhancedMemberDashboard />
-          </ProtectedRoute>
-        </Route>
-
-        <Route path="/enhanced">
-          <ProtectedRoute>
-            <EnhancedHome />
-          </ProtectedRoute>
-        </Route> */}
 
         <Route path="/news">
           <ProtectedRoute>
@@ -201,12 +205,16 @@ function AppRouter() {
           </ProtectedRoute>
         </Route>
 
-        {/* Fallback to 404 */}
+        {/* Fallback 404 */}
         <Route component={NotFound} />
       </Switch>
     </div>
   );
 }
+
+// ========================
+// Main App Wrapper
+// ========================
 
 function App() {
   return (
@@ -214,7 +222,6 @@ function App() {
       <AuthProvider>
         <TooltipProvider>
           <Toaster />
-
           <AppRouter />
         </TooltipProvider>
       </AuthProvider>

@@ -1477,45 +1477,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // News engagement routes
-  app.post("/api/news/:newsId/like", async (req, res) => {
+  app.get("/api/news/:slug", async (req, res) => {
     try {
-      const { newsId } = req.params;
-      const { userId } = req.body;
+      const { slug } = req.params;
+      const article = await storage.getNewsArticleBySlug(slug);
+      
+      if (!article) {
+        return res.status(404).json({ error: "News article not found" });
+      }
+      
+      res.json(article);
+    } catch (error) {
+      console.error("Error fetching news article:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/news/:slug/engagement", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const userId = req.headers['x-user-id'] as string;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "User ID required" });
+      }
+
+      const article = await storage.getNewsArticleBySlug(slug);
+      if (!article) {
+        return res.status(404).json({ error: "News article not found" });
+      }
+
+      // Get user's vote status
+      const userVote = await storage.getUserVote(userId, article.id);
+      
+      // Get user's share status
+      const userShared = await storage.getUserShare(userId, article.id);
+
+      res.json({
+        upvotesCount: article.upvotesCount || 0,
+        downvotesCount: article.downvotesCount || 0,
+        sharesCount: article.sharesCount || 0,
+        commentsCount: article.commentsCount || 0,
+        userVote: userVote?.voteType || null,
+        userShared: !!userShared,
+        commentsEnabled: article.commentsEnabled,
+      });
+    } catch (error) {
+      console.error("Error fetching engagement data:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // News engagement routes
+  app.post("/api/news/:slug/vote", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const { userId, voteType } = req.body;
 
       if (!userId) {
         return res.status(400).json({ error: "User ID is required" });
       }
 
-      const liked = await storage.likeNews(userId, newsId);
-      res.json({ liked });
+      if (!voteType || !['upvote', 'downvote'].includes(voteType)) {
+        return res.status(400).json({ error: "Vote type must be 'upvote' or 'downvote'" });
+      }
+
+      // Get article by slug to get the ID
+      const article = await storage.getNewsArticleBySlug(slug);
+      if (!article) {
+        return res.status(404).json({ error: "News article not found" });
+      }
+
+      const result = await storage.voteNews(userId, article.id, voteType);
+      
+      // Broadcast real-time update via WebSocket
+      if (wss) {
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+              type: "update",
+              data: {
+                newsId: article.id,
+                slug: slug,
+                type: "vote",
+                voted: result.voted,
+                voteType: result.voteType,
+                upvotesCount: result.upvotesCount,
+                downvotesCount: result.downvotesCount,
+                timestamp: new Date().toISOString(),
+              },
+            }));
+          }
+        });
+      }
+      
+      res.json(result);
     } catch (error) {
-      console.error("News like error:", error);
-      res.status(500).json({ error: "Failed to toggle like" });
+      console.error("News vote error:", error);
+      res.status(500).json({ error: "Failed to vote" });
     }
   });
 
-  app.post("/api/news/:newsId/share", async (req, res) => {
+  app.post("/api/news/:slug/share", async (req, res) => {
     try {
-      const { newsId } = req.params;
+      const { slug } = req.params;
       const { userId, platform } = req.body;
 
       if (!userId) {
         return res.status(400).json({ error: "User ID is required" });
       }
 
-      const share = await storage.shareNews(userId, newsId, platform);
-      res.json({ share });
+      // Get article by slug to get the ID
+      const article = await storage.getNewsArticleBySlug(slug);
+      if (!article) {
+        return res.status(404).json({ error: "News article not found" });
+      }
+
+      const { share, isNewShare } = await storage.shareNews(userId, article.id, platform);
+      
+      // Get updated counts for real-time updates
+      const updatedArticle = await storage.getNewsArticleById(article.id);
+      const sharesCount = updatedArticle?.sharesCount || 0;
+      
+      // Broadcast real-time update via WebSocket only for new shares
+      if (wss && isNewShare) {
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+              type: "update",
+              data: {
+                newsId: article.id,
+                slug: slug,
+                type: "share",
+                share,
+                sharesCount,
+                timestamp: new Date().toISOString(),
+              },
+            }));
+          }
+        });
+      }
+      
+      res.json({ share, isNewShare });
     } catch (error) {
       console.error("News share error:", error);
       res.status(500).json({ error: "Failed to share news" });
     }
   });
 
-  app.get("/api/news/:newsId/comments", async (req, res) => {
+  app.get("/api/news/:slug/comments", async (req, res) => {
     try {
-      const { newsId } = req.params;
-      const comments = await storage.getNewsComments(newsId);
+      const { slug } = req.params;
+      const article = await storage.getNewsArticleBySlug(slug);
+      if (!article) {
+        return res.status(404).json({ error: "News article not found" });
+      }
+      const comments = await storage.getNewsComments(article.id);
       res.json({ comments });
     } catch (error) {
       console.error("News comments error:", error);
@@ -1523,16 +1640,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/news/:newsId/comments", async (req, res) => {
+  app.post("/api/news/:slug/comments", async (req, res) => {
     try {
-      const { newsId } = req.params;
+      const { slug } = req.params;
       const { userId, content } = req.body;
 
       if (!userId || !content) {
         return res.status(400).json({ error: "User ID and content are required" });
       }
 
-      const comment = await storage.addNewsComment(userId, newsId, content);
+      // Get article by slug to get the ID
+      const article = await storage.getNewsArticleBySlug(slug);
+      if (!article) {
+        return res.status(404).json({ error: "News article not found" });
+      }
+
+      const comment = await storage.addNewsComment(userId, article.id, content);
+      
+      // Get updated counts for real-time updates
+      const updatedArticle = await storage.getNewsArticleById(article.id);
+      const commentsCount = updatedArticle?.commentsCount || 0;
+      
+      // Broadcast real-time update via WebSocket
+      if (wss) {
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+              type: "update",
+              data: {
+                newsId: article.id,
+                slug: slug,
+                type: "comment",
+                comment,
+                commentsCount,
+                timestamp: new Date().toISOString(),
+              },
+            }));
+          }
+        });
+      }
+      
       res.json({ comment });
     } catch (error) {
       console.error("News comment error:", error);

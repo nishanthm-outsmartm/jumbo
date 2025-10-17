@@ -27,6 +27,7 @@ import { NewsEngagement } from "@/components/NewsEngagement";
 interface NewsArticle {
   id: string;
   title: string;
+  slug: string;
   description: string;
   imageUrls: string[] | null;
   source: string | null;
@@ -40,6 +41,10 @@ interface NewsArticle {
   updatedAt: string;
   fromBrands?: Brand[];
   toBrands?: Brand[];
+  upvotesCount?: number;
+  downvotesCount?: number;
+  sharesCount?: number;
+  commentsCount?: number;
 }
 
 interface Brand {
@@ -75,9 +80,11 @@ function NewsCard({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <h2 className="text-2xl md:text-2xl font-semibold mb-2">
-              {article.title}
-            </h2>
+            <Link href={`/news/${article.slug}`}>
+              <h2 className="text-2xl md:text-2xl font-semibold mb-2 hover:text-orange-600 cursor-pointer transition-colors">
+                {article.title}
+              </h2>
+            </Link>
 
             <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
               <div className="flex items-center gap-1">
@@ -114,7 +121,7 @@ function NewsCard({
 
       <CardContent className="pt-0">
         <p className="text-gray-700 mb-4 break-words overflow-hidden">
-          {article.description}
+          {article.description.length > 500? article.description.slice(0, 500) + '...' : article.description}
         </p>
 
         {/* Brand Switching Information */}
@@ -175,13 +182,14 @@ function NewsCard({
 
         {article.source && (
           <div className="flex items-end justify-end gap-1">
-            <Link
-              href={article.source}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button>View on Source</Button>
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link href={`/news/${article.slug}`}>
+                <Button>Read More</Button>
+                </Link>
+                <a href={article.source} target="_blank" rel="noopener noreferrer">
+                  <Button><ExternalLink className="w-4 h-4 mr-2" />View on Source</Button>
+                </a>
+            </div>
           </div>
         )}
 
@@ -190,7 +198,10 @@ function NewsCard({
           {isLoggedIn ? (
             <NewsEngagement
               newsId={article.id}
-              initialLikes={0}
+              newsSlug={article.slug}
+              title={article.title}
+              initialUpvotes={0}
+              initialDownvotes={0}
               initialShares={0}
               initialComments={0}
             />

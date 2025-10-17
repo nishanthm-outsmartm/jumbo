@@ -9,6 +9,7 @@ import {
   jsonb,
   pgEnum,
   decimal,
+  unique,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -613,13 +614,15 @@ export const newsArticles = pgTable("news_articles", {
     .primaryKey()
     .default(sql`gen_random_uuid()`),
   title: varchar("title").notNull(),
+  slug: varchar("slug").notNull(),
   source: text("source"),
   description: text("description").notNull(),
   imageUrls: text("image_urls").array(), // Array of image URLs
   suggestedFromBrandIds: text("suggested_from_brand_ids").array(),
   suggestedToBrandIds: text("suggested_to_brand_ids").array(),
   commentsEnabled: boolean("comments_enabled").default(true),
-  likesCount: integer("likes_count").default(0),
+  upvotesCount: integer("upvotes_count").default(0),
+  downvotesCount: integer("downvotes_count").default(0),
   sharesCount: integer("shares_count").default(0),
   commentsCount: integer("comments_count").default(0),
   isPublished: boolean("is_published").default(true),
@@ -629,8 +632,8 @@ export const newsArticles = pgTable("news_articles", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// News likes
-export const newsLikes = pgTable("news_likes", {
+// News votes (upvotes/downvotes)
+export const newsVotes = pgTable("news_votes", {
   id: varchar("id")
     .primaryKey()
     .default(sql`gen_random_uuid()`),
@@ -640,8 +643,13 @@ export const newsLikes = pgTable("news_likes", {
   newsId: varchar("news_id").references(() => newsArticles.id, {
     onDelete: "cascade",
   }),
+  voteType: varchar("vote_type", { length: 10 }).notNull(), // 'upvote' or 'downvote'
   createdAt: timestamp("created_at").defaultNow(),
-});
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint to prevent duplicate votes from same user
+  uniqueUserNews: unique("unique_user_news").on(table.userId, table.newsId),
+}));
 
 // News shares
 export const newsShares = pgTable("news_shares", {
@@ -785,7 +793,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   recoveryKeys: many(recoveryKeys),
   backupCodes: many(backupCodes),
   userRewards: many(userRewards),
-  newsLikes: many(newsLikes),
+  newsVotes: many(newsVotes),
   newsShares: many(newsShares),
   gdprRequests: many(gdprRequests),
 }));
@@ -995,13 +1003,13 @@ export const userRewardsRelations = relations(userRewards, ({ one }) => ({
 export const newsArticlesRelations = relations(newsArticles, ({ one, many }) => ({
   creator: one(users, { fields: [newsArticles.createdBy], references: [users.id] }),
   comments: many(comments),
-  likes: many(newsLikes),
+  votes: many(newsVotes),
   shares: many(newsShares),
 }));
 
-export const newsLikesRelations = relations(newsLikes, ({ one }) => ({
-  user: one(users, { fields: [newsLikes.userId], references: [users.id] }),
-  news: one(newsArticles, { fields: [newsLikes.newsId], references: [newsArticles.id] }),
+export const newsVotesRelations = relations(newsVotes, ({ one }) => ({
+  user: one(users, { fields: [newsVotes.userId], references: [users.id] }),
+  news: one(newsArticles, { fields: [newsVotes.newsId], references: [newsArticles.id] }),
 }));
 
 export const newsSharesRelations = relations(newsShares, ({ one }) => ({
@@ -1170,7 +1178,7 @@ export const insertUserRewardSchema = createInsertSchema(userRewards).omit({
   claimedAt: true,
 });
 
-export const insertNewsLikeSchema = createInsertSchema(newsLikes).omit({
+export const insertNewsVoteSchema = createInsertSchema(newsVotes).omit({
   id: true,
   createdAt: true,
 });

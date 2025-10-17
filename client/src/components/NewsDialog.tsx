@@ -48,6 +48,7 @@ interface Brand {
 }
 const newsArticleSchema = z.object({
   title: z.string().min(1, "Title is required"),
+  slug: z.string().min(1, "Slug is required").regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens"),
   description: z.string().min(1, "Description is required"),
   imageUrls: z.array(z.string().url()).optional(),
   source: z.string().optional(),
@@ -68,6 +69,7 @@ const NewsDialog = ({
   news?: {
     id: string;
     title: string;
+    slug: string;
     description: string;
     imageUrls: string[];
     source: string;
@@ -126,6 +128,7 @@ const NewsDialog = ({
     resolver: zodResolver(newsArticleSchema),
     defaultValues: news ?? {
       title: "",
+      slug: "",
       description: "",
       source: "",
       imageUrls: [],
@@ -294,9 +297,43 @@ const NewsDialog = ({
                 <FormItem>
                   <FormLabel>Article Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter news title" {...field} />
+                    <Input 
+                      placeholder="Enter news title" 
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        // Auto-generate slug from title
+                        const slug = e.target.value
+                          .toLowerCase()
+                          .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+                          .replace(/\s+/g, '-') // Replace spaces with hyphens
+                          .replace(/-+/g, '-') // Replace multiple hyphens with single
+                          .trim();
+                        newsForm.setValue('slug', slug);
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={newsForm.control}
+              name="slug"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>URL Slug</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="url-friendly-slug" 
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  <p className="text-sm text-gray-500">
+                    This will be used in the article URL. Only lowercase letters, numbers, and hyphens are allowed.
+                  </p>
                 </FormItem>
               )}
             />

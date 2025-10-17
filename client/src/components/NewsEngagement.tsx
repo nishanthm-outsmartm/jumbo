@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  Heart,
+  ThumbsUp,
+  ThumbsDown,
   MessageCircle,
   Share2,
   Send,
@@ -17,6 +18,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { ShareDialog } from "./ShareDialog";
 
 interface NewsComment {
   id: string;
@@ -32,19 +34,26 @@ interface NewsComment {
 
 interface NewsEngagementProps {
   newsId: string;
-  initialLikes?: number;
+  newsSlug: string;
+  initialUpvotes?: number;
+  initialDownvotes?: number;
   initialShares?: number;
   initialComments?: number;
+  title?: string;
 }
 
 export function NewsEngagement({
   newsId,
-  initialLikes = 0,
+  newsSlug,
+  initialUpvotes = 0,
+  initialDownvotes = 0,
   initialShares = 0,
   initialComments = 0,
+  title = "",
 }: NewsEngagementProps) {
   const { user } = useAuth();
-  const [likes, setLikes] = useState(initialLikes);
+  const [upvotes, setUpvotes] = useState(initialUpvotes);
+  const [downvotes, setDownvotes] = useState(initialDownvotes);
   const [shares, setShares] = useState(initialShares);
   const [comments, setComments] = useState(initialComments);
   const [commentsList, setCommentsList] = useState<NewsComment[]>([]);
@@ -52,8 +61,98 @@ export function NewsEngagement({
   const [loading, setLoading] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [showComments, setShowComments] = useState(false);
-  const [userLiked, setUserLiked] = useState(false);
+  const [userVote, setUserVote] = useState<'upvote' | 'downvote' | null>(null);
   const [userShared, setUserShared] = useState(false);
+  const [commentsEnabled, setCommentsEnabled] = useState(true);
+  const wsRef = useRef<WebSocket | null>(null);
+
+  // Fetch current engagement data
+  const fetchEngagementData = async () => {
+    if (!user) return;
+    
+    try {
+      const response = await fetch(`/api/news/${newsSlug}/engagement`, {
+        headers: {
+          'x-user-id': user.id,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUpvotes(data.upvotesCount || 0);
+        setDownvotes(data.downvotesCount || 0);
+        setShares(data.sharesCount || 0);
+        setComments(data.commentsCount || 0);
+        setUserVote(data.userVote);
+        setUserShared(data.userShared);
+        setCommentsEnabled(data.commentsEnabled);
+      }
+    } catch (error) {
+      console.error("Failed to fetch engagement data:", error);
+    }
+  };
+
+  // Fetch engagement data on component mount
+  useEffect(() => {
+    fetchEngagementData();
+  }, [newsId, user]);
+
+  // WebSocket connection for real-time updates
+  useEffect(() => {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const host = window.location.host || "localhost:3006";
+    const wsUrl = `${protocol}//${host}/ws`;
+
+    const connectWebSocket = () => {
+      try {
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          console.log("WebSocket connected for news engagement");
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === "update" && data.data.newsId === newsId) {
+              // Update counts in real-time
+              if (data.data.type === "vote") {
+                setUpvotes(data.data.upvotesCount);
+                setDownvotes(data.data.downvotesCount);
+              } else if (data.data.type === "share") {
+                setShares(data.data.sharesCount);
+              } else if (data.data.type === "comment") {
+                setComments(data.data.commentsCount);
+                if (showComments) {
+                  fetchComments();
+                }
+              }
+            }
+          } catch (error) {
+            console.error("Error parsing WebSocket message:", error);
+          }
+        };
+
+        ws.onclose = () => {
+          console.log("WebSocket disconnected for news engagement");
+        };
+
+        ws.onerror = (error) => {
+          console.error("WebSocket error:", error);
+        };
+      } catch (error) {
+        console.error("Failed to create WebSocket connection:", error);
+      }
+    };
+
+    connectWebSocket();
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, [newsId, showComments]);
 
   useEffect(() => {
     if (showComments) {
@@ -64,7 +163,7 @@ export function NewsEngagement({
   const fetchComments = async () => {
     setCommentsLoading(true);
     try {
-      const response = await fetch(`/api/news/${newsId}/comments`);
+      const response = await fetch(`/api/news/${newsSlug}/comments`);
       const data = await response.json();
       setCommentsList(data.comments || []);
     } catch (error) {
@@ -74,11 +173,11 @@ export function NewsEngagement({
     }
   };
 
-  const handleLike = async () => {
+  const handleVote = async (voteType: 'upvote' | 'downvote') => {
     if (!user) {
       toast({
-        title: "Please log in",
-        description: "You need to be logged in to like news articles.",
+        title: "Please connect your account",
+        description: "You need to connect your account to vote on news articles.",
         variant: "destructive",
       });
       return;
@@ -86,23 +185,24 @@ export function NewsEngagement({
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/news/${newsId}/like`, {
+      const response = await fetch(`/api/news/${newsSlug}/vote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId: user.id, voteType }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        setUserLiked(data.liked);
-        setLikes((prev) => (data.liked ? prev + 1 : prev - 1));
+        setUserVote(data.voteType);
+        setUpvotes(data.upvotesCount);
+        setDownvotes(data.downvotesCount);
       } else {
-        throw new Error("Failed to toggle like");
+        throw new Error("Failed to vote");
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to like article",
+        description: error.message || "Failed to vote on article",
         variant: "destructive",
       });
     } finally {
@@ -113,8 +213,8 @@ export function NewsEngagement({
   const handleShare = async (platform?: string) => {
     if (!user) {
       toast({
-        title: "Please log in",
-        description: "You need to be logged in to share news articles.",
+        title: "Please connect your account",
+        description: "You need to connect your account to share news articles.",
         variant: "destructive",
       });
       return;
@@ -131,7 +231,7 @@ export function NewsEngagement({
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/news/${newsId}/share`, {
+      const response = await fetch(`/api/news/${newsSlug}/share`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: user.id, platform }),
@@ -171,8 +271,8 @@ export function NewsEngagement({
   const handleComment = async () => {
     if (!user) {
       toast({
-        title: "Please log in",
-        description: "You need to be logged in to comment on news articles.",
+        title: "Please connect your account",
+        description: "You need to connect your account to comment on news articles.",
         variant: "destructive",
       });
       return;
@@ -189,7 +289,7 @@ export function NewsEngagement({
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/news/${newsId}/comments`, {
+      const response = await fetch(`/api/news/${newsSlug}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: user.id, content: newComment.trim() }),
@@ -231,18 +331,33 @@ export function NewsEngagement({
     <div className="space-y-4">
       {/* Engagement Actions */}
       <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleLike}
-          disabled={loading}
-          className={`flex items-center gap-2 ${
-            userLiked ? "text-red-500" : ""
-          }`}
-        >
-          <Heart className={`h-4 w-4 ${userLiked ? "fill-current" : ""}`} />
-          {likes}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleVote('upvote')}
+            disabled={loading}
+            className={`flex items-center gap-2 ${
+              userVote === 'upvote' ? "text-green-500" : ""
+            }`}
+          >
+            <ThumbsUp className={`h-4 w-4 ${userVote === 'upvote' ? "fill-current" : ""}`} />
+            {upvotes}
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleVote('downvote')}
+            disabled={loading}
+            className={`flex items-center gap-2 ${
+              userVote === 'downvote' ? "text-red-500" : ""
+            }`}
+          >
+            <ThumbsDown className={`h-4 w-4 ${userVote === 'downvote' ? "fill-current" : ""}`} />
+            {downvotes}
+          </Button>
+        </div>
 
         <Button
           variant="ghost"
@@ -254,22 +369,41 @@ export function NewsEngagement({
           {comments}
         </Button>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handleShare()}
-          disabled={loading || userShared}
-          className={`flex items-center gap-2 ${
-            userShared ? "text-green-500" : ""
-          }`}
+        <ShareDialog 
+          newsId={newsId}
+          newsSlug={newsSlug}
+          title={title}
+          userId={user?.id}
+          onShare={() => {
+            setShares(prev => prev + 1);
+            setUserShared(true);
+          }}
         >
-          <Share2 className={`h-4 w-4 ${userShared ? "fill-current" : ""}`} />
-          {shares}
-        </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={loading}
+            className={`flex items-center gap-2 ${
+              userShared ? "text-green-500" : ""
+            }`}
+          >
+            <Share2 className={`h-4 w-4 ${userShared ? "fill-current" : ""}`} />
+            {shares}
+          </Button>
+        </ShareDialog>
       </div>
 
       {/* Comments Section */}
-      {showComments && (
+      {showComments && !commentsEnabled && (
+        <Card>
+          <CardContent className="p-4 text-center">
+            <MessageCircle className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+            <p className="text-gray-500">Comments are disabled for this article.</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {showComments && commentsEnabled && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Comments</CardTitle>
@@ -326,7 +460,7 @@ export function NewsEngagement({
                         <span className="font-medium text-sm">
                           {comment.user.handle}
                         </span>
-                        {getUserTypeIcon(comment.user.userType)}
+                        {/* {getUserTypeIcon(comment.user.userType)}
                         <Badge
                           variant={
                             comment.user.userType === "REGISTERED"
@@ -339,6 +473,18 @@ export function NewsEngagement({
                             ? "Registered"
                             : "Anonymous"}
                         </Badge>
+                        <Badge
+                          variant={
+                            comment.status === "APPROVED"
+                              ? "default"
+                              : comment.status === "PENDING"
+                              ? "secondary"
+                              : "destructive"
+                          }
+                          className="text-xs"
+                        >
+                          {comment.status}
+                        </Badge> */}
                       </div>
 
                       <p className="text-sm">{comment.content}</p>

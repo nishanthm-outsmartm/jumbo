@@ -1,8 +1,10 @@
 import React from "react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Home() {
   const [, navigate] = useLocation();
+  const { user } = useAuth(); // ✅ get logged in user
 
   // Responsive logo height and font
   const logoHeight = window.innerWidth < 480 ? 80 : 90;
@@ -20,73 +22,74 @@ export default function Home() {
         boxSizing: "border-box",
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          background: "#0b2238",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "8px 20px",
-          height: window.innerWidth < 480 ? "60px" : "90px",
-          overflow: "hidden",
-        }}
-      >
-        {/* Logo + Text */}
-        <button
-          onClick={() => (window.location.href = "/")}
+      {/* ---------------- Header (only visible when logged out) ---------------- */}
+      {!user && (
+        <div
           style={{
+            background: "#0b2238",
             display: "flex",
             alignItems: "center",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: 0,
+            justifyContent: "space-between",
+            padding: "8px 20px",
+            height: window.innerWidth < 480 ? "60px" : "90px",
+            overflow: "hidden",
           }}
         >
-          <img
-            src="src\\images\\logo.png"
-            alt="JumboJolt"
+          {/* Logo + Text */}
+          <button
+            onClick={() => (window.location.href = "/")}
             style={{
-              height: logoHeight,
-              width: "auto",
-              borderRadius: 20,
-              objectFit: "contain",
-              marginRight: -20,
-              zIndex: 1,
-            }}
-          />
-          <span
-            style={{
-              color: "#00cfff",
-              fontWeight: 800,
-              fontSize: logoFontSize,
-              position: "relative",
-              zIndex: 2,
+              display: "flex",
+              alignItems: "center",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
             }}
           >
-            JumboJolt
-          </span>
-        </button>
+            <img
+              src="src\\images\\logo.png"
+              alt="JumboJolt"
+              style={{
+                height: logoHeight,
+                width: "auto",
+                borderRadius: 20,
+                objectFit: "contain",
+                marginRight: -20,
+                zIndex: 1,
+              }}
+            />
+            <span
+              style={{
+                color: "#00cfff",
+                fontWeight: 800,
+                fontSize: logoFontSize,
+                position: "relative",
+                zIndex: 2,
+              }}
+            >
+              JumboJolt
+            </span>
+          </button>
 
-        {/* Pick a Handle */}
-        <button
-          onClick={() => navigate("/oldhome")}
-          style={{
-            background: "#00cfff",
-            color: "#fff",
-            border: "none",
-            borderRadius: 6,
-            padding: window.innerWidth < 480 ? "6px 12px" : "8px 18px",
-            fontWeight: 600,
-            fontSize: window.innerWidth < 480 ? 14 : 16,
-            cursor: "pointer",
-          }}
-        >
-          Pick a Handle
-        </button>
-      </div>
-
+          {/* Pick a Handle */}
+          <button
+            onClick={() => navigate("/oldhome")}
+            style={{
+              background: "#00cfff",
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              padding: window.innerWidth < 480 ? "6px 12px" : "8px 18px",
+              fontWeight: 600,
+              fontSize: window.innerWidth < 480 ? 14 : 16,
+              cursor: "pointer",
+            }}
+          >
+            Pick a Handle
+          </button>
+        </div>
+      )}
       {/* Banner */}
       <div
         style={{

@@ -229,10 +229,7 @@ export function ModeratorPostCreator({ onPostCreated }: ModeratorPostCreatorProp
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
-              <Select 
-                value={postData.categoryId} 
-                onValueChange={(value) => setPostData({ ...postData, categoryId: value })}
-              >
+              <Select value={postData.categoryId} onValueChange={(value) => setPostData({ ...postData, categoryId: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
@@ -241,10 +238,7 @@ export function ModeratorPostCreator({ onPostCreated }: ModeratorPostCreatorProp
                   {categories.map((category: any) => (
                     <SelectItem key={category.id} value={category.id}>
                       <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: category.color }}
-                        />
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color }} />
                         {category.name}
                       </div>
                     </SelectItem>
@@ -255,10 +249,7 @@ export function ModeratorPostCreator({ onPostCreated }: ModeratorPostCreatorProp
 
             <div className="space-y-2">
               <Label htmlFor="community">Community</Label>
-              <Select 
-                value={postData.communityId} 
-                onValueChange={(value) => setPostData({ ...postData, communityId: value })}
-              >
+              <Select value={postData.communityId} onValueChange={(value) => setPostData({ ...postData, communityId: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select community" />
                 </SelectTrigger>
@@ -283,10 +274,8 @@ export function ModeratorPostCreator({ onPostCreated }: ModeratorPostCreatorProp
 
           {/* Switch Log Prompt Specific Fields */}
           {postData.postType === "SWITCH_LOG_PROMPT" && (
-            <div className="space-y-4 p-4 bg-orange-50 dark:bg-orange-950 rounded-lg border border-orange-200 dark:border-orange-800">
-              <h4 className="font-medium text-orange-900 dark:text-orange-100">
-                Switch Log Prompt Settings
-              </h4>
+            <div className="space-y-4 p-4 bg-[#0b2238]/10 rounded-lg border border-[#0b2238]/20">
+              <h4 className="font-medium text-[#0b2238]">Switch Log Prompt Settings</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="targetBrandFrom">From Brand (Optional)</Label>
@@ -296,9 +285,7 @@ export function ModeratorPostCreator({ onPostCreated }: ModeratorPostCreatorProp
                     onChange={(e) => setPostData({ ...postData, targetBrandFrom: e.target.value })}
                     placeholder="e.g., Samsung, Nike, Coca-Cola"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Suggest a specific brand to switch from
-                  </p>
+                  <p className="text-xs text-muted-foreground">Suggest a specific brand to switch from</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="targetBrandTo">To Brand (Optional)</Label>
@@ -308,9 +295,7 @@ export function ModeratorPostCreator({ onPostCreated }: ModeratorPostCreatorProp
                     onChange={(e) => setPostData({ ...postData, targetBrandTo: e.target.value })}
                     placeholder="e.g., Micromax, Bata, Thums Up"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Suggest a specific Indian brand to switch to
-                  </p>
+                  <p className="text-xs text-muted-foreground">Suggest a specific Indian brand to switch to</p>
                 </div>
               </div>
             </div>
@@ -415,24 +400,21 @@ export function ModeratorPostCreator({ onPostCreated }: ModeratorPostCreatorProp
 
           {/* Submit Button */}
           <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline">
-              Save as Draft
-            </Button>
+            <Button type="button" variant="outline">Save as Draft</Button>
             <Button 
               type="submit" 
               disabled={createPostMutation.isPending}
-              className="bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600"
+              className="bg-[#0b2238] hover:bg-[#0d2b4f] text-white"
             >
               {createPostMutation.isPending ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
                   Publishing...
-                </>
+                </div>
               ) : (
-                <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Publish Post
-                </>
+                <div className="flex items-center gap-2">
+                  <Send className="h-4 w-4" /> Publish Post
+                </div>
               )}
             </Button>
           </div>

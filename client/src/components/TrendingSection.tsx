@@ -5,26 +5,39 @@ import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 
 const categoryColors = {
-  'Food & Beverages': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-  'Electronics': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  'Fashion & Apparel': 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200',
-  'Home & Garden': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  'Health & Beauty': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-  'Automotive': 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
-  'Sports & Fitness': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-  'Education': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+  'Food & Beverages': 'bg-[#dbe9f4] text-[#0b2238] dark:bg-[#0d2b4f] dark:text-[#00a8cc]',
+  'Electronics': 'bg-[#cce3f0] text-[#0b2238] dark:bg-[#0d2b4f] dark:text-[#00a8cc]',
+  'Fashion & Apparel': 'bg-[#f4dbe9] text-[#0b2238] dark:bg-[#2b0d4f] dark:text-[#00a8cc]',
+  'Home & Garden': 'bg-[#dbf4e9] text-[#0b2238] dark:bg-[#0d4f2b] dark:text-[#00a8cc]',
+  'Health & Beauty': 'bg-[#ecdbe9] text-[#0b2238] dark:bg-[#4f0d4f] dark:text-[#00a8cc]',
+  'Automotive': 'bg-[#e0e0e0] text-[#0b2238] dark:bg-[#1a1a1a] dark:text-[#00a8cc]',
+  'Sports & Fitness': 'bg-[#f4dbdb] text-[#0b2238] dark:bg-[#4f0d0d] dark:text-[#00a8cc]',
+  'Education': 'bg-[#dbdff4] text-[#0b2238] dark:bg-[#0d0d4f] dark:text-[#00a8cc]'
 };
+
+interface Brand {
+  id: string;
+  name: string;
+  logoUrl?: string;
+  switchesToCount?: number;
+  switchCount?: number;
+}
+
+interface Category {
+  category: string;
+  recentSwitches?: number;
+  switchCount?: number;
+}
 
 interface TrendingSectionProps {
   className?: string;
 }
-
+  
 export function TrendingSection({ className }: TrendingSectionProps) {
-  const { data: trendingBrands = [] } = useQuery({
+  const { data: trendingBrands = [] } = useQuery<Brand[]>({
     queryKey: ['/api/brands/trending']
   });
-
-  const { data: trendingCategories = [] } = useQuery({
+  const { data: trendingCategories = [] } = useQuery<Category[]>({
     queryKey: ['/api/categories/trending']
   });
 
@@ -34,17 +47,17 @@ export function TrendingSection({ className }: TrendingSectionProps) {
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-orange-600" />
+            <TrendingUp className="w-5 h-5 text-[#0b2238]" />
             Trending Categories
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-3">
             {trendingCategories.slice(0, 6).map((category: any, index: number) => (
-              <div key={category.category} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+              <div key={category.category} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900">
-                    <span className="text-sm font-bold text-orange-600">#{index + 1}</span>
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#dbe9f4] dark:bg-[#0d2b4f]">
+                    <span className="text-sm font-bold text-[#0b2238] dark:text-[#00a8cc]">#{index + 1}</span>
                   </div>
                   <div>
                     <Badge 
@@ -72,16 +85,16 @@ export function TrendingSection({ className }: TrendingSectionProps) {
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <Package className="w-5 h-5 text-green-600" />
+            <Package className="w-5 h-5 text-[#0b2238]" />
             Popular Indian Brands
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-3">
             {trendingBrands.slice(0, 5).map((brand: any, index: number) => (
-              <div key={brand.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 dark:bg-green-900">
-                  <span className="text-sm font-bold text-green-600">#{index + 1}</span>
+              <div key={brand.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#cce3f0] dark:bg-[#0d2b4f]">
+                  <span className="text-sm font-bold text-[#0b2238] dark:text-[#00a8cc]">#{index + 1}</span>
                 </div>
                 <div className="flex-1">
                   <div className="font-medium">{brand.name}</div>
@@ -91,7 +104,7 @@ export function TrendingSection({ className }: TrendingSectionProps) {
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-medium flex items-center gap-1">
-                    <Users className="w-3 h-3" />
+                    <Users className="w-3 h-3 text-[#0b2238]" />
                     {brand.switchesToCount}
                   </div>
                   <div className="text-xs text-muted-foreground">switches</div>
@@ -106,36 +119,36 @@ export function TrendingSection({ className }: TrendingSectionProps) {
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <Star className="w-5 h-5 text-yellow-600" />
+            <Star className="w-5 h-5 text-[#00a8cc]" />
             Weekly Highlights
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-gradient-to-r from-orange-50 to-green-50 dark:from-orange-950 dark:to-green-950 border">
+            <div className="p-4 rounded-lg bg-gradient-to-r from-[#dbe9f4] to-[#cce3f0] dark:from-[#0b2238] dark:to-[#0d2b4f] border">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <TrendingUp className="w-4 h-4" />
+                <TrendingUp className="w-4 h-4 text-[#0b2238]" />
                 Most Active Category
               </div>
-              <div className="font-semibold">Food & Beverages</div>
+              <div className="font-semibold text-[#0b2238] dark:text-[#00a8cc]">Food & Beverages</div>
               <div className="text-sm text-muted-foreground">847 switches this week</div>
             </div>
             
-            <div className="p-4 rounded-lg bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950 dark:to-blue-950 border">
+            <div className="p-4 rounded-lg bg-gradient-to-r from-[#cce3f0] to-[#dbf4e9] dark:from-[#0b2238] dark:to-[#0d2b4f] border">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <Package className="w-4 h-4" />
+                <Package className="w-4 h-4 text-[#0b2238]" />
                 Rising Brand
               </div>
-              <div className="font-semibold">Patanjali</div>
+              <div className="font-semibold text-[#0b2238] dark:text-[#00a8cc]">Patanjali</div>
               <div className="text-sm text-muted-foreground">+156% growth in switches</div>
             </div>
 
-            <div className="p-4 rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border">
+            <div className="p-4 rounded-lg bg-gradient-to-r from-[#dbf4e9] to-[#cce3f0] dark:from-[#0b2238] dark:to-[#0d2b4f] border">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <Users className="w-4 h-4" />
+                <Users className="w-4 h-4 text-[#0b2238]" />
                 Community Growth
               </div>
-              <div className="font-semibold">1,247 new members</div>
+              <div className="font-semibold text-[#0b2238] dark:text-[#00a8cc]">1,247 new members</div>
               <div className="text-sm text-muted-foreground">joined this week</div>
             </div>
           </div>

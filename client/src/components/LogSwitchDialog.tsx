@@ -194,7 +194,7 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600">
+        <Button className="w-full bg-[#0b2238] hover:bg-[#0d2b4f] text-white">
           Log Your Switch
         </Button>
       </DialogTrigger>
@@ -205,10 +205,10 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
         <div>
           <form onSubmit={handleSubmit} className="mt-4 grid gap-2">
             {/* Brand Switch */}
-            <div className="bg-gradient-to-r from-red-50 to-green-50 border-2 border-dashed border-gray-200 rounded-lg p-6">
+            <div className="bg-[#e6f0f5] border-2 border-dashed border-[#0b2238] rounded-lg p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                 <div className="text-center">
-                  <Label className="text-red-600 font-medium">
+                  <Label className="text-[#0b2238] font-medium">
                     Switching FROM
                   </Label>
                   <BrandSelectComboBox
@@ -218,17 +218,17 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
                       setFormData({ ...formData, fromBrand: value })
                     }
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-600 mt-1">
                     Foreign/Non-preferred brand
                   </p>
                 </div>
 
                 <div className="flex justify-center">
-                  <ArrowRight className="h-8 w-8 text-orange-500" />
+                  <ArrowRight className="h-8 w-8 text-[#0b2238]" />
                 </div>
 
                 <div className="text-center">
-                  <Label className="text-green-600 font-medium">
+                  <Label className="text-[#0b2238] font-medium">
                     Switching TO
                   </Label>
                   <BrandSelectComboBox
@@ -240,7 +240,7 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
                       setFormData({ ...formData, toBrand: value })
                     }
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-600 mt-1">
                     Indian/Preferred brand
                   </p>
                 </div>
@@ -257,7 +257,7 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
                 }
                 required
               >
-                <SelectTrigger className="mt-1">
+                <SelectTrigger className="mt-1 border-[#0b2238]">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -279,7 +279,7 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
                 onChange={(e) =>
                   setFormData({ ...formData, reason: e.target.value })
                 }
-                className="mt-1"
+                className="mt-1 border-[#0b2238]"
                 rows={4}
               />
             </div>
@@ -287,8 +287,8 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
             {/* Evidence Upload */}
             <div>
               <Label>Add Photo Evidence (Optional)</Label>
-              <div className="mt-1 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-400 transition-colors">
-                <Camera className="mx-auto h-8 w-8 text-gray-400" />
+              <div className="mt-1 border-2 border-dashed border-[#0b2238] rounded-lg p-6 text-center hover:border-[#0d2b4f] transition-colors">
+                <Camera className="mx-auto h-8 w-8 text-gray-600" />
                 <p className="text-sm text-gray-600 mt-2">
                   Upload a photo of your new product or purchase receipt
                 </p>
@@ -306,38 +306,18 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
               </div>
             </div>
 
-            {/* Reward Preview */}
-            {/* <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium text-orange-900">
-                      Reward Preview
-                    </h4>
-                    <p className="text-sm text-orange-700">
-                      Base: 25 XP{" "}
-                      {formData.isPublic && "+ 10 XP bonus for sharing"}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-orange-600">
-                      {formData.isPublic ? "35" : "25"} XP
-                    </p>
-                  </div>
-                </div>
-              </div> */}
-
             <div className="flex space-x-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setOpen(false)}
-                className="flex-1"
+                className="flex-1 border-[#0b2238] text-[#0b2238]"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                className="flex-1 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600"
+                className="flex-1 bg-[#0b2238] hover:bg-[#0d2b4f] text-white"
                 disabled={logSwitchMutation.isPending}
               >
                 {logSwitchMutation.isPending

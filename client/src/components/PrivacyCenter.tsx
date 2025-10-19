@@ -172,13 +172,15 @@ export function PrivacyCenter() {
             </ul>
 
             <Button
-              onClick={handleExportData}
-              disabled={loading}
-              className="w-full"
-            >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Export Data
-            </Button>
+  onClick={handleExportData}
+  disabled={loading}
+  className="w-full"
+  style={{ backgroundColor: "#0b2238", color: "#fff" }}
+>
+  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+  Export Data
+</Button>
+
           </CardContent>
         </Card>
 

@@ -211,9 +211,9 @@ export default function Home() {
                   </p>
                   <div className="space-y-2">
                     <button
-                      className="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
-                      onClick={() => (window.location.href = "/signup")}
-                    >
+  className="w-full bg-[#0b2238] hover:bg-[#0b2238]/90 text-white px-4 py-2 rounded-lg text-sm font-medium"
+  onClick={() => (window.location.href = "/signup")}
+>
                       Create Account
                     </button>
                     <button
@@ -222,18 +222,12 @@ export default function Home() {
                     >
                       Join Anonymously
                     </button>
-                    <button
+                    {/*<button
                       className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
                       onClick={() => setShowSecretLogin(true)}
                     >
                       Login with Secret
-                    </button>
-                    {/* <button
-                      className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
-                      onClick={() => setShowAnonymousRegistration(true)}
-                    >
-                      Join Anonymously
-                    </button> */}
+                    </button>*/}
                   </div>
                 </div>
               </div>
@@ -244,7 +238,7 @@ export default function Home() {
           {/* Main Content */}
           <div className="lg:col-span-6">
             {/* Welcome Banner */}
-            <div className="bg-gradient-to-r from-orange-500 to-green-600 rounded-xl p-6 mb-6 text-white">
+            <div className="rounded-xl p-6 mb-6 text-white" style={{ backgroundColor: '#0b2238' }}>
               {user ? (
                 <>
                   <h2 className="text-2xl font-bold mb-2">
@@ -271,21 +265,22 @@ export default function Home() {
             {/* Your next actions */}
             {user && (
               <section className="px-1 pt-4">
-                <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Your next actions
-                </h3>
-                <div className="grid gap-3">
-                  {/* Daily 60-sec Switch */}
-                  <CardAction
-                    kicker=""
-                    icon={<Target className="text-orange-600" />}
-                    title="Support Mission"
-                    desc="Be part of the movement — choose Indian first."
-                    cta="Do it now"
-                    badge="+50 pts"
-                  />
-                </div>
-              </section>
+  <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+    Your next actions
+  </h3>
+  <div className="grid gap-3">
+    {/* Daily 60-sec Switch */}
+    <CardAction
+      kicker=""
+      icon={<Target className="text-[#0b2238]" />}
+      title="Support Mission"
+      desc="Be part of the movement — choose Indian first."
+      cta="Do it now"
+      badge="+50 pts"
+    />
+  </div>
+</section>
+
             )}
 
             {/* Call to action for non-logged users */}
@@ -300,8 +295,9 @@ export default function Home() {
                       Choose Your Path
                     </div>
                     <div className="mb-2 flex items-center gap-2 text-base font-semibold">
-                      <Target className="text-orange-600" /> Join the Movement
-                    </div>
+  <Target className="text-[#0b2238]" /> Join the Movement
+</div>
+
                     <p className="text-sm text-slate-600 mb-3">
                       Create an account or try anonymously to start earning
                       points.
@@ -331,9 +327,10 @@ export default function Home() {
                 </h3>
                 {user && (
                   <Link to="/missions">
-                    <button className="text-sm font-medium text-orange-600">
-                      See all
-                    </button>
+                    <button className="text-sm font-medium text-[#0b2238]">
+  See all
+</button>
+
                   </Link>
                 )}
               </div>
@@ -462,9 +459,10 @@ export default function Home() {
                 </h3>
                 {user && (
                   <Link to="/news">
-                    <button className="text-sm font-medium text-orange-600">
-                      More
-                    </button>
+                    <button className="text-sm font-medium text-[#0b2238]">
+  More
+</button>
+
                   </Link>
                 )}
               </div>
@@ -575,9 +573,10 @@ function CardAction({
           </button>
         </Link>
         {badge ? (
-          <span className="rounded-full bg-orange-100 px-2 py-1 text-[11px] font-semibold text-orange-700">
-            {badge}
-          </span>
+          <span className="rounded-full px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: "rgb(0, 207, 255)", color: "#0b2238" }}>
+  {badge}
+</span>
+
         ) : null}
       </div>
     </div>
@@ -603,9 +602,10 @@ function CardProgress({
       <div className="mt-3">
         <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-orange-500 to-emerald-500"
-            style={{ width: `${pct}%` }}
-          />
+  className="h-full rounded-full bg-gradient-to-r"
+  style={{ width: `${pct}%`, background: "linear-gradient(to right, #0b2238, #0b5599)" }}
+/>
+
         </div>
         <div className="mt-2 flex items-center justify-between">
           <span className="text-xs text-slate-600">{pct}%</span>
@@ -635,7 +635,8 @@ function NewsCard({
           <NewsLogSwitchDialog newsId={article.id} />
         ) : (
           <button
-            className="rounded-full px-4 py-1.5 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white font-medium transition-all"
+            className="rounded-full px-4 py-1.5 bg-gradient-to-r from-[#0b2238] to-[#0b2238]/80 hover:from-[#0b2238]/90 hover:to-[#0b2238] text-white font-medium transition-all"
+
             onClick={() => {
               // Show login prompt
               window.location.href = "/login";
@@ -756,18 +757,19 @@ function MissionCard({
   return (
     <div className="min-w-[240px] rounded-2xl border p-4">
       <div className="text-xs text-slate-500">{mission.targetCategory}</div>
-      <div className="mt-1 text-base font-semibold">{mission.title}</div>
+      <div className="text-xl font-semibold text-[#0b2238] mb-2">{mission.title}</div>
       <div>
         {/* Drawer for full details */}
         <Drawer>
           <DrawerTrigger asChild>
             <div className="flex justify-end">
               <Button
-                variant="link"
-                className="p-0 h-auto text-orange-600 text-xs underline"
-              >
-                View more details
-              </Button>
+  variant="link"
+  className="p-0 h-auto text-[#0b2238] text-xs underline"
+>
+  View more details
+</Button>
+
             </div>
           </DrawerTrigger>
           <DrawerContent className="h-[75vh] max-h-[80vh] ">
@@ -875,7 +877,7 @@ function MissionCard({
               <div className="flex gap-2">
                 {!isLoggedIn ? (
                   <button
-                    className="flex-1 rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 font-medium transition-all px-4 py-2 text-sm text-white active:scale-[.99]"
+                    className="flex-1 rounded-full bg-gradient-to-r from-[#0b2238] to-[#0b2238]/80 hover:from-[#0b2238]/90 hover:to-[#0b2238] font-medium transition-all px-4 py-2 text-sm text-white active:scale-[.99]"
                     onClick={() => {
                       // Show login prompt
                       window.location.href = "/login";
@@ -886,16 +888,17 @@ function MissionCard({
                   </button>
                 ) : !userMission ? (
                   <button
-                    className="flex-1 rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 font-medium transition-all px-4 py-2 text-sm text-white active:scale-[.99]"
-                    onClick={() => onParticipate(mission.id)}
-                  >
-                    <Target className="w-4 h-4 mr-2" />
-                    Join Mission
-                  </button>
+  className="flex-1 rounded-full bg-gradient-to-r from-[#0b2238] to-[#0b2238]/80 hover:from-[#0b2238]/90 hover:to-[#0b2238]/70 font-medium transition-all px-4 py-2 text-sm text-white active:scale-[.99] flex items-center justify-center"
+  onClick={() => onParticipate(mission.id)}
+>
+  <Target className="w-4 h-4 mr-2" />
+  Join Mission
+</button>
+
                 ) : userMission.status === "STARTED" ? (
                   <LogSwitchDialog missionId={mission.id} />
                 ) : (
-                  <Button className="bg-gradient-to-r w-full from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600">
+                  <Button className="bg-gradient-to-r w-full from-[#0b2238] to-[#0b2238]/80 hover:from-[#0b2238]/90 hover:to-[#0b2238] text-white">
                     {userMission.status === "COMPLETED"
                       ? "Mission Completed!"
                       : "Pending verification..."}
@@ -909,7 +912,7 @@ function MissionCard({
       <div className="mt-3 flex items-center justify-between">
         {!isLoggedIn ? (
           <button
-            className="rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 font-medium transition-all px-4 py-2 text-sm text-white active:scale-[.99]"
+            className="rounded-full bg-gradient-to-r from-[#0b2238] to-[#0b2238]/80 hover:from-[#0b2238]/90 hover:to-[#0b2238] font-medium transition-all px-4 py-2 text-sm text-white active:scale-[.99]"
             onClick={() => {
               // Show login prompt
               window.location.href = "/login";
@@ -919,24 +922,25 @@ function MissionCard({
           </button>
         ) : !userMission ? (
           <button
-            className="rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 font-medium transition-all px-4 py-2 text-sm text-white active:scale-[.99]"
-            onClick={() => onParticipate(mission.id)}
-          >
-            Join Mission
-          </button>
+  className="rounded-full bg-gradient-to-r from-[#0b2238] to-[#0b2238]/80 hover:from-[#0b2238]/90 hover:to-[#0b2238]/70 font-medium transition-all px-4 py-2 text-sm text-white active:scale-[.99]"
+  onClick={() => onParticipate(mission.id)}
+>
+  Join Mission
+</button>
+
         ) : userMission.status === "STARTED" ? (
           <div>
             <LogSwitchDialog missionId={mission.id} />
           </div>
         ) : (
-          <button className="rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 font-medium transition-all px-4 py-2 text-sm text-white active:scale-[.99]">
+          <button   className="rounded-full bg-gradient-to-r from-[#0b2238] to-[#0b2238]/80 hover:from-[#0b2238]/90 hover:to-[#0b2238] font-medium transition-all px-4 py-2 text-sm text-white active:scale-[.99]">
             {userMission.status === "COMPLETED"
               ? "Mission Completed!"
               : "Pending verification..."}
           </button>
         )}
 
-        <span className="rounded-full bg-orange-100 px-2 py-1 text-[11px] font-semibold text-orange-700">
+        <span className="rounded-full px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: 'rgb(0, 207, 255)', color: '#0b2238' }}>
           +{mission.pointsReward} pts
         </span>
       </div>

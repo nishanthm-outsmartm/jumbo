@@ -9,18 +9,15 @@ import {
   Clock,
   User,
   ArrowLeft,
-  Share2,
-  Heart,
   MessageCircle,
-  Loader2,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Link, useRoute } from "wouter";
 import { NewsEngagement } from "@/components/NewsEngagement";
-import { ShareDialog } from "@/components/ShareDialog";
 
 interface NewsArticle {
   id: string;
+  slug: string;
   title: string;
   description: string;
   imageUrls: string[] | null;
@@ -75,7 +72,11 @@ export default function NewsDetails() {
       <div className="max-w-4xl mx-auto p-6">
         <div className="flex items-center gap-4 mb-8">
           <Link href="/news">
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-[#0b2238] text-[#0b2238]"
+            >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to News
             </Button>
@@ -105,7 +106,11 @@ export default function NewsDetails() {
       <div className="max-w-4xl mx-auto p-6">
         <div className="flex items-center gap-4 mb-8">
           <Link href="/news">
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-[#0b2238] text-[#0b2238]"
+            >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to News
             </Button>
@@ -113,14 +118,16 @@ export default function NewsDetails() {
         </div>
         <Card>
           <CardContent className="p-8 text-center">
-            <h3 className="text-lg font-semibold mb-2 text-red-600">
+            <h3 className="text-lg font-semibold mb-2 text-[#0b2238]">
               Article Not Found
             </h3>
             <p className="text-gray-500 mb-4">
               The news article you're looking for doesn't exist or has been removed.
             </p>
             <Link href="/news">
-              <Button>Back to News</Button>
+              <Button className="bg-[#0b2238] hover:bg-[#112e4d] text-white">
+                Back to News
+              </Button>
             </Link>
           </CardContent>
         </Card>
@@ -133,7 +140,11 @@ export default function NewsDetails() {
       {/* Navigation */}
       <div className="flex items-center gap-4 mb-8">
         <Link href="/news">
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-[#0b2238] text-[#0b2238]"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to News
           </Button>
@@ -145,24 +156,24 @@ export default function NewsDetails() {
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">
+              <h1 className="text-3xl md:text-4xl font-bold mb-4 text-[#0b2238]">
                 {article.title}
               </h1>
 
               <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
                 <div className="flex items-center gap-1">
-                  <User className="w-4 h-4" />
+                  <User className="w-4 h-4 text-[#0b2238]" />
                   <span>Jumbo</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
+                  <Clock className="w-4 h-4 text-[#0b2238]" />
                   <span>
                     {formatDistanceToNow(new Date(article.publishedAt))} ago
                   </span>
                 </div>
                 {article.commentsEnabled && (
                   <div className="flex items-center gap-1">
-                    <MessageCircle className="w-4 h-4" />
+                    <MessageCircle className="w-4 h-4 text-[#0b2238]" />
                     <span>Comments enabled</span>
                   </div>
                 )}
@@ -197,19 +208,19 @@ export default function NewsDetails() {
           {/* Brand Switching Information */}
           {((article.fromBrands && article.fromBrands.length > 0) ||
             (article.toBrands && article.toBrands.length > 0)) && (
-            <div className="bg-gradient-to-r from-red-50 to-green-50 border border-gray-200 rounded-lg p-4 mb-6">
+            <div className="bg-gradient-to-r from-[#e6eef5] to-[#d0dee9] border border-gray-200 rounded-lg p-4 mb-6">
               <div className="flex items-center justify-between text-sm">
                 {article.fromBrands && article.fromBrands.length > 0 && (
                   <div className="flex flex-col items-center min-w-[100px]">
-                    <span className="text-red-600 font-medium mb-2">
+                    <span className="text-[#0b2238] font-medium mb-2">
                       Switch From:
                     </span>
                     <div className="flex flex-wrap gap-1">
                       {article.fromBrands.map((brand: Brand) => (
                         <Badge
                           key={brand.id}
-                          variant="destructive"
-                          className="text-xs"
+                          variant="outline"
+                          className="text-xs border-[#0b2238] text-[#0b2238]"
                         >
                           {brand.name}
                         </Badge>
@@ -227,7 +238,7 @@ export default function NewsDetails() {
 
                 {article.toBrands && article.toBrands.length > 0 && (
                   <div className="flex flex-col items-center">
-                    <span className="text-green-600 font-medium mb-2 min-w-[100px]">
+                    <span className="text-[#0b2238] font-medium mb-2 min-w-[100px]">
                       Switch To:
                     </span>
                     <div className="flex flex-1 flex-wrap gap-2">
@@ -235,7 +246,7 @@ export default function NewsDetails() {
                         <Badge
                           key={brand.id}
                           variant="default"
-                          className="text-xs bg-green-600"
+                          className="text-xs bg-[#0b2238] text-white"
                         >
                           {brand.name} {brand.isIndian ? "🇮🇳" : ""}
                         </Badge>
@@ -254,7 +265,7 @@ export default function NewsDetails() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Button>
+                <Button className="bg-[#0b2238] hover:bg-[#112e4d] text-white">
                   <ExternalLink className="w-4 h-4 mr-2" />
                   View on Source
                 </Button>
@@ -282,7 +293,7 @@ export default function NewsDetails() {
                 <Link href="/login">
                   <Button
                     size="sm"
-                    className="bg-orange-500 hover:bg-orange-600"
+                    className="bg-[#0b2238] hover:bg-[#112e4d] text-white"
                   >
                     Login
                   </Button>

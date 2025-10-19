@@ -10,10 +10,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea"; // Added for message field
+import { Textarea } from "@/components/ui/textarea";
 import { MessageSquare } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "@/hooks/use-toast"; // Assuming shadcn/ui toast for feedback; adjust if using different notification system
+import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { Label } from "../ui/label";
 import {
@@ -27,7 +27,6 @@ import {
 interface FeedbackSwitchDialogProps {
   open: boolean;
   onClose: () => void;
-  // Added to pass userId for feedback submission
 }
 
 interface FeedbackData {
@@ -39,7 +38,6 @@ interface FeedbackData {
   userId: string;
 }
 
-// API function to submit feedback
 const submitFeedback = async (data: FeedbackData) => {
   const response = await fetch("/api/feedbacks", {
     method: "POST",
@@ -81,7 +79,7 @@ export default function FeedbackSwitchDialog({
   const mutation = useMutation({
     mutationFn: submitFeedback,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["feedbacks"] }); // Refresh feedback list if used elsewhere
+      queryClient.invalidateQueries({ queryKey: ["feedbacks"] });
       toast({
         title: "Success",
         description: "Feedback submitted successfully!",
@@ -111,10 +109,9 @@ export default function FeedbackSwitchDialog({
       });
       return;
     }
-    
+
     const userId = user.id;
-    
-    // Validate required fields
+
     if (!from.trim()) {
       toast({
         title: "Error",
@@ -123,25 +120,26 @@ export default function FeedbackSwitchDialog({
       });
       return;
     }
-    
+
     if (!to.trim()) {
       toast({
-        title: "Error", 
+        title: "Error",
         description: "Please enter the brand you want to switch to.",
         variant: "destructive",
       });
       return;
     }
-    
+
     if (!message.trim()) {
       toast({
         title: "Error",
-        description: "Please provide your feedback message explaining why this switch is beneficial.",
+        description:
+          "Please provide your feedback message explaining why this switch is beneficial.",
         variant: "destructive",
       });
       return;
     }
-    
+
     if (!category) {
       toast({
         title: "Error",
@@ -150,7 +148,7 @@ export default function FeedbackSwitchDialog({
       });
       return;
     }
-    
+
     mutation.mutate({
       fromBrands: from.trim(),
       toBrands: to.trim(),
@@ -167,20 +165,20 @@ export default function FeedbackSwitchDialog({
         <DialogHeader className="p-4">
           <DialogTitle>
             <div className="mb-2 flex items-center justify-between">
-              <h4 className="flex items-center gap-2 text-base font-semibold">
-                <MessageSquare className="text-emerald-600" /> Help the
-                community decide
+              <h4 className="flex items-center gap-2 text-base font-semibold text-[#0b2238]">
+                <MessageSquare className="text-[#0b2238]" /> Help the community decide
               </h4>
-              <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-semibold text-orange-700">
+              <span className="rounded-full bg-[#0b2238]/10 px-2 py-0.5 text-[11px] font-semibold text-[#0b2238]">
                 1 min
               </span>
             </div>
           </DialogTitle>
           <p className="text-sm text-slate-600">
-            Suggest products we should **switch from** and **switch to**. Your
-            tips become missions.
+            Suggest products we should <strong>switch from</strong> and{" "}
+            <strong>switch to</strong>. Your tips become missions.
           </p>
         </DialogHeader>
+
         <div className="space-y-4">
           <Input
             placeholder="Switch From (Brand Name)"
@@ -199,7 +197,7 @@ export default function FeedbackSwitchDialog({
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />
-          {/* Category */}
+
           <div>
             <Label>Product Category</Label>
             <Select
@@ -207,7 +205,7 @@ export default function FeedbackSwitchDialog({
               onValueChange={(value) => setCategory(value)}
               required
             >
-              <SelectTrigger className="mt-1">
+              <SelectTrigger className="mt-1 border-[#0b2238]">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
@@ -219,6 +217,7 @@ export default function FeedbackSwitchDialog({
               </SelectContent>
             </Select>
           </div>
+
           <Textarea
             placeholder="Your feedback message"
             value={message}
@@ -226,11 +225,20 @@ export default function FeedbackSwitchDialog({
             required
           />
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+
+        <DialogFooter className="space-x-2">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="border-[#0b2238] text-[#0b2238] hover:bg-[#091b2c]/5"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={mutation.isPending}>
+          <Button
+            onClick={handleSubmit}
+            disabled={mutation.isPending}
+            className="bg-[#0b2238] hover:bg-[#091b2c] text-white"
+          >
             {mutation.isPending ? "Submitting..." : "Submit"}
           </Button>
         </DialogFooter>

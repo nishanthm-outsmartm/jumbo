@@ -73,9 +73,10 @@ export function TrendingContent() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center text-gray-900">
-            <TrendingUp className="text-orange-500 mr-2 h-5 w-5" />
-            Trending Alternatives
-          </CardTitle>
+            <TrendingUp className="mr-2 h-5 w-5" style={{ color: "#0b2238" }} />
+Trending Alternatives
+</CardTitle>
+
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

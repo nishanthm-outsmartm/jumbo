@@ -271,17 +271,21 @@ export function BackupCodesDialog({ children }: BackupCodesDialogProps) {
                 </Alert>
 
                 <div className="space-y-4">
-                  <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                    <h3 className="font-semibold text-orange-900 mb-2">
-                      What are backup codes?
-                    </h3>
-                    <ul className="text-sm text-orange-800 space-y-1">
-                      <li>• 8 unique codes to recover your account</li>
-                      <li>• Each code can only be used once</li>
-                      <li>• Store them in a secure location</li>
-                      <li>• Use them if you lose access to your device</li>
-                    </ul>
-                  </div>
+                  <div
+  className="p-4 rounded-lg"
+  style={{ backgroundColor: "#0b2238", border: "1px solid #0b2238" }}
+>
+  <h3 className="font-semibold mb-2" style={{ color: "#0b2238" }}>
+    What are backup codes?
+  </h3>
+  <ul className="text-sm space-y-1" style={{ color: "#0b2238" }}>
+    <li>• 8 unique codes to recover your account</li>
+    <li>• Each code can only be used once</li>
+    <li>• Store them in a secure location</li>
+    <li>• Use them if you lose access to your device</li>
+  </ul>
+</div>
+
 
                   {error && (
                     <Alert variant="destructive">

@@ -233,55 +233,51 @@ export default function LogSwitch() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Brand Switch Visual */}
-              <div className="bg-gradient-to-r from-red-50 to-green-50 border-2 border-dashed border-gray-200 rounded-lg p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                  {/* From Brand */}
-                  <div className="text-center">
-                    <Label>
-                      Switching FROM <span className="text-red-500">*</span>
-                    </Label>
-                    <BrandSelectComboBox
-                      value={formData.fromBrand}
-                      brands={brands.filter((brand) => !brand.isIndian)}
-                      onValueChange={(value: string) =>
-                        setFormData({ ...formData, fromBrand: value })
-                      }
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Foreign/Non-preferred brand
-                    </p>
-                  </div>
+              <div className="bg-gradient-to-r from-[#0b2238]/10 to-[#0b2238]/20 border-2 border-dashed border-[#0b2238]/30 rounded-lg p-6">
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+    {/* From Brand */}
+    <div className="text-center">
+      <Label>
+        Switching FROM <span className="text-red-500">*</span>
+      </Label>
+      <BrandSelectComboBox
+        value={formData.fromBrand}
+        brands={brands.filter((brand) => !brand.isIndian)}
+        onValueChange={(value: string) =>
+          setFormData({ ...formData, fromBrand: value })
+        }
+      />
+      <p className="text-xs text-gray-500 mt-1">Foreign/Non-preferred brand</p>
+    </div>
 
-                  {/* Arrow */}
-                  <div className="flex justify-center">
-                    <ArrowRight className="h-8 w-8 text-orange-500" />
-                  </div>
+    {/* Arrow */}
+    <div className="flex justify-center">
+      <ArrowRight className="h-8 w-8 text-[#0b2238]" />
+    </div>
 
-                  {/* To Brand */}
-                  <div className="text-center">
-                    <Label>
-                      Switching TO <span className="text-red-500">*</span>
-                    </Label>
-                    <BrandSelectComboBox
-                      value={formData.toBrand}
-                      brands={brands.filter(
-                        (brand) =>
-                          (brand.isIndian || brand.isFavorable) &&
-                          (!formData.fromBrand ||
-                            brand.category ===
-                              brands.find((b) => b.id === formData.fromBrand)
-                                ?.category)
-                      )}
-                      onValueChange={(value: string) =>
-                        setFormData({ ...formData, toBrand: value })
-                      }
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Indian/Preferred brand
-                    </p>
-                  </div>
-                </div>
-              </div>
+    {/* To Brand */}
+    <div className="text-center">
+      <Label>
+        Switching TO <span className="text-red-500">*</span>
+      </Label>
+      <BrandSelectComboBox
+        value={formData.toBrand}
+        brands={brands.filter(
+          (brand) =>
+            (brand.isIndian || brand.isFavorable) &&
+            (!formData.fromBrand ||
+              brand.category ===
+                brands.find((b) => b.id === formData.fromBrand)?.category)
+        )}
+        onValueChange={(value: string) =>
+          setFormData({ ...formData, toBrand: value })
+        }
+      />
+      <p className="text-xs text-gray-500 mt-1">Indian/Preferred brand</p>
+    </div>
+  </div>
+</div>
+
 
               {/* Category */}
               <div>
@@ -342,7 +338,7 @@ export default function LogSwitch() {
               {/* Evidence Upload */}
               <div>
                 <Label>Add Photo Evidence (Optional)</Label>
-                <div className="mt-1 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-400 transition-colors">
+                  <div className="mt-1 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#0b2238] transition-colors">
                   <Camera className="mx-auto h-8 w-8 text-gray-400" />
                   <p className="text-sm text-gray-600 mt-2">
                     Upload a photo of your new product or receipt
@@ -364,46 +360,41 @@ export default function LogSwitch() {
                 </div>
               </div>
 
-              {/* Points Preview */}
-              <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium text-orange-900">
-                      Reward Preview
-                    </h4>
-                    <p className="text-sm text-orange-700">
-                      Base: 25 XP{" "}
-                      {formData.isPublic && "+ 10 XP bonus for sharing"}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-orange-600">
-                      {formData.isPublic ? "35" : "25"} XP
-                    </p>
-                  </div>
-                </div>
-              </div>
+{/* Reward Preview */}
+<div className="bg-[#0b2238]/10 border border-[#0b2238]/30 rounded-lg p-4">
+  <div className="flex items-center justify-between">
+    <div>
+      <h4 className="font-medium text-[#0b2238]">Reward Preview</h4>
+      <p className="text-sm text-[#0b2238]/80">
+        Base: 25 XP {formData.isPublic && "+ 10 XP bonus for sharing"}
+      </p>
+    </div>
+    <div className="text-right">
+      <p className="text-2xl font-bold text-[#0b2238]">
+        {formData.isPublic ? "35" : "25"} XP
+      </p>
+    </div>
+  </div>
+</div>
 
-              {/* Buttons */}
-              <div className="flex space-x-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate("/")}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  className="flex-1 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600"
-                  disabled={logSwitchMutation.isPending}
-                >
-                  {logSwitchMutation.isPending
-                    ? "Logging Switch..."
-                    : "Log My Switch"}
-                </Button>
-              </div>
+{/* Buttons */}
+<div className="flex space-x-4">
+  <Button
+    type="button"
+    variant="outline"
+    onClick={() => navigate("/")}
+    className="flex-1 border-[#0b2238] text-[#0b2238] hover:bg-[#091b2c]/5"
+  >
+    Cancel
+  </Button>
+  <Button
+    type="submit"
+    className="flex-1 bg-[#0b2238] hover:bg-[#091b2c] text-white"
+    disabled={logSwitchMutation.isPending}
+  >
+    {logSwitchMutation.isPending ? "Logging Switch..." : "Log My Switch"}
+  </Button>
+</div>
             </form>
           </CardContent>
         </Card>

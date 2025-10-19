@@ -99,49 +99,49 @@ export function InteractivePostCard({ post, onAction }: InteractivePostCardProps
   });
 
   const getPostTypeInfo = (type: string) => {
-    switch (type) {
-      case "SWITCH_LOG_PROMPT":
-        return {
-          icon: <Target className="h-4 w-4" />,
-          color: "text-orange-600",
-          bgColor: "bg-orange-50 dark:bg-orange-950",
-          borderColor: "border-orange-200 dark:border-orange-800",
-          label: "Switch Challenge"
-        };
-      case "MISSION_PROMPT":
-        return {
-          icon: <Zap className="h-4 w-4" />,
-          color: "text-blue-600",
-          bgColor: "bg-blue-50 dark:bg-blue-950",
-          borderColor: "border-blue-200 dark:border-blue-800",
-          label: "Mission"
-        };
-      case "ANNOUNCEMENT":
-        return {
-          icon: <MessageSquare className="h-4 w-4" />,
-          color: "text-purple-600",
-          bgColor: "bg-purple-50 dark:bg-purple-950",
-          borderColor: "border-purple-200 dark:border-purple-800",
-          label: "Announcement"
-        };
-      case "POLL":
-        return {
-          icon: <CheckCircle className="h-4 w-4" />,
-          color: "text-green-600",
-          bgColor: "bg-green-50 dark:bg-green-950",
-          borderColor: "border-green-200 dark:border-green-800",
-          label: "Poll"
-        };
-      default:
-        return {
-          icon: <MessageSquare className="h-4 w-4" />,
-          color: "text-gray-600",
-          bgColor: "bg-gray-50 dark:bg-gray-950",
-          borderColor: "border-gray-200 dark:border-gray-800",
-          label: "Post"
-        };
-    }
-  };
+  switch (type) {
+    case "SWITCH_LOG_PROMPT":
+      return {
+        icon: <Target className="h-4 w-4" />,
+        color: "text-[#0b2238]",
+        bgColor: "bg-[#0b2238]/10",
+        borderColor: "border-[#0b2238]/20",
+        label: "Switch Challenge"
+      };
+    case "MISSION_PROMPT":
+      return {
+        icon: <Zap className="h-4 w-4" />,
+        color: "text-[#0b2238]",
+        bgColor: "bg-[#0b2238]/10",
+        borderColor: "border-[#0b2238]/20",
+        label: "Mission"
+      };
+    case "ANNOUNCEMENT":
+      return {
+        icon: <MessageSquare className="h-4 w-4" />,
+        color: "text-[#0b2238]",
+        bgColor: "bg-[#0b2238]/10",
+        borderColor: "border-[#0b2238]/20",
+        label: "Announcement"
+      };
+    case "POLL":
+      return {
+        icon: <CheckCircle className="h-4 w-4" />,
+        color: "text-[#0b2238]",
+        bgColor: "bg-[#0b2238]/10",
+        borderColor: "border-[#0b2238]/20",
+        label: "Poll"
+      };
+    default:
+      return {
+        icon: <MessageSquare className="h-4 w-4" />,
+        color: "text-[#0b2238]",
+        bgColor: "bg-[#0b2238]/10",
+        borderColor: "border-[#0b2238]/20",
+        label: "Post"
+      };
+  }
+};
 
   const handlePrimaryAction = () => {
     switch (post.postType) {
@@ -210,12 +210,12 @@ export function InteractivePostCard({ post, onAction }: InteractivePostCardProps
             
             <div className="flex items-center gap-2">
               <Badge 
-                variant="outline" 
-                className={`${postTypeInfo.color} ${postTypeInfo.bgColor} ${postTypeInfo.borderColor}`}
-              >
-                {postTypeInfo.icon}
-                <span className="ml-1">{postTypeInfo.label}</span>
-              </Badge>
+  variant="outline" 
+  className={`${postTypeInfo.color} ${postTypeInfo.bgColor} ${postTypeInfo.borderColor} text-xs`}
+>
+  {postTypeInfo.icon}
+  <span className="ml-1">{postTypeInfo.label}</span>
+</Badge>
             </div>
           </div>
         </CardHeader>
@@ -320,17 +320,17 @@ export function InteractivePostCard({ post, onAction }: InteractivePostCardProps
 
             {!isExpired && (
               <Button 
-                onClick={handlePrimaryAction}
-                className={`${postTypeInfo.color} bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white`}
-              >
-                {postTypeInfo.icon}
-                <span className="ml-2">
-                  {post.actionButtonText || 
-                   (post.postType === "SWITCH_LOG_PROMPT" ? "Log Your Switch" :
-                    post.postType === "MISSION_PROMPT" ? "Start Mission" : "Learn More")}
-                </span>
-                {post.actionButtonUrl && <ExternalLink className="h-3 w-3 ml-1" />}
-              </Button>
+  onClick={handlePrimaryAction}
+  className={`${postTypeInfo.color} bg-gradient-to-r from-[#0b2238] to-[#0b2238]/80 hover:from-[#0b2238]/90 hover:to-[#0b2238] text-white`}
+>
+  {postTypeInfo.icon}
+  <span className="ml-2">
+    {post.actionButtonText || 
+     (post.postType === "SWITCH_LOG_PROMPT" ? "Log Your Switch" :
+      post.postType === "MISSION_PROMPT" ? "Start Mission" : "Learn More")}
+  </span>
+  {post.actionButtonUrl && <ExternalLink className="h-3 w-3 ml-1" />}
+</Button>
             )}
           </div>
         </CardContent>

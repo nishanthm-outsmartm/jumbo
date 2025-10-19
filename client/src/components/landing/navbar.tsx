@@ -4,7 +4,6 @@ import { Menu, X } from "lucide-react";
 import { QuickAnonymousJoin } from "@/components/auth/QuickAnonymousJoin";
 
 const navLinks = [
-  //   { name: "Home", href: "/" },
   { name: "How it Works", href: "#how" },
   { name: "Features", href: "#features" },
   { name: "Contact", href: "#contact" },
@@ -18,8 +17,8 @@ const Navbar = () => {
       <div className="max-w-6xl mx-auto sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16 px-5">
           {/* Logo */}
-          <Link href="/" className=" gap-2">
-            <span className="font-bold text-xl text-orange-600">JumboJolt</span>
+          <Link href="/" className="gap-2">
+            <span className="font-bold text-xl text-[#0b2238]">JumboJolt</span>
           </Link>
 
           {/* Desktop Nav */}
@@ -28,7 +27,7 @@ const Navbar = () => {
               <a
                 key={link.name}
                 href={link.href}
-                className="text-gray-700 hover:text-orange-600 font-medium transition"
+                className="text-gray-700 hover:text-[#0b2238] font-medium transition"
               >
                 {link.name}
               </a>
@@ -40,7 +39,7 @@ const Navbar = () => {
                 size="sm"
               />
               <Link href="/login">
-                <button className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition font-semibold">
+                <button className="px-4 py-2 bg-[#0b2238] text-white rounded hover:bg-[#091b2c] transition font-semibold">
                   Login / Sign Up
                 </button>
               </Link>
@@ -66,7 +65,7 @@ const Navbar = () => {
               <a
                 key={link.name}
                 href={link.href}
-                className="text-gray-700 py-2 px-2 rounded hover:bg-orange-50 font-medium"
+                className="text-gray-700 py-2 px-2 rounded hover:bg-[#0b2238]/10 font-medium"
                 onClick={() => setOpen(false)}
               >
                 {link.name}
@@ -84,7 +83,7 @@ const Navbar = () => {
               />
               <Link href="/login">
                 <button
-                  className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition font-semibold w-full"
+                  className="px-4 py-2 bg-[#0b2238] text-white rounded hover:bg-[#091b2c] transition font-semibold w-full"
                   onClick={() => setOpen(false)}
                 >
                   Login / Sign Up

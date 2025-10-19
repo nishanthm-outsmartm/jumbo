@@ -145,6 +145,7 @@ interface Post {
 interface News {
   id: string;
   title: string;
+  slug: string;
   description: string;
   imageUrls: string[];
   source: string;
@@ -715,12 +716,13 @@ export default function EnhancedModeratorPanel() {
 
             return (
               <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`flex flex-col items-center py-2 transition-colors ${
-                  isActive ? "text-orange-500" : "text-gray-400"
-                }`}
-              >
+  key={item.id}
+  onClick={() => setActiveTab(item.id)}
+  className={`flex flex-col items-center py-2 transition-colors ${
+    isActive ? "text-[#0b2238]" : "text-gray-400"
+  }`}
+>
+
                 <Icon className="h-5 w-5 mb-1" />
                 <span className="text-xs font-medium">{item.label}</span>
               </button>
@@ -808,7 +810,7 @@ export default function EnhancedModeratorPanel() {
 
                 <Card>
                   <CardContent className="flex items-center p-6">
-                    <TrendingUp className="h-8 w-8 text-orange-600" />
+                    <TrendingUp className="h-8 w-8 text-[#0b2238]" />
                     <div className="ml-4">
                       <p className="text-sm font-medium text-muted-foreground">
                         Platform Growth

@@ -27,6 +27,7 @@ interface Brand {
   isIndian: boolean;
   description?: string;
 }
+
 const BrandSelectComboBox = ({
   brands,
   value,
@@ -66,12 +67,12 @@ const BrandSelectComboBox = ({
               <CommandEmpty className="p-3 max-w-[300px] text-center">
                 No brand found. If you can't find it, you can use the{" "}
                 <span
-                  className="text-orange-500 cursor-pointer"
+                  className="text-[#0b2238] cursor-pointer"
                   onClick={() => setFeedbackOpen(true)}
                 >
                   {" "}
                   'Suggest Brand'
-                </span>
+                </span>{" "}
                 form.
               </CommandEmpty>
               <CommandGroup>

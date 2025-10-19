@@ -11,9 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocation } from "wouter";
-import { Zap, Mail, Chrome, Shield, AlertCircle } from "lucide-react";
+import { Chrome, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import ForgotPasswordForm from "@/components/auth/ForgetPasswordForm";
 import ResetPasswordForm from "@/components/auth/ResetPasswordForm";
@@ -36,8 +35,6 @@ export default function EnhancedLogin(mode: { mode?: "login" | "signup" }) {
     }
   }, [mode.mode]);
 
-
-  // Get token from URL parameters manually
   const getUrlParameter = (name: string) => {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get(name);
@@ -65,29 +62,16 @@ export default function EnhancedLogin(mode: { mode?: "login" | "signup" }) {
           password
         );
       } else {
-        userCredential = await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
       }
 
       const user = userCredential.user;
-
-      // Try to login or redirect to registration
       try {
         await login(user.uid);
         navigate("/");
       } catch (error) {
-        if (isSignUp) {
-          // If signing up and user not found in backend, redirect to register
-          navigate("/register");
-        } else {
-          // If signing in and user not found in backend, show error
-          setError(
-            "Account exists in Firebase but not registered. Please sign up first."
-          );
-        }
+        if (isSignUp) navigate("/register");
+        else setError("Account exists in Firebase but not registered. Please sign up first.");
       }
     } catch (error: any) {
       console.error("Email auth error:", error);
@@ -112,38 +96,26 @@ export default function EnhancedLogin(mode: { mode?: "login" | "signup" }) {
   const handleGoogleAuth = async () => {
     setLoading(true);
     setError("");
-
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-
-      // Try to login or redirect to registration
       try {
         await login(user.uid);
         navigate("/");
       } catch (error) {
-        // Only redirect to registration if this is a new user
-        setError(
-          "Account exists in Google but not registered. Please sign up first."
-        );
+        setError("Account exists in Google but not registered. Please sign up first.");
       }
     } catch (error: any) {
       console.error("Google auth error:", error);
-      if (error.code === "auth/popup-closed-by-user") {
-        setError("Sign-in cancelled");
-      } else {
-        setError(error.message || "Google authentication failed");
-      }
+      if (error.code === "auth/popup-closed-by-user") setError("Sign-in cancelled");
+      else setError(error.message || "Google authentication failed");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleForgotPasswordSuccess = () => {
-    setCurrentView("login");
-  };
-
+  const handleForgotPasswordSuccess = () => setCurrentView("login");
   const handleResetPasswordSuccess = () => {
     setCurrentView("login");
     setEmail("");
@@ -171,13 +143,10 @@ export default function EnhancedLogin(mode: { mode?: "login" | "signup" }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-green-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-[#0b2238]/10 via-white to-green-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          {/* <div className="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-green-600">
-            <Zap className="h-10 w-10 text-white" />
-          </div> */}
-          <h2 className=" text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="text-center text-3xl font-extrabold text-gray-900">
             {`Welcome ${!isSignUp ? "back " : ""}to JumboJolt`}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
@@ -187,10 +156,9 @@ export default function EnhancedLogin(mode: { mode?: "login" | "signup" }) {
           </p>
         </div>
 
-        <Card className="">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-center justify-center">
-              {/* <Shield className="h-5 w-5 text-orange-600" /> */}
               {isSignUp ? "Sign Up" : "Log In"}
             </CardTitle>
           </CardHeader>
@@ -205,29 +173,19 @@ export default function EnhancedLogin(mode: { mode?: "login" | "signup" }) {
               <Chrome className="h-5 w-5 mr-3" />
               {"Continue with Google"}
             </Button>
+
             <div className="flex items-center my-6">
               <div className="flex-grow border-t border-gray-300"></div>
               <span className="px-4 text-gray-500 text-sm font-medium">OR</span>
               <div className="flex-grow border-t border-gray-300"></div>
             </div>
+
             {error && (
               <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-
-            {/* <Tabs defaultValue="email" className="space-y-4">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="email">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Email
-                </TabsTrigger>
-                <TabsTrigger value="google">
-                  <Chrome className="h-4 w-4 mr-2" />
-                  Google
-                </TabsTrigger>
-              </TabsList> */}
 
             <div className="space-y-4">
               <form onSubmit={handleEmailAuth} className="space-y-4">
@@ -257,10 +215,8 @@ export default function EnhancedLogin(mode: { mode?: "login" | "signup" }) {
                   />
                 </div>
 
-                {/* forget password */}
-
-                <div className="text-sm text-blue-600 hover:text-gray-900 hover:underline pr-2 cursor-pointer text-right self-end">
-                  {!isSignUp && (
+                {!isSignUp && (
+                  <div className="text-sm text-[#0b2238] hover:text-gray-900 hover:underline pr-2 cursor-pointer text-right self-end">
                     <Button
                       variant="link"
                       className="px-0 font-normal text-sm"
@@ -268,11 +224,12 @@ export default function EnhancedLogin(mode: { mode?: "login" | "signup" }) {
                     >
                       Forgot your password?
                     </Button>
-                  )}
-                </div>
+                  </div>
+                )}
+
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-orange-500 to-green-600 hover:from-orange-600 hover:to-green-700 "
+                  className="w-full bg-gradient-to-r from-[#0b2238] to-green-600 hover:from-[#091b2c] hover:to-green-700"
                   disabled={loading}
                 >
                   {loading
@@ -297,23 +254,6 @@ export default function EnhancedLogin(mode: { mode?: "login" | "signup" }) {
                 </Button>
               </form>
             </div>
-
-            {/* <TabsContent value="google" className="space-y-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-12 text-lg"
-                  onClick={handleGoogleAuth}
-                  disabled={loading}
-                >
-                  <Chrome className="h-5 w-5 mr-3" />
-                  {loading ? "Signing in..." : "Continue with Google"}
-                </Button>
-                <p className="text-xs text-gray-500 text-center">
-                  Quick and secure sign-in with your Google account
-                </p>
-              </TabsContent> */}
-            {/* </Tabs> */}
           </CardContent>
         </Card>
       </div>

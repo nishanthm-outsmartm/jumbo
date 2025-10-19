@@ -71,11 +71,7 @@ export function SwitchPost({ post }: SwitchPostProps) {
 
   const userHandle = post.user.handle || "Anonymous";
   const userInitials = userHandle.substring(0, 2).toUpperCase();
-  const gradientClass = `bg-gradient-to-r from-${
-    ["blue", "green", "purple", "pink", "indigo"][userHandle.charCodeAt(0) % 5]
-  }-500 to-${
-    ["purple", "blue", "pink", "indigo", "green"][userHandle.charCodeAt(1) % 5]
-  }-500`;
+  const gradientClass = `bg-gradient-to-r from-[#0b2238] to-[#0b2238]`; // unified gradient color
 
   return (
     <Card className="bg-white shadow-sm overflow-hidden">
@@ -99,7 +95,7 @@ export function SwitchPost({ post }: SwitchPostProps) {
             {post.user.level >= 5 && (
               <Badge
                 variant="secondary"
-                className="bg-yellow-100 text-yellow-800"
+                className="bg-[#0b2238] text-white"
               >
                 <i className="fas fa-star mr-1" />
                 Top Switcher
@@ -113,10 +109,10 @@ export function SwitchPost({ post }: SwitchPostProps) {
 
           {/* Switch Details */}
           {post.fromBrand && post.toBrand && (
-            <div className="bg-gradient-to-r from-red-50 to-green-50 border border-gray-200 rounded-lg p-4 mb-4">
+            <div className="bg-[#f0f4f8] border border-gray-200 rounded-lg p-4 mb-4">
               <div className="flex items-center justify-between">
                 <div className="text-center">
-                  <div className="text-red-500 mb-2">
+                  <div className="text-red-600 mb-2">
                     <i className="fas fa-arrow-left text-xl" />
                   </div>
                   <p className="text-sm font-medium text-gray-700">From</p>
@@ -128,7 +124,7 @@ export function SwitchPost({ post }: SwitchPostProps) {
                   </p>
                 </div>
                 <div className="flex-1 flex justify-center">
-                  <ArrowRight className="text-2xl text-orange-500" />
+                  <ArrowRight className="text-2xl text-[#0b2238]" />
                 </div>
                 <div className="text-center">
                   <div className="text-green-600 mb-2">
@@ -160,8 +156,8 @@ export function SwitchPost({ post }: SwitchPostProps) {
               size="sm"
               onClick={handleLike}
               className={`flex items-center space-x-2 ${
-                liked ? "text-orange-500" : "text-gray-500"
-              } hover:text-orange-500 transition-colors`}
+                liked ? "text-[#0b2238]" : "text-gray-500"
+              } hover:text-[#0b2238] transition-colors`}
             >
               <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
               <span className="text-sm font-medium">
@@ -172,7 +168,7 @@ export function SwitchPost({ post }: SwitchPostProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors"
+              className="flex items-center space-x-2 text-gray-500 hover:text-[#0b2238] transition-colors"
             >
               <MessageCircle className="h-4 w-4" />
               <span className="text-sm font-medium">
@@ -183,7 +179,7 @@ export function SwitchPost({ post }: SwitchPostProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="flex items-center space-x-2 text-gray-500 hover:text-green-600 transition-colors"
+              className="flex items-center space-x-2 text-gray-500 hover:text-[#0b2238] transition-colors"
             >
               <Share2 className="h-4 w-4" />
               <span className="text-sm font-medium">
@@ -198,7 +194,7 @@ export function SwitchPost({ post }: SwitchPostProps) {
             </span>
             <Badge
               variant="outline"
-              className="bg-yellow-50 text-yellow-800 border-yellow-200"
+              className="bg-[#0b2238] text-white border-[#0b2238]"
             >
               <Coins className="h-3 w-3 mr-1" />
               Rewarded
@@ -209,3 +205,5 @@ export function SwitchPost({ post }: SwitchPostProps) {
     </Card>
   );
 }
+
+export default SwitchPost;

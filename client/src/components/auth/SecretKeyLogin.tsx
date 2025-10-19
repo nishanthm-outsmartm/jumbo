@@ -112,16 +112,22 @@ export function SecretKeyLogin({ onSuccess, onCancel }: SecretKeyLoginProps) {
           </Alert>
 
           <div className="flex gap-2">
-            <Button type="submit" disabled={isSubmitting} className="flex-1">
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Logging in...
-                </>
-              ) : (
-                "Login"
-              )}
-            </Button>
+            <Button
+  type="submit"
+  disabled={isSubmitting}
+  className="flex-1"
+  style={{ backgroundColor: "#0b2238", color: "#fff" }}
+>
+  {isSubmitting ? (
+    <>
+      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+      Logging in...
+    </>
+  ) : (
+    "Login"
+  )}
+</Button>
+
             <Button
               type="button"
               variant="outline"

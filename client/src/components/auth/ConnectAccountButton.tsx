@@ -27,14 +27,16 @@ export function ConnectAccountButton({
   return (
     <AccountMigrationDialog>
       <Button
-        variant={variant}
-        size={size}
-        className={`flex items-center gap-2 ${className}`}
-      >
-        {showIcon && <UserPlus className="h-4 w-4" />}
-        <Shield className="h-4 w-4" />
-        Connect Account
-      </Button>
+  variant={variant}
+  size={size}
+  className={`flex items-center gap-2 ${className}`}
+  style={{ backgroundColor: "#0b2238", color: "#fff" }}
+>
+  {showIcon && <UserPlus className="h-4 w-4" />}
+  <Shield className="h-4 w-4" />
+  Connect Account
+</Button>
+
     </AccountMigrationDialog>
   );
 }

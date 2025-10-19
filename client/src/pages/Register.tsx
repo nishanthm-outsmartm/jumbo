@@ -238,25 +238,25 @@ export default function Register() {
                 </p>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-blue-900 mb-2">
-                  Privacy First
-                </h4>
-                <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• Your handle keeps you anonymous</li>
-                  <li>• Phone/email stays completely private</li>
-                  <li>• Only you control what to share publicly</li>
-                  <li>• You can switch products silently or publicly</li>
-                </ul>
-              </div>
+              <div className="bg-[#0b2238]/10 border border-[#0b2238]/20 rounded-lg p-4">
+  <h4 className="font-medium text-[#0b2238] mb-2">Privacy First</h4>
+  <ul className="text-sm text-[#0b2238]/80 space-y-1">
+    <li>• Your handle keeps you anonymous</li>
+    <li>• Phone/email stays completely private</li>
+    <li>• Only you control what to share publicly</li>
+    <li>• You can switch products silently or publicly</li>
+  </ul>
+</div>
+
 
               <Button
-                type="submit"
-                className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600"
-                disabled={loading}
-              >
-                {loading ? "Creating Account..." : "Join JumboJolt"}
-              </Button>
+  type="submit"
+  className="w-full bg-gradient-to-r from-[#0b2238] to-[#0b2238] hover:from-[#091b2c] hover:to-[#091b2c] text-white"
+  disabled={loading}
+>
+  {loading ? "Creating Account..." : "Join JumboJolt"}
+</Button>
+
             </form>
           </CardContent>
         </Card>

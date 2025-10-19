@@ -32,7 +32,7 @@ export default function AdminPanel() {
   }
 
   // Suggestions query
-  const { data: suggestionsData, isLoading: suggestionsLoading } = useQuery({
+  const { data: suggestionsData, isLoading: suggestionsLoading } = useQuery<any>({
     queryKey: ["/api/admin/suggestions"],
   });
 
@@ -122,14 +122,15 @@ export default function AdminPanel() {
           </Card>
 
           <Card>
-            <CardContent className="p-6 text-center">
-              <Clock className="h-8 w-8 text-orange-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-orange-500">
-                {suggestions.filter((s: any) => s.status === "PENDING").length}
-              </p>
-              <p className="text-sm text-gray-600">Pending Reviews</p>
-            </CardContent>
-          </Card>
+  <CardContent className="p-6 text-center">
+    <Clock className="h-8 w-8 text-[#0b2238] mx-auto mb-2" />
+    <p className="text-2xl font-bold text-[#0b2238]">
+      {suggestions.filter((s: any) => s.status === "PENDING").length}
+    </p>
+    <p className="text-sm text-gray-600">Pending Reviews</p>
+  </CardContent>
+</Card>
+
 
           <Card>
             <CardContent className="p-6 text-center">
@@ -158,9 +159,10 @@ export default function AdminPanel() {
               <CardContent>
                 {suggestionsLoading ? (
                   <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
-                    <p className="text-gray-500 mt-2">Loading suggestions...</p>
-                  </div>
+  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0b2238] mx-auto"></div>
+  <p className="text-gray-500 mt-2">Loading suggestions...</p>
+</div>
+
                 ) : suggestions.length === 0 ? (
                   <div className="text-center py-8">
                     <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />

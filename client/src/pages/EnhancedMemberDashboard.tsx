@@ -172,7 +172,7 @@ export default function EnhancedMemberDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-[#0b2238] via-white to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -186,10 +186,11 @@ export default function EnhancedMemberDashboard() {
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <Badge variant="outline" className="text-orange-600 border-orange-300">
-                <Sparkles className="h-4 w-4 mr-1" />
-                {user?.points || 0} Points
-              </Badge>
+              <Badge variant="outline" className="text-[#0b2238] border-[#0b2238]/30">
+  <Sparkles className="h-4 w-4 mr-1 text-[#0b2238]" />
+  {user?.points || 0} Points
+</Badge>
+
               <Badge variant="outline" className="text-green-600 border-green-300">
                 <Trophy className="h-4 w-4 mr-1" />
                 Level {Math.floor((user?.points || 0) / 100) + 1}

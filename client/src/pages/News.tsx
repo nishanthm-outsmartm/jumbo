@@ -81,7 +81,7 @@ function NewsCard({
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <Link href={`/news/${article.slug}`}>
-              <h2 className="text-2xl md:text-2xl font-semibold mb-2 hover:text-orange-600 cursor-pointer transition-colors">
+              <h2 className="text-2xl md:text-2xl font-semibold mb-2 hover:text-[#0b2238] cursor-pointer transition-colors">
                 {article.title}
               </h2>
             </Link>
@@ -97,31 +97,16 @@ function NewsCard({
                   {formatDistanceToNow(new Date(article.publishedAt))} ago
                 </span>
               </div>
-              {/* {article.commentsEnabled && (
-                <div className="flex items-center gap-1">
-                  <MessageCircle className="w-4 h-4" />
-                  <span>Comments enabled</span>
-                </div>
-              )} */}
             </div>
-
-            {/* <div className="flex items-center gap-2 mb-3">
-              <Badge variant="secondary" className="text-xs">
-                News Article
-              </Badge>
-              {article.isPublished && (
-                <Badge variant="outline" className="text-xs text-green-600">
-                  Published
-                </Badge>
-              )}
-            </div> */}
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="pt-0">
         <p className="text-gray-700 mb-4 break-words overflow-hidden">
-          {article.description.length > 500? article.description.slice(0, 500) + '...' : article.description}
+          {article.description.length > 500
+            ? article.description.slice(0, 500) + "..."
+            : article.description}
         </p>
 
         {/* Brand Switching Information */}
@@ -160,7 +145,7 @@ function NewsCard({
 
               {article.toBrands && article.toBrands.length > 0 && (
                 <div className="flex flex-col items-center">
-                  <span className="text-green-600 font-medium mb-1 min-w-[100px]">
+                  <span className="text-[#0b2238] font-medium mb-1 min-w-[100px]">
                     Switch To:
                   </span>
                   <div className="flex flex-1 flex-wrap gap-2">
@@ -168,7 +153,7 @@ function NewsCard({
                       <Badge
                         key={brand.id}
                         variant="default"
-                        className="text-xs bg-green-600"
+                        className="text-xs bg-[#0b2238] text-white"
                       >
                         {brand.name} {brand.isIndian ? "🇮🇳" : ""}
                       </Badge>
@@ -184,11 +169,15 @@ function NewsCard({
           <div className="flex items-end justify-end gap-1">
             <div className="flex items-center gap-3">
               <Link href={`/news/${article.slug}`}>
-                <Button>Read More</Button>
-                </Link>
-                <a href={article.source} target="_blank" rel="noopener noreferrer">
-                  <Button><ExternalLink className="w-4 h-4 mr-2" />View on Source</Button>
-                </a>
+                <Button className="bg-[#0b2238] hover:bg-[#091b2c] text-white">
+                  Read More
+                </Button>
+              </Link>
+              <a href={article.source} target="_blank" rel="noopener noreferrer">
+                <Button className="bg-[#0b2238] hover:bg-[#091b2c] text-white">
+                  <ExternalLink className="w-4 h-4 mr-2" />View on Source
+                </Button>
+              </a>
             </div>
           </div>
         )}
@@ -213,7 +202,7 @@ function NewsCard({
               <Button
                 size="sm"
                 onClick={() => (window.location.href = "/login")}
-                className="bg-orange-500 hover:bg-orange-600"
+                className="bg-[#0b2238] hover:bg-[#091b2c] text-white"
               >
                 Login
               </Button>
@@ -241,7 +230,7 @@ function TrendingTopics() {
     <Card className="mb-6">
       <CardHeader>
         <h3 className="text-lg font-semibold flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-orange-500" />
+          <TrendingUp className="w-5 h-5 text-[#0b2238]" />
           Trending Topics
         </h3>
       </CardHeader>
@@ -251,7 +240,7 @@ function TrendingTopics() {
             <Badge
               key={tag}
               variant="secondary"
-              className="hover:bg-blue-100 cursor-pointer transition-colors"
+              className="hover:bg-[#0b2238]/10 cursor-pointer transition-colors"
             >
               #{tag}
             </Badge>
@@ -266,7 +255,7 @@ function OngoingMissions() {
   const { data: missions = [], isLoading } = useQuery({
     queryKey: ["/api/missions/ongoing"],
     queryFn: () => fetch("/api/missions/ongoing").then((res) => res.json()),
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: 60000,
   });
 
   if (isLoading) {
@@ -302,10 +291,7 @@ function OngoingMissions() {
         ) : (
           <div className="space-y-4">
             {missions.slice(0, 3).map((mission: Mission) => (
-              <div
-                key={mission.id}
-                className="border-l-4 border-blue-500 pl-4 pb-3"
-              >
+              <div key={mission.id} className="border-l-4 border-blue-500 pl-4 pb-3">
                 <div className="flex items-start justify-between mb-2">
                   <h4 className="font-medium text-sm">{mission.title}</h4>
                   <Badge
@@ -320,8 +306,6 @@ function OngoingMissions() {
                   {mission.description}
                 </p>
 
-                {/* Mission Brand Information */}
-
                 {((mission.fromBrands && mission.fromBrands.length > 0) ||
                   (mission.toBrands && mission.toBrands.length > 0)) && (
                   <div className="bg-gray-50 rounded p-2 text-xs">
@@ -335,11 +319,9 @@ function OngoingMissions() {
                     )}
                     {mission.toBrands && mission.toBrands.length > 0 && (
                       <div>
-                        <span className="font-medium text-green-600">To: </span>
+                        <span className="font-medium text-[#0b2238]">To: </span>
                         <span>
-                          {mission.toBrands
-                            .map((b) => `${b.name} 🇮🇳`)
-                            .join(", ")}
+                          {mission.toBrands.map((b) => `${b.name} 🇮🇳`).join(", ")}
                         </span>
                       </div>
                     )}
@@ -351,43 +333,13 @@ function OngoingMissions() {
                     {mission.impact} Impact
                   </Badge>
                   <span className="text-xs text-gray-500">
-                    Ends {formatDistanceToNow(new Date(mission.endDate))} from
-                    now
+                    Ends {formatDistanceToNow(new Date(mission.endDate))} from now
                   </span>
                 </div>
               </div>
             ))}
           </div>
         )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function RecentActivity() {
-  return (
-    <Card>
-      <CardHeader>
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-green-500" />
-          Recent Activity
-        </h3>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3 text-sm">
-          <div className="flex items-center gap-2 text-gray-600">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <span>12 new articles published today</span>
-          </div>
-          <div className="flex items-center gap-2 text-gray-600">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>Updated guidelines for Indian brands</span>
-          </div>
-          <div className="flex items-center gap-2 text-gray-600">
-            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-            <span>Featured: Top 10 Indian alternatives</span>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );
@@ -438,7 +390,6 @@ export default function News() {
 
   return (
     <div className="max-w-6xl mx-auto p-6">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">News & Articles</h1>
         <p className="text-gray-600">
@@ -448,7 +399,6 @@ export default function News() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
         <div className="lg:col-span-2">
           {error ? (
             <Card>
@@ -490,7 +440,7 @@ export default function News() {
                     onClick={loadMore}
                     disabled={isLoading}
                     variant="outline"
-                    className="px-8"
+                    className="px-8 text-[#0b2238] border-[#0b2238] hover:bg-[#0b2238]/10"
                   >
                     {isLoading ? (
                       <>
@@ -507,11 +457,8 @@ export default function News() {
           )}
         </div>
 
-        {/* Sidebar */}
         <div className="lg:col-span-1">
           <OngoingMissions />
-          {/* <TrendingTopics />
-          <RecentActivity /> */}
         </div>
       </div>
     </div>

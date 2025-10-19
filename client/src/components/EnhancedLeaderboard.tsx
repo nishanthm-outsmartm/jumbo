@@ -23,6 +23,7 @@ interface LeaderboardUser {
 interface LeaderboardData {
   leaderboard: LeaderboardUser[];
 }
+// ...imports remain unchanged
 
 export function EnhancedLeaderboard({ isLoggedIn }: { isLoggedIn: boolean }) {
   const [allUsers, setAllUsers] = useState<LeaderboardUser[]>([]);
@@ -69,11 +70,11 @@ export function EnhancedLeaderboard({ isLoggedIn }: { isLoggedIn: boolean }) {
   const getRankIcon = (index: number) => {
     switch (index) {
       case 0:
-        return <Trophy className="h-5 w-5 text-yellow-500" />;
+        return <Trophy className="h-5 w-5 text-[#0b2238]" />;
       case 1:
-        return <Medal className="h-5 w-5 text-gray-400" />;
+        return <Medal className="h-5 w-5 text-[#0b2238]/70" />;
       case 2:
-        return <Award className="h-5 w-5 text-amber-600" />;
+        return <Award className="h-5 w-5 text-[#0b2238]/60" />;
       default:
         return (
           <span className="text-sm font-medium text-muted-foreground">
@@ -85,19 +86,19 @@ export function EnhancedLeaderboard({ isLoggedIn }: { isLoggedIn: boolean }) {
 
   const getUserTypeIcon = (userType: string) => {
     return userType === "REGISTERED" ? (
-      <UserCheck className="h-4 w-4 text-green-500" />
+      <UserCheck className="h-4 w-4 text-[#0b2238]" />
     ) : (
-      <Users className="h-4 w-4 text-blue-500" />
+      <Users className="h-4 w-4 text-[#0b2238]/70" />
     );
   };
 
   const getUserTypeBadge = (userType: string) => {
     return userType === "REGISTERED" ? (
-      <Badge variant="secondary" className="bg-green-100 text-green-800">
+      <Badge variant="secondary" className="bg-[#0b2238]/10 text-[#0b2238]">
         Registered
       </Badge>
     ) : (
-      <Badge variant="outline" className="bg-blue-100 text-blue-800">
+      <Badge variant="outline" className="bg-[#0b2238]/20 text-[#0b2238]/70">
         Anonymous
       </Badge>
     );
@@ -113,7 +114,7 @@ export function EnhancedLeaderboard({ isLoggedIn }: { isLoggedIn: boolean }) {
                 <div className="flex items-center gap-2">
                   {getRankIcon(index)}
                   <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-primary text-primary-foreground">
+                    <AvatarFallback className="bg-[#0b2238] text-white">
                       {user.handle.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -121,7 +122,7 @@ export function EnhancedLeaderboard({ isLoggedIn }: { isLoggedIn: boolean }) {
 
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold">{user.handle}</h3>
+                    <h3 className="font-semibold text-[#0b2238]">{user.handle}</h3>
                     {getUserTypeIcon(user.userType)}
                   </div>
                   <div className="flex items-center gap-2">
@@ -134,7 +135,7 @@ export function EnhancedLeaderboard({ isLoggedIn }: { isLoggedIn: boolean }) {
               </div>
 
               <div className="text-right space-y-1">
-                <div className="text-2xl font-bold text-primary">
+                <div className="text-2xl font-bold text-[#0b2238]">
                   {user.points.toLocaleString()}
                 </div>
                 <div className="text-sm text-muted-foreground">
@@ -149,7 +150,7 @@ export function EnhancedLeaderboard({ isLoggedIn }: { isLoggedIn: boolean }) {
       {users.length === 0 && (
         <div className="text-center py-8">
           <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No users yet</h3>
+          <h3 className="text-lg font-semibold mb-2 text-[#0b2238]">No users yet</h3>
           <p className="text-muted-foreground">
             Be the first to start earning points!
           </p>
@@ -169,7 +170,7 @@ export function EnhancedLeaderboard({ isLoggedIn }: { isLoggedIn: boolean }) {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-3xl font-bold">Leaderboard</h2>
+        <h2 className="text-3xl font-bold text-[#0b2238]">Leaderboard</h2>
         <p className="text-muted-foreground mt-2">
           {isLoggedIn
             ? "See who's making the biggest impact"
@@ -177,29 +178,26 @@ export function EnhancedLeaderboard({ isLoggedIn }: { isLoggedIn: boolean }) {
         </p>
       </div>
 
-      {/* User Position for Anonymous Users */}
       {!isLoggedIn && userPosition && (
-        <Card className="border-orange-200 bg-orange-50">
+        <Card className="border-[#0b2238]/20 bg-[#0b2238]/10">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                  <span className="text-orange-600 font-bold">
+                <div className="w-10 h-10 bg-[#0b2238]/20 rounded-full flex items-center justify-center">
+                  <span className="text-[#0b2238] font-bold">
                     #{userPosition.position}
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-orange-900">
-                    Your Position
-                  </h3>
-                  <p className="text-sm text-orange-700">
+                  <h3 className="font-semibold text-[#0b2238]">Your Position</h3>
+                  <p className="text-sm text-[#0b2238]/80">
                     {userPosition.user.points} points
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm text-orange-600">Anonymous</p>
-                <p className="text-xs text-orange-500">
+                <p className="text-sm text-[#0b2238]">Anonymous</p>
+                <p className="text-xs text-[#0b2238]/70">
                   Create account to compete publicly
                 </p>
               </div>
@@ -211,11 +209,11 @@ export function EnhancedLeaderboard({ isLoggedIn }: { isLoggedIn: boolean }) {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="all" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
+            <Users className="h-4 w-4 text-[#0b2238]" />
             {isLoggedIn ? "All Participants" : "Top Performers"}
           </TabsTrigger>
           <TabsTrigger value="registered" className="flex items-center gap-2">
-            <UserCheck className="h-4 w-4" />
+            <UserCheck className="h-4 w-4 text-[#0b2238]" />
             Registered Users
           </TabsTrigger>
         </TabsList>
@@ -223,7 +221,7 @@ export function EnhancedLeaderboard({ isLoggedIn }: { isLoggedIn: boolean }) {
         <TabsContent value="all" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-[#0b2238]">
                 <Users className="h-5 w-5" />
                 {isLoggedIn ? "All Participants" : "Top Performers"}
               </CardTitle>
@@ -242,7 +240,7 @@ export function EnhancedLeaderboard({ isLoggedIn }: { isLoggedIn: boolean }) {
         <TabsContent value="registered" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-[#0b2238]">
                 <UserCheck className="h-5 w-5" />
                 Registered Users Only
               </CardTitle>

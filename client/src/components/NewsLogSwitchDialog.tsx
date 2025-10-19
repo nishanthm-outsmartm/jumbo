@@ -188,10 +188,7 @@ export default function NewsLogSwitchDialog({ newsId }: LogSwitchDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {/* <Button className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600">
-          Log Your Switch
-        </Button> */}
-        <button className="rounded-full px-4 py-1.5 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white font-medium transition-all">
+        <button className="rounded-full px-4 py-1.5 bg-gradient-to-r from-[#0b2238] to-[#0d2b49] hover:from-[#0d2b49] hover:to-[#12345b] text-white font-medium transition-all">
           Act on this
         </button>
       </DialogTrigger>
@@ -221,7 +218,7 @@ export default function NewsLogSwitchDialog({ newsId }: LogSwitchDialogProps) {
                 </div>
 
                 <div className="flex justify-center">
-                  <ArrowRight className="h-8 w-8 text-orange-500" />
+                  <ArrowRight className="h-8 w-8 text-[#0b2238]" />
                 </div>
 
                 <div className="text-center">
@@ -284,7 +281,7 @@ export default function NewsLogSwitchDialog({ newsId }: LogSwitchDialogProps) {
             {/* Evidence Upload */}
             <div>
               <Label>Add Photo Evidence (Optional)</Label>
-              <div className="mt-1 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-400 transition-colors">
+              <div className="mt-1 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#0b2238] transition-colors">
                 <Camera className="mx-auto h-8 w-8 text-gray-400" />
                 <p className="text-sm text-gray-600 mt-2">
                   Upload a photo of your new product or purchase receipt
@@ -303,26 +300,7 @@ export default function NewsLogSwitchDialog({ newsId }: LogSwitchDialogProps) {
               </div>
             </div>
 
-            {/* Reward Preview */}
-            {/* <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium text-orange-900">
-                      Reward Preview
-                    </h4>
-                    <p className="text-sm text-orange-700">
-                      Base: 25 XP{" "}
-                      {formData.isPublic && "+ 10 XP bonus for sharing"}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-orange-600">
-                      {formData.isPublic ? "35" : "25"} XP
-                    </p>
-                  </div>
-                </div>
-              </div> */}
-
+            {/* Buttons */}
             <div className="flex space-x-4">
               <Button
                 type="button"
@@ -334,7 +312,7 @@ export default function NewsLogSwitchDialog({ newsId }: LogSwitchDialogProps) {
               </Button>
               <Button
                 type="submit"
-                className="flex-1 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600"
+                className="flex-1 bg-gradient-to-r from-[#0b2238] to-[#0d2b49] hover:from-[#0d2b49] hover:to-[#12345b] text-white"
                 disabled={logSwitchMutation.isPending}
               >
                 {logSwitchMutation.isPending

@@ -7,7 +7,7 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { Navigation } from "@/components/Navigation";
 
 // Import pages
-import AdminProfile from "@/pages/admin/Profile";
+import Profile from "@/pages/Profile";
 import Home from "@/pages/Home";
 import OldHome from "@/pages/OldHome"; // ✅ Added for /oldhome route
 
@@ -21,7 +21,7 @@ import NewsDetails from "@/pages/NewsDetails";
 import Missions from "@/pages/Missions";
 import NotFound from "@/pages/not-found";
 import CookieConsent from "./components/landing/CookieConsent";
-import ModeratorFeedbackPage from "./pages/moderator/ModeratorFeedbackPage";
+import ModeratorFeedbackPage from "./pages/moderator/ModeratorFeedbackPage.tsx";
 import Rewards from "@/pages/Rewards";
 import PrivacyCenterPage from "@/pages/PrivacyCenter";
 import { AnonymousUserBanner } from "./components/auth/AnonymousUserBanner";
@@ -163,6 +163,13 @@ function AppRouter() {
             <LogSwitch />
           </ProtectedRoute>
         </Route>
+        
+        <Route path="/profile/:username">
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        </Route>
+
 
         <Route path="/admin">
           <ProtectedAdminRoute>

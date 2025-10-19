@@ -106,6 +106,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Registration failed" });
     }
   });
+  app.get("/api/users/:username", async (req, res) => {
+  try {
+    const { username } = req.params;
+    const user = await storage.getUserByHandle(username);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error("Fetch user error:", error);
+    res.status(500).json({ error: "Failed to fetch user" });
+  }
+});
+
 
   app.post("/api/auth/login", async (req, res) => {
     try {
@@ -725,9 +741,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     userId: z.string(),
     fromBrands: z.string(),
     toBrands: z.string(),
-    category: z.string(),
+    category: z.enum([
+      "FOOD_BEVERAGES",
+      "ELECTRONICS",
+      "FASHION",
+      "BEAUTY",
+      "HOME_GARDEN",
+      "AUTOMOTIVE",
+      "SPORTS",
+      "BOOKS_MEDIA",
+      "OTHER",
+    ]),
     url: z.string().optional(),
     message: z.string().min(1, 'Message is required'),
+    isPublic: z.boolean().optional(),
+    status: z.enum(["PENDING", "APPROVED", "REJECTED"]).optional(),
   });
 
   // POST: Create new feedback

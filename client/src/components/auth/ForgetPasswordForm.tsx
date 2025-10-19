@@ -16,10 +16,13 @@ import { api } from "@/lib/api";
 
 interface ForgotPasswordFormProps {
   onBackToLogin?: () => void;
+  onSuccess?: (token?: string) => void; // ✅ add this
 }
 
+// ✅ explicitly type props in the function signature
 export default function ForgotPasswordForm({
   onBackToLogin,
+  onSuccess,
 }: ForgotPasswordFormProps) {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -27,23 +30,12 @@ export default function ForgotPasswordForm({
   const [error, setError] = useState("");
   const [emailSent, setEmailSent] = useState(false);
 
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!email) {
-      setError("Email is required");
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      setError("Please enter a valid email address");
-      return;
-    }
+    if (!email) return setError("Email is required");
+    if (!validateEmail(email)) return setError("Please enter a valid email address");
 
     setIsLoading(true);
     setError("");
@@ -53,6 +45,11 @@ export default function ForgotPasswordForm({
       const response = await api.forgotPassword(email);
       setMessage(response.message || "Password reset email sent successfully");
       setEmailSent(true);
+
+      // ✅ call onSuccess if provided
+      if (onSuccess) {
+        onSuccess(response.token); // token optional
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -83,40 +80,22 @@ export default function ForgotPasswordForm({
             <Mail className="h-6 w-6 text-green-600" />
           </div>
           <CardTitle>Check your email</CardTitle>
-          <CardDescription>
-            We've sent a password reset link to {email}
-          </CardDescription>
+          <CardDescription>We've sent a password reset link to {email}</CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {message && (
-            <Alert>
-              <AlertDescription>{message}</AlertDescription>
-            </Alert>
-          )}
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
+          {message && <Alert><AlertDescription>{message}</AlertDescription></Alert>}
+          {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
           <div className="text-sm text-gray-600 text-center">
             <p>Didn't receive the email? Check your spam folder or</p>
           </div>
         </CardContent>
 
         <CardFooter className="flex flex-col space-y-2">
-          <Button
-            onClick={handleResendEmail}
-            disabled={isLoading}
-            variant="outline"
-            className="w-full"
-          >
+          <Button onClick={handleResendEmail} disabled={isLoading} variant="outline" className="w-full">
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Resend email
           </Button>
-
           {onBackToLogin && (
             <Button onClick={onBackToLogin} variant="ghost" className="w-full">
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -132,18 +111,11 @@ export default function ForgotPasswordForm({
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
         <CardTitle>Forgot your password?</CardTitle>
-        <CardDescription>
-          Enter your email address and we'll send you a link to reset your
-          password.
-        </CardDescription>
+        <CardDescription>Enter your email address and we'll send you a link to reset your password.</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+        {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
 
         <div className="space-y-2">
           <Label htmlFor="email">Email address</Label>
@@ -154,11 +126,7 @@ export default function ForgotPasswordForm({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={isLoading}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleSubmit(e as any);
-              }
-            }}
+            onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(e as any); }}
           />
         </div>
       </CardContent>
@@ -168,7 +136,6 @@ export default function ForgotPasswordForm({
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Send reset link
         </Button>
-
         {onBackToLogin && (
           <Button onClick={onBackToLogin} variant="ghost" className="w-full">
             <ArrowLeft className="mr-2 h-4 w-4" />

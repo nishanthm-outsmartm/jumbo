@@ -38,17 +38,17 @@ export function Navigation() {
             <Link href="/">
               <div className="flex items-center cursor-pointer">
                 <img
-                  src="src\\images\\logo.png"
-                  alt="JumboJolt"
-                  style={{
-                    height: logoHeight,
-                    width: "auto",
-                    borderRadius: 20,
-                    objectFit: "contain",
-                    marginRight: -20,
-                    zIndex: 1,
-                  }}
-                />
+              src="src\\images\\logo.png"
+              alt="JumboJolt"
+              style={{
+                height: logoHeight,
+                width: "auto",
+                borderRadius: 20,
+                objectFit: "contain",
+                marginRight: -20,
+                zIndex: 1,
+              }}
+            />
                 <span
                   style={{
                     color: "#00cfff",
@@ -63,8 +63,18 @@ export function Navigation() {
               </div>
             </Link>
 
-            {/* 👤 User / Handle Section (only show if logged in) */}
-            {user && (
+            {/* 👤 User / Logged out Section */}
+            {!user ? (
+              // Logged out: simple header like Home.tsx
+              <div className="flex items-center space-x-4">
+                <QuickAnonymousJoin
+                  onSuccess={() => window.location.reload()}
+                  variant="outline"
+                  size="sm"
+                />
+              </div>
+            ) : (
+              // Logged in: user dropdown menu
               <div className="flex items-center space-x-4">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -118,17 +128,6 @@ export function Navigation() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              </div>
-            )}
-
-            {/* Logged out: show QuickAnonymousJoin button if needed */}
-            {!user && (
-              <div className="flex items-center space-x-4">
-                <QuickAnonymousJoin
-                  onSuccess={() => window.location.reload()}
-                  variant="outline"
-                  size="sm"
-                />
               </div>
             )}
           </div>

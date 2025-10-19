@@ -362,10 +362,9 @@ function MissionCard({
     </div>
   );
 }
-
-// 🚀 Updated NavButton with navigation support
 function NavButton({ label }: { label: string }) {
   const [, navigate] = useLocation();
+  const { user } = useAuth(); // ✅ get logged-in user
 
   const handleClick = () => {
     switch (label) {
@@ -382,7 +381,11 @@ function NavButton({ label }: { label: string }) {
         navigate("/rewards");
         break;
       case "Profile":
-        window.location.href = "http://localhost:5173/signup";
+        if (user?.handle) {
+          navigate(`/profile/${user.handle}`); // ✅ navigate to /profile/:username
+        } else {
+          navigate("/login"); // fallback if not logged in
+        }
         break;
       default:
         break;
@@ -405,6 +408,7 @@ function NavButton({ label }: { label: string }) {
     </button>
   );
 }
+
 
 const cardStyle: React.CSSProperties = {
   background: "#fff",

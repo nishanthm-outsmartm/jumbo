@@ -16,7 +16,7 @@ jumbojolt-monorepo/
 │       ├── App.tsx                 # React Router setup and global layout
 │       ├── components/             # Reusable UI components
 │       ├── pages/                  # Page components for each route
-│       │   ├── OldHome.tsx            # Home dashboard (news, leaderboard, etc.)
+│       │   ├── Connect.tsx            # Home dashboard (news, leaderboard, etc.)
 │       │   ├── Register.tsx        # Registration/Onboarding page
 │       │   ├── LogSwitch.tsx       # Form to log a product switch
 │       │   ├── Suggestions.tsx     # Target suggestion form/page

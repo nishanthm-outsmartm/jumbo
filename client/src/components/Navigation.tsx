@@ -38,7 +38,7 @@ export function Navigation() {
             <Link href="/">
               <div className="flex items-center cursor-pointer">
                 <img
-              src="src\\images\\logo.png"
+              src="/logo.png"
               alt="JumboJolt"
               style={{
                 height: logoHeight,

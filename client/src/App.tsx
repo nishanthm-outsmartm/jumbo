@@ -9,7 +9,7 @@ import { Navigation } from "@/components/Navigation";
 // Import pages
 import Profile from "@/pages/Profile";
 import Home from "@/pages/Home";
-import OldHome from "@/pages/OldHome"; // ✅ Added for /oldhome route
+import Connect from "@/pages/Connect"; // ✅ Added for /Connect route
 
 import Register from "@/pages/Register";
 import LogSwitch from "@/pages/LogSwitch";
@@ -148,8 +148,8 @@ function AppRouter() {
         {/* Public Routes */}
         <Route path="/" component={HomePage} />
 
-        {/* ✅ Added OldHome route */}
-        <Route path="/oldhome" component={OldHome} />
+        {/* ✅ Added Connect route */}
+        <Route path="/connect" component={Connect} />
 
         {/* Protected Routes */}
         <Route path="/home">

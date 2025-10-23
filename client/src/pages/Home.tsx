@@ -48,7 +48,7 @@ export default function Home() {
             }}
           >
             <img
-              src="src\\images\\logo.png"
+              src="/logo.png"
               alt="JumboJolt"
               style={{
                 height: logoHeight,
@@ -74,7 +74,7 @@ export default function Home() {
 
           {/* Pick a Handle */}
           <button
-            onClick={() => navigate("/oldhome")}
+            onClick={() => navigate("/connect")}
             style={{
               background: "#00cfff",
               color: "#fff",
@@ -242,22 +242,22 @@ export default function Home() {
       <div
         style={{
           position: "fixed",
-          left: 0,
-          bottom: 0,
-          width: "100%",
-          background: "#fff",
-          borderTop: "3px solid #00cfff",
-          display: "flex",
-          justifyContent: "space-around",
-          padding: "10px 0",
-          zIndex: 10,
+    left: 0,
+    bottom: 0,
+    width: "100%",
+    background: "#ffffff",
+    borderTop: "3px solid #00cfff",
+    display: "flex",
+    justifyContent: "space-around",
+    alignItems: "center",
+    padding: "12px 0",
+    boxShadow: "0 -2px 10px rgba(0,0,0,0.1)",
+    zIndex: 20,
         }}
       >
-        <NavButton label="Home" />
-        <NavButton label="Missions" />
-        <NavButton label="News" />
-        <NavButton label="Rewards" />
-        <NavButton label="Profile" />
+        {["Home", "Missions", "News", "Rewards", "Profile"].map((label) => (
+    <NavButton key={label} label={label} />
+  ))}
       </div>
     </div>
   );
@@ -364,12 +364,17 @@ function MissionCard({
 }
 function NavButton({ label }: { label: string }) {
   const [, navigate] = useLocation();
-  const { user } = useAuth(); // ✅ get logged-in user
+  const { user } = useAuth();
+  const [isHovered, setIsHovered] = React.useState(false);
+  const [isActive, setIsActive] = React.useState(false);
 
   const handleClick = () => {
+    setIsActive(true);
+    setTimeout(() => setIsActive(false), 300);
+
     switch (label) {
       case "Home":
-        navigate("/oldhome");
+        navigate("/Connect");
         break;
       case "Missions":
         navigate("/missions");
@@ -381,11 +386,8 @@ function NavButton({ label }: { label: string }) {
         navigate("/rewards");
         break;
       case "Profile":
-        if (user?.handle) {
-          navigate(`/profile/${user.handle}`); // ✅ navigate to /profile/:username
-        } else {
-          navigate("/login"); // fallback if not logged in
-        }
+        if (user?.handle) navigate(`/profile/${user.handle}`);
+        else navigate("/login");
         break;
       default:
         break;
@@ -395,13 +397,22 @@ function NavButton({ label }: { label: string }) {
   return (
     <button
       onClick={handleClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
         background: "none",
         border: "none",
-        color: "#222",
-        fontWeight: 500,
+        color: isHovered || isActive ? "#00cfff" : "#222",
+        fontWeight: 600,
         fontSize: 16,
         cursor: "pointer",
+        transition: "all 0.25s ease",
+        transform: isHovered ? "scale(1.2)" : "scale(1)",
+        textShadow: isHovered
+          ? "0px 2px 6px rgba(0, 207, 255, 0.5)"
+          : "none",
+        padding: "6px 10px",
+        borderRadius: 8,
       }}
     >
       {label}

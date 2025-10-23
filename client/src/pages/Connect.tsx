@@ -508,15 +508,15 @@ export default function Home() {
           <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <EnhancedAnonymousRegistration
               onSuccess={(user) => {
-                console.log("OldHome.tsx: onSuccess called with user:", user);
+                console.log("Connect.tsx: onSuccess called with user:", user);
                 console.log(
-                  "OldHome.tsx: User has confirmed secret key - closing modal and reloading page"
+                  "Connect.tsx: User has confirmed secret key - closing modal and reloading page"
                 );
                 setShowAnonymousRegistration(false);
                 window.location.reload();
               }}
               onCancel={() => {
-                console.log("OldHome.tsx: onCancel called");
+                console.log("Connect.tsx: onCancel called");
                 setShowAnonymousRegistration(false);
               }}
             />

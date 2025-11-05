@@ -776,13 +776,26 @@ export const feedbackSubmissions = pgTable("feedback_submissions", {
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
-  switchLogs: many(switchLogs),
+  // Distinguish authored vs moderated switch logs
+  switchLogs: many(switchLogs, { relationName: "switchLogs_user" }),
+  moderatedSwitchLogs: many(switchLogs, { relationName: "switchLogs_moderator" }),
+  // Feedback submissions (authored vs moderated)
+  feedbackSubmissions: many(feedbackSubmissions, { relationName: "feedback_user" }),
+  moderatedFeedbackSubmissions: many(feedbackSubmissions, { relationName: "feedback_moderator" }),
+  // Switch feedbacks (authored vs moderated)
+  switchFeedbacks: many(switchFeedbacks, { relationName: "switchFeedback_user" }),
+  moderatedSwitchFeedbacks: many(switchFeedbacks, { relationName: "switchFeedback_moderator" }),
+  // Moderation reports (filed vs moderated)
+  reportsFiled: many(moderationReports, { relationName: "reports_reporter" }),
+  reportsModerated: many(moderationReports, { relationName: "reports_moderator" }),
+  // Messages (sent vs received)
+  sentMessages: many(messages, { relationName: "messages_from_user" }),
+  receivedMessages: many(messages, { relationName: "messages_to_user" }),
   posts: many(posts),
   likes: many(likes),
   comments: many(comments),
   reactions: many(reactions),
-  publicAliases: many(publicAliases),
-  feedbackSubmissions: many(feedbackSubmissions),
+  publicAliases: many(publicAliases, { relationName: "user_public_alias" }),
   userAchievements: many(userAchievements),
   leaderboardSnapshots: many(leaderboardSnapshots),
   communityMemberships: many(communityMembers),
@@ -837,7 +850,11 @@ export const communityMembersRelations = relations(
 );
 
 export const switchLogsRelations = relations(switchLogs, ({ one, many }) => ({
-  user: one(users, { fields: [switchLogs.userId], references: [users.id] }),
+  user: one(users, {
+    fields: [switchLogs.userId],
+    references: [users.id],
+    relationName: "switchLogs_user",
+  }),
   fromBrand: one(brands, {
     fields: [switchLogs.fromBrandId],
     references: [brands.id],
@@ -861,6 +878,7 @@ export const switchLogsRelations = relations(switchLogs, ({ one, many }) => ({
   moderator: one(users, {
     fields: [switchLogs.moderatorId],
     references: [users.id],
+    relationName: "switchLogs_moderator",
   }),
   posts: many(posts),
 }));
@@ -892,11 +910,44 @@ export const likesRelations = relations(likes, ({ one }) => ({
 export const commentsRelations = relations(comments, ({ one }) => ({
   user: one(users, { fields: [comments.userId], references: [users.id] }),
   post: one(posts, { fields: [comments.postId], references: [posts.id] }),
+  // Disambiguate comment parent for Drizzle Studio: map comments -> newsArticles
+  news: one(newsArticles, {
+    fields: [comments.newsId],
+    references: [newsArticles.id],
+  }),
 }));
 
 export const reactionsRelations = relations(reactions, ({ one }) => ({
   user: one(users, { fields: [reactions.userId], references: [users.id] }),
   post: one(posts, { fields: [reactions.postId], references: [posts.id] }),
+}));
+
+// Switch feedbacks relations (user vs moderator)
+export const switchFeedbacksRelations = relations(switchFeedbacks, ({ one }) => ({
+  user: one(users, {
+    fields: [switchFeedbacks.userId],
+    references: [users.id],
+    relationName: "switchFeedback_user",
+  }),
+  moderator: one(users, {
+    fields: [switchFeedbacks.moderatorId],
+    references: [users.id],
+    relationName: "switchFeedback_moderator",
+  }),
+}));
+
+// Messages relations (sender vs recipient)
+export const messagesRelations = relations(messages, ({ one }) => ({
+  fromUser: one(users, {
+    fields: [messages.fromUserId],
+    references: [users.id],
+    relationName: "messages_from_user",
+  }),
+  toUser: one(users, {
+    fields: [messages.toUserId],
+    references: [users.id],
+    relationName: "messages_to_user",
+  }),
 }));
 
 export const leaderboardSnapshotsRelations = relations(
@@ -909,16 +960,28 @@ export const leaderboardSnapshotsRelations = relations(
   })
 );
 
+// User achievements join table -> users and achievements
+export const userAchievementsRelations = relations(userAchievements, ({ one }) => ({
+  user: one(users, { fields: [userAchievements.userId], references: [users.id] }),
+  achievement: one(achievements, { fields: [userAchievements.achievementId], references: [achievements.id] }),
+}));
+
+export const achievementsRelations = relations(achievements, ({ many }) => ({
+  userAchievements: many(userAchievements),
+}));
+
 export const moderationReportsRelations = relations(
   moderationReports,
   ({ one }) => ({
     reporter: one(users, {
       fields: [moderationReports.reporterId],
       references: [users.id],
+      relationName: "reports_reporter",
     }),
     moderator: one(users, {
       fields: [moderationReports.moderatorId],
       references: [users.id],
+      relationName: "reports_moderator",
     }),
   })
 );
@@ -966,6 +1029,7 @@ export const feedbackSubmissionsRelations = relations(
     user: one(users, {
       fields: [feedbackSubmissions.userId],
       references: [users.id],
+      relationName: "feedback_user",
     }),
     category: one(categories, {
       fields: [feedbackSubmissions.categoryId],
@@ -974,12 +1038,22 @@ export const feedbackSubmissionsRelations = relations(
     moderator: one(users, {
       fields: [feedbackSubmissions.moderatorId],
       references: [users.id],
+      relationName: "feedback_moderator",
     }),
   })
 );
 
 export const contentTagsRelations = relations(contentTags, ({ one }) => ({
   tag: one(tags, { fields: [contentTags.tagId], references: [tags.id] }),
+}));
+
+// Public aliases ↔ users
+export const publicAliasesRelations = relations(publicAliases, ({ one }) => ({
+  user: one(users, {
+    fields: [publicAliases.userId],
+    references: [users.id],
+    relationName: "user_public_alias",
+  }),
 }));
 
 // New relations for enhanced features

@@ -36,7 +36,9 @@ export default function BottomNav() {
   return (
     <div
       style={{
-        position: "sticky",
+        position: "fixed", // keep persistent across scroll
+        left: 0,
+        right: 0,
         bottom: 0,
         width: "100%",
         background: "rgba(255,255,255,0.9)",
@@ -45,9 +47,9 @@ export default function BottomNav() {
         display: "flex",
         justifyContent: "space-around",
         alignItems: "center",
-        padding: "12px 0",
+        padding: "12px 0 calc(12px + env(safe-area-inset-bottom))",
         boxShadow: "0 -3px 12px rgba(0,0,0,0.08)",
-        zIndex: 50,
+        zIndex: 1000,
         transition: "all 0.3s ease",
       }}
     >

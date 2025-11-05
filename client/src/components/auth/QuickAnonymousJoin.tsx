@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Loader2, Shield, Shuffle } from "lucide-react";
@@ -6,7 +6,8 @@ import { toast } from "@/hooks/use-toast";
 import { testServerConnection } from "@/utils/testServer";
 
 interface QuickAnonymousJoinProps {
-  onSuccess?: () => void;
+  onSuccess?: (data: any) => void;
+  onClick?: () => void;
   variant?: "default" | "outline" | "secondary";
   size?: "sm" | "default" | "lg";
   className?: string;
@@ -14,6 +15,7 @@ interface QuickAnonymousJoinProps {
 
 export function QuickAnonymousJoin({
   onSuccess,
+  onClick,
   variant = "outline",
   size = "default",
   className = "",
@@ -21,7 +23,6 @@ export function QuickAnonymousJoin({
   const { createAnonymousUser } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  // Generate random handle names
   const generateRandomHandle = () => {
     const adjectives = [
       "Swift",
@@ -125,7 +126,6 @@ export function QuickAnonymousJoin({
     setLoading(true);
 
     try {
-      // Test server connection first
       const serverRunning = await testServerConnection();
       if (!serverRunning) {
         throw new Error(
@@ -134,26 +134,15 @@ export function QuickAnonymousJoin({
       }
 
       const randomHandle = generateRandomHandle();
-      console.log("Creating anonymous user with handle:", randomHandle);
-
       const response = await createAnonymousUser(randomHandle);
-      console.log("Anonymous user created successfully:", response);
 
-      // Show backup codes if they were generated
-      if (response.backupCodes && response.backupCodes.length > 0) {
-        toast({
-          title: "Welcome! Backup codes generated",
-          description: `You're now logged in as ${randomHandle}. Your 8 backup codes have been generated - click "Generate Backup Codes" in your account status to view them.`,
-          duration: 8000,
-        });
-      } else {
-        toast({
-          title: "Welcome!",
-          description: `You're now logged in as ${randomHandle}. You can connect your account later to protect your progress.`,
-        });
-      }
+      toast({
+        title: "Welcome!",
+        description: `You're now logged in as ${randomHandle}. You can connect your account later to protect your progress.`,
+      });
 
-      onSuccess?.();
+      onSuccess?.(response);
+      onClick?.();
     } catch (err: any) {
       console.error("Anonymous user creation error:", err);
       toast({
@@ -186,3 +175,4 @@ export function QuickAnonymousJoin({
     </Button>
   );
 }
+

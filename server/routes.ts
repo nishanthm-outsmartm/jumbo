@@ -127,9 +127,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { firebaseUid } = req.body;
 
-      const user = await storage.getUserByFirebaseUid(firebaseUid);
+      let user = await storage.getUserByFirebaseUid(firebaseUid);
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        // Auto-provision a DB user for this Firebase account
+        // Generate a unique handle like anon_xxx if not provided elsewhere
+        const base = "user_" + Math.random().toString(36).slice(2, 8);
+        const candidateHandle = base.toLowerCase();
+        // Ensure uniqueness via storage.getUserByHandle loop (few tries)
+        let finalHandle = candidateHandle;
+        for (let i = 0; i < 5; i++) {
+          const exists = await storage.getUserByHandle(finalHandle);
+          if (!exists) break;
+          finalHandle = `${candidateHandle}${i + 1}`;
+        }
+
+        user = await storage.createUser({
+          firebaseUid,
+          handle: finalHandle,
+          userType: "REGISTERED",
+          points: 0,
+          level: 1,
+        } as any);
       }
 
       // Update last login

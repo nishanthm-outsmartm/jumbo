@@ -172,12 +172,8 @@ function MissionCard({
         <Target className="w-4 h-4 mr-2" /> Join Mission
       </Button>
     );
-    if (userMission.status === "STARTED") return <LogSwitchDialog missionId={mission.id} />;
-    return (
-      <Button className="bg-[#0b2238] w-full hover:bg-[#0b2238]/90 text-white" size="sm">
-        {userMission.status === "COMPLETED" ? "Mission Completed!" : "Pending verification..."}
-      </Button>
-    );
+    // Allow logging new switches regardless of mission status
+    return <LogSwitchDialog missionId={mission.id} />;
   };
 
   return (

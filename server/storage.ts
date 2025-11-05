@@ -3069,7 +3069,10 @@ export class DatabaseStorage implements IStorage {
         throw new Error("You must join the mission first");
       }
 
-      if (userMission[0].status !== "STARTED") {
+      // Allow multiple submissions for a mission regardless of prior outcome
+      // Accept historical records where status may be "SUBMITTED", "COMPLETED" or "FAILED"
+      const allowedStatuses = ["STARTED", "SUBMITTED", "COMPLETED", "FAILED"] as const;
+      if (!allowedStatuses.includes(userMission[0].status as any)) {
         throw new Error("Mission already completed or failed");
       }
 
@@ -3087,13 +3090,8 @@ export class DatabaseStorage implements IStorage {
         status: "PENDING",
       });
 
-      const updateUserMission = await db
-        .update(userMissions)
-        .set({ status: "SUBMITTED" })
-        .where(eq(userMissions.id, userMission[0].id));
-
-
-      return { switchLog, updateUserMission };
+      // Keep user mission in-progress so user can submit multiple logs
+      return { switchLog };
     } catch (error) {
       console.error("Error submitting mission switch log:", error);
       throw error;

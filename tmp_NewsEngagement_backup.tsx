@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+﻿import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -359,10 +359,155 @@ export function NewsEngagement({
           </Button>
         </div>
 
-        {/* Comments and Share disabled as requested */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowComments(!showComments)}
+          className="flex items-center gap-2"
+        >
+          <MessageCircle className="h-4 w-4" />
+          {comments}
+        </Button>
+
+        <ShareDialog 
+          newsId={newsId}
+          newsSlug={newsSlug}
+          title={title}
+          userId={user?.id}
+          onShare={() => {
+            setShares(prev => prev + 1);
+            setUserShared(true);
+          }}
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={loading}
+            className={`flex items-center gap-2 ${
+              userShared ? "text-green-500" : ""
+            }`}
+          >
+            <Share2 className={`h-4 w-4 ${userShared ? "fill-current" : ""}`} />
+            {shares}
+          </Button>
+        </ShareDialog>
       </div>
 
-      {/* Comments section removed */}
+      {/* Comments Section */}
+      {showComments && !commentsEnabled && (
+        <Card>
+          <CardContent className="p-4 text-center">
+            <MessageCircle className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+            <p className="text-gray-500">Comments are disabled for this article.</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {showComments && commentsEnabled && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Comments</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Comment Form */}
+            <div className="space-y-3">
+              <Textarea
+                placeholder="Share your thoughts on this article..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                disabled={loading}
+                rows={3}
+              />
+
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Do not share personal info.</strong> Comments may be
+                  moderated.
+                </AlertDescription>
+              </Alert>
+
+              <Button
+                onClick={handleComment}
+                disabled={loading || !newComment.trim()}
+                className="w-full"
+              >
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Submit Comment
+              </Button>
+            </div>
+
+            {/* Comments List */}
+            <div className="space-y-3">
+              {commentsLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : (
+                commentsList.map((comment) => (
+                  <div
+                    key={comment.id}
+                    className="flex gap-3 p-3 border rounded-lg"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                        {comment.user.handle.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">
+                          {comment.user.handle}
+                        </span>
+                        {/* {getUserTypeIcon(comment.user.userType)}
+                        <Badge
+                          variant={
+                            comment.user.userType === "REGISTERED"
+                              ? "secondary"
+                              : "outline"
+                          }
+                          className="text-xs"
+                        >
+                          {comment.user.userType === "REGISTERED"
+                            ? "Registered"
+                            : "Anonymous"}
+                        </Badge>
+                        <Badge
+                          variant={
+                            comment.status === "APPROVED"
+                              ? "default"
+                              : comment.status === "PENDING"
+                              ? "secondary"
+                              : "destructive"
+                          }
+                          className="text-xs"
+                        >
+                          {comment.status}
+                        </Badge> */}
+                      </div>
+
+                      <p className="text-sm">{comment.content}</p>
+
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(comment.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {commentsList.length === 0 && !commentsLoading && (
+                <div className="text-center py-4 text-muted-foreground">
+                  <MessageCircle className="h-8 w-8 mx-auto mb-2" />
+                  <p>No comments yet. Be the first to share your thoughts!</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
+

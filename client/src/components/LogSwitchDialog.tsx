@@ -74,6 +74,33 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
     enabled: !!user,
   });
 
+  // Fetch missions to get brand mappings for this mission (fromBrands/toBrands)
+  type Mission = {
+    id: string;
+    title: string;
+    description: string;
+    targetCategory: string;
+    pointsReward: number;
+    startDate: string;
+    endDate: string | null;
+    status: string;
+    impact: string;
+    fromBrands?: Brand[];
+    toBrands?: Brand[];
+  };
+
+  const { data: missions = [] } = useQuery<Mission[]>({
+    queryKey: ["/api/missions"],
+    queryFn: async () => {
+      const res = await fetch("/api/missions");
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+  const mission = missions.find((m) => m.id === missionId);
+
   const logSwitchMutation = useMutation({
     mutationFn: async (switchData: any) => {
       const response = await apiRequest(
@@ -213,9 +240,19 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
                   </Label>
                   <BrandSelectComboBox
                     value={formData.fromBrand}
-                    brands={brands.filter((brand) => !brand.isIndian)}
+                    brands={
+                      mission?.fromBrands?.length
+                        ? mission.fromBrands
+                        : brands.filter((brand) => !brand.isIndian)
+                    }
                     onValueChange={(value: string) =>
-                      setFormData({ ...formData, fromBrand: value })
+                      setFormData({
+                        ...formData,
+                        fromBrand: value,
+                        // If we know the category from the selected brand, prefill it
+                        category:
+                          brands.find((b) => b.id === value)?.category || formData.category,
+                      })
                     }
                   />
                   <p className="text-xs text-gray-600 mt-1">
@@ -231,17 +268,30 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
                   <Label className="text-[#0b2238] font-medium">
                     Switching TO
                   </Label>
-                  <BrandSelectComboBox
-                    value={formData.toBrand}
-                    brands={brands.filter(
-                      (brand) => brand.isIndian || brand.isFavorable
-                    )}
-                    onValueChange={(value: string) =>
-                      setFormData({ ...formData, toBrand: value })
+                  {(() => {
+                    // Base Indian/Preferred pool
+                    let baseTo: Brand[] = mission?.toBrands?.length
+                      ? mission.toBrands
+                      : brands.filter((b) => b.isIndian || b.isFavorable);
+
+                    // If a FROM brand is selected, narrow TO options to same category
+                    const fromBrandObj = brands.find((b) => b.id === formData.fromBrand);
+                    if (fromBrandObj?.category) {
+                      baseTo = baseTo.filter((b) => b.category === fromBrandObj.category);
                     }
-                  />
+
+                    return (
+                      <BrandSelectComboBox
+                        value={formData.toBrand}
+                        brands={baseTo}
+                        onValueChange={(value: string) =>
+                          setFormData({ ...formData, toBrand: value })
+                        }
+                      />
+                    );
+                  })()}
                   <p className="text-xs text-gray-600 mt-1">
-                    Indian/Preferred brand
+                    Indian/Preferred brand (matched to your selection)
                   </p>
                 </div>
               </div>

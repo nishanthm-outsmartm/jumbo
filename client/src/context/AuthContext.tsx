@@ -58,7 +58,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(data.user);
         } catch (error) {
           console.error("Auto-login failed:", error);
-          setUser(null);
+          // Fallback: auto-register in DB, then login
+          try {
+            const genHandle = () =>
+              `user_${Math.random().toString(36).slice(2, 8).toLowerCase()}`;
+            let handle = genHandle();
+            // try up to 3 times in case of handle collision
+            for (let i = 0; i < 3; i++) {
+              try {
+                const regRes = await apiRequest("POST", "/api/auth/register", {
+                  firebaseUid: firebaseUser.uid,
+                  email: firebaseUser.email || undefined,
+                  phone: firebaseUser.phoneNumber || undefined,
+                  handle,
+                  region: "",
+                });
+                await regRes.json();
+                break;
+              } catch (e) {
+                handle = genHandle();
+                if (i === 2) throw e;
+              }
+            }
+            const loginRes = await apiRequest("POST", "/api/auth/login", {
+              firebaseUid: firebaseUser.uid,
+            });
+            const loginData = await loginRes.json();
+            setUser(loginData.user);
+          } catch (regErr) {
+            console.error("Auto-register fallback failed:", regErr);
+            setUser(null);
+          }
         }
       } else {
         // Check if there's an anonymous user stored in localStorage
@@ -108,12 +138,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (firebaseUid: string): Promise<User> => {
-    const response = await apiRequest("POST", "/api/auth/login", {
-      firebaseUid,
-    });
-    const data = await response.json();
-    setUser(data.user);
-    return data.user;
+    try {
+      const response = await apiRequest("POST", "/api/auth/login", {
+        firebaseUid,
+      });
+      const data = await response.json();
+      setUser(data.user);
+      return data.user;
+    } catch (err) {
+      // Fallback: attempt to auto-register and then login
+      const response = await apiRequest("POST", "/api/auth/register", {
+        firebaseUid,
+        handle: `user_${Math.random().toString(36).slice(2, 8).toLowerCase()}`,
+        region: "",
+      });
+      await response.json();
+      const loginRes = await apiRequest("POST", "/api/auth/login", { firebaseUid });
+      const data = await loginRes.json();
+      setUser(data.user);
+      return data.user;
+    }
   };
 
   const logout = async () => {

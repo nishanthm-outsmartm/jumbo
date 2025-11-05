@@ -1,15 +1,16 @@
-import { Switch, Route, Router } from "wouter";
+﻿import { Switch, Route, Router, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { Navigation } from "@/components/Navigation";
+import BottomNav from "@/components/landing/BottomNav";
 
 // Import pages
 import Profile from "@/pages/Profile";
 import Home from "@/pages/Home";
-import Connect from "@/pages/Connect"; // ✅ Added for /Connect route
+import Connect from "@/pages/Connect"; // minimal connect page
 
 import Register from "@/pages/Register";
 import LogSwitch from "@/pages/LogSwitch";
@@ -48,7 +49,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <EnhancedLogin />;
   }
 
-  return <div className="mb-16">{children}</div>;
+  return (
+    <>
+      <div className="pb-24">{children}</div>
+      <BottomNav />
+    </>
+  );
 }
 
 function ProtectedModeratorRoute({ children }: { children: React.ReactNode }) {
@@ -72,7 +78,12 @@ function ProtectedModeratorRoute({ children }: { children: React.ReactNode }) {
     return <NotFound />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <div className="pb-24">{children}</div>
+      <BottomNav />
+    </>
+  );
 }
 
 function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
@@ -94,7 +105,12 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
     return <EnhancedLogin />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <div className="pb-24">{children}</div>
+      <BottomNav />
+    </>
+  );
 }
 
 // ========================
@@ -103,6 +119,7 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
 
 function AppRouter() {
   const { user, loading } = useAuth();
+  const [location] = useLocation();
 
   const HomePage = () => {
     if (loading) {
@@ -121,9 +138,9 @@ function AppRouter() {
 
   return (
     <div className="min-h-screen">
-      {user && <Navigation />}
-      <AnonymousUserBanner />
-      <CookieConsent />
+      {user && location !== "/connect" && <Navigation />}
+      {location !== "/connect" && <AnonymousUserBanner />}
+      {location !== "/connect" && <CookieConsent />}
       <Switch>
         {/* Authentication Routes */}
         <Route path="/login">
@@ -148,7 +165,7 @@ function AppRouter() {
         {/* Public Routes */}
         <Route path="/" component={HomePage} />
 
-        {/* ✅ Added Connect route */}
+        {/* âœ… Added Connect route */}
         <Route path="/connect" component={Connect} />
 
         {/* Protected Routes */}
@@ -243,3 +260,15 @@ function App() {
 }
 
 export default App;
+
+
+
+
+
+
+
+
+
+
+
+

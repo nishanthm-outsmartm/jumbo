@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { api } from "@/lib/api";
 import BrandSelectComboBox from "@/components/BrandSelectComboBox";
+import { getOrCreateGuestSessionId } from "@/lib/guestSession";
 
 const categories = [
   { value: "FOOD_BEVERAGES", label: "Food & Beverages" },
@@ -68,10 +69,14 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
   });
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [guestSessionId] = useState<string | null>(() => getOrCreateGuestSessionId());
+  const [guestHandle, setGuestHandle] = useState("");
+
+  const identityReady = Boolean(user?.id || guestSessionId);
 
   const { data: brands = [] } = useQuery<Brand[]>({
     queryKey: ["/api/brands"],
-    enabled: !!user,
+    enabled: true,
   });
 
   // Fetch missions to get brand mappings for this mission (fromBrands/toBrands)
@@ -96,7 +101,7 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
       const data = await res.json();
       return Array.isArray(data) ? data : [];
     },
-    enabled: !!user,
+    enabled: true,
     staleTime: 60_000,
   });
   const mission = missions.find((m) => m.id === missionId);
@@ -113,9 +118,11 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
     onSuccess: () => {
       toast({
         title: "Switch logged successfully!",
-        description: `You earned 25 XP for making a switch${
-          formData.isPublic ? " and sharing it!" : "!"
-        }`,
+        description: user
+          ? `You earned 25 XP for making a switch${
+              formData.isPublic ? " and sharing it!" : "!"
+            }`
+          : "Saved on this device. Connect an account later to protect your progress.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/feed"] });
       queryClient.invalidateQueries({ queryKey: ["/api/missions"] });
@@ -169,7 +176,14 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!identityReady) {
+      toast({
+        title: "Please refresh",
+        description: "We couldn't confirm your session. Try again in a moment.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       let evidenceUrl = "";
@@ -195,8 +209,7 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
         return;
       }
 
-      await logSwitchMutation.mutateAsync({
-        userId: user.id,
+      const payload: Record<string, any> = {
         missionId,
         fromBrandId: formData.fromBrand,
         toBrandId: formData.toBrand,
@@ -205,7 +218,16 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
         isPublic: formData.isPublic,
         points: 25,
         evidenceUrl,
-      });
+      };
+
+      if (user?.id) {
+        payload.userId = user.id;
+      } else if (guestSessionId) {
+        payload.guestSessionId = guestSessionId;
+        payload.guestHandle = guestHandle.trim() || undefined;
+      }
+
+      await logSwitchMutation.mutateAsync(payload);
     } catch (error) {
       console.error("Error logging switch:", error);
       toast({
@@ -215,14 +237,11 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
       });
     }
   };
-
-  if (!user) return null;
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="w-full bg-[#0b2238] hover:bg-[#0d2b4f] text-white">
-          Log Your Switch
+          {user ? "Log Your Switch" : "Log a Switch (Guest)"}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto ">
@@ -231,6 +250,12 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
         </DialogHeader>
         <div>
           <form onSubmit={handleSubmit} className="mt-4 grid gap-2">
+            {!user && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                No login needed. Your switch will be saved on this device and doesn't earn XP
+                until you connect an account.
+              </div>
+            )}
             {/* Brand Switch */}
             <div className="bg-[#e6f0f5] border-2 border-dashed border-[#0b2238] rounded-lg p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
@@ -334,6 +359,18 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
               />
             </div>
 
+            {!user && (
+              <div>
+                <Label>Nickname (optional)</Label>
+                <Input
+                  placeholder="Anonymous Switcher"
+                  value={guestHandle}
+                  onChange={(e) => setGuestHandle(e.target.value)}
+                  className="mt-1 border-[#0b2238]"
+                />
+              </div>
+            )}
+
             {/* Evidence Upload */}
             <div>
               <Label>Add Photo Evidence (Optional)</Label>
@@ -368,7 +405,7 @@ export default function LogSwitchDialog({ missionId }: LogSwitchDialogProps) {
               <Button
                 type="submit"
                 className="flex-1 bg-[#0b2238] hover:bg-[#0d2b4f] text-white"
-                disabled={logSwitchMutation.isPending}
+                disabled={logSwitchMutation.isPending || !identityReady}
               >
                 {logSwitchMutation.isPending
                   ? "Logging Switch..."

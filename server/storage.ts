@@ -140,12 +140,12 @@ export interface IStorage {
   getUserRewards(userId: string): Promise<any[]>;
 
   // News engagement methods
-  voteNews(userId: string, newsId: string, voteType: 'upvote' | 'downvote'): Promise<{ voted: boolean; voteType: string | null; upvotesCount: number; downvotesCount: number }>;
-  getUserVote(userId: string, newsId: string): Promise<{ voteType: string } | null>;
-  getUserShare(userId: string, newsId: string): Promise<any>;
-  shareNews(userId: string, newsId: string, platform?: string): Promise<{ share: NewsShare; isNewShare: boolean }>;
+  voteNews(params: { userId?: string; sessionId?: string; newsId: string; voteType: 'upvote' | 'downvote' }): Promise<{ voted: boolean; voteType: string | null; upvotesCount: number; downvotesCount: number }>;
+  getUserVote(params: { userId?: string; sessionId?: string; newsId: string }): Promise<{ voteType: string } | null>;
+  getUserShare(params: { userId?: string; sessionId?: string; newsId: string }): Promise<any>;
+  shareNews(params: { userId?: string; sessionId?: string; newsId: string; platform?: string }): Promise<{ share: NewsShare; isNewShare: boolean }>;
   getNewsComments(newsId: string): Promise<any[]>;
-  addNewsComment(userId: string, newsId: string, content: string): Promise<any>;
+  addNewsComment(params: { userId?: string; sessionId?: string; guestName?: string; newsId: string; content: string }): Promise<any>;
 
   // GDPR methods
   exportUserData(userId: string): Promise<any>;
@@ -246,6 +246,18 @@ export interface IStorage {
   deleteMission(id: string): Promise<void>;
   getUserMissions(userId: string): Promise<any[]>;
   getMissionSubmissions(): Promise<any[]>;
+  joinMission(userId: string, missionId: string): Promise<any>;
+  submitMissionSwitchLog(
+    identity: { userId?: string; sessionId?: string; guestHandle?: string },
+    missionId: string,
+    switchLogData: any
+  ): Promise<any>;
+  verifyMissionSwitchLog(
+    switchLogId: string,
+    moderatorId: string,
+    approved: boolean,
+    feedback?: string
+  ): Promise<any>;
 
   // Member management methods
   getAllUsers(filters?: { role?: string; active?: boolean }): Promise<any[]>;
@@ -1662,52 +1674,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   // News engagement methods
-  async voteNews(userId: string, newsId: string, voteType: 'upvote' | 'downvote'): Promise<{ voted: boolean; voteType: string | null; upvotesCount: number; downvotesCount: number }> {
-    // Check if user already voted
-    const existingVote = await db
-      .select()
-      .from(newsVotes)
-      .where(and(eq(newsVotes.userId, userId), eq(newsVotes.newsId, newsId)));
+  async voteNews({ userId, sessionId, newsId, voteType }: { userId?: string; sessionId?: string; newsId: string; voteType: 'upvote' | 'downvote' }): Promise<{ voted: boolean; voteType: string | null; upvotesCount: number; downvotesCount: number }> {
+    if (!userId && !sessionId) {
+      throw new Error("User ID or session ID is required to vote");
+    }
+
+    const identityFilter = userId
+      ? and(eq(newsVotes.userId, userId), eq(newsVotes.newsId, newsId))
+      : and(eq(newsVotes.sessionId, sessionId!), eq(newsVotes.newsId, newsId));
+
+    const existingVote = await db.select().from(newsVotes).where(identityFilter);
 
     if (existingVote.length > 0) {
       const currentVote = existingVote[0];
-      
-      if (currentVote.voteType === voteType) {
-        // Remove vote (unvote)
-        await db
-          .delete(newsVotes)
-          .where(and(eq(newsVotes.userId, userId), eq(newsVotes.newsId, newsId)));
 
-        // Update counts
+      if (currentVote.voteType === voteType) {
+        await db.delete(newsVotes).where(identityFilter);
+
         const countField = voteType === 'upvote' ? 'upvotesCount' : 'downvotesCount';
         await db
           .update(newsArticles)
           .set({ [countField]: sql`${newsArticles[countField]} - 1` })
           .where(eq(newsArticles.id, newsId));
-
-        // Get updated counts
-        const [article] = await db
-          .select({ upvotesCount: newsArticles.upvotesCount, downvotesCount: newsArticles.downvotesCount })
-          .from(newsArticles)
-          .where(eq(newsArticles.id, newsId));
-
-        return {
-          voted: false,
-          voteType: null,
-          upvotesCount: article?.upvotesCount || 0,
-          downvotesCount: article?.downvotesCount || 0,
-        };
       } else {
-        // Change vote type
         await db
           .update(newsVotes)
           .set({ voteType, updatedAt: new Date() })
-          .where(and(eq(newsVotes.userId, userId), eq(newsVotes.newsId, newsId)));
+          .where(identityFilter);
 
-        // Update counts - decrease old vote, increase new vote
         const oldCountField = currentVote.voteType === 'upvote' ? 'upvotesCount' : 'downvotesCount';
         const newCountField = voteType === 'upvote' ? 'upvotesCount' : 'downvotesCount';
-        
+
         await db
           .update(newsArticles)
           .set({
@@ -1715,83 +1712,91 @@ export class DatabaseStorage implements IStorage {
             [newCountField]: sql`${newsArticles[newCountField]} + 1`,
           })
           .where(eq(newsArticles.id, newsId));
-
-        // Get updated counts
-        const [article] = await db
-          .select({ upvotesCount: newsArticles.upvotesCount, downvotesCount: newsArticles.downvotesCount })
-          .from(newsArticles)
-          .where(eq(newsArticles.id, newsId));
-
-        return {
-          voted: true,
-          voteType,
-          upvotesCount: article?.upvotesCount || 0,
-          downvotesCount: article?.downvotesCount || 0,
-        };
       }
     } else {
-      // New vote
-      await db.insert(newsVotes).values({ userId, newsId, voteType });
+      await db.insert(newsVotes).values({
+        userId: userId || null,
+        sessionId: sessionId || null,
+        newsId,
+        voteType,
+      });
 
-      // Update count
       const countField = voteType === 'upvote' ? 'upvotesCount' : 'downvotesCount';
       await db
         .update(newsArticles)
         .set({ [countField]: sql`${newsArticles[countField]} + 1` })
         .where(eq(newsArticles.id, newsId));
-
-      // Get updated counts
-      const [article] = await db
-        .select({ upvotesCount: newsArticles.upvotesCount, downvotesCount: newsArticles.downvotesCount })
-        .from(newsArticles)
-        .where(eq(newsArticles.id, newsId));
-
-      return {
-        voted: true,
-        voteType,
-        upvotesCount: article?.upvotesCount || 0,
-        downvotesCount: article?.downvotesCount || 0,
-      };
     }
+
+    const [article] = await db
+      .select({ upvotesCount: newsArticles.upvotesCount, downvotesCount: newsArticles.downvotesCount })
+      .from(newsArticles)
+      .where(eq(newsArticles.id, newsId));
+
+    const [activeVote] = await db
+      .select({ voteType: newsVotes.voteType })
+      .from(newsVotes)
+      .where(identityFilter);
+
+    return {
+      voted: !!activeVote,
+      voteType: activeVote?.voteType || null,
+      upvotesCount: article?.upvotesCount || 0,
+      downvotesCount: article?.downvotesCount || 0,
+    };
   }
 
-  async getUserVote(userId: string, newsId: string): Promise<{ voteType: string } | null> {
+  async getUserVote({ userId, sessionId, newsId }: { userId?: string; sessionId?: string; newsId: string }): Promise<{ voteType: string } | null> {
+    if (!userId && !sessionId) {
+      return null;
+    }
+
+    const filter = userId
+      ? and(eq(newsVotes.userId, userId), eq(newsVotes.newsId, newsId))
+      : and(eq(newsVotes.sessionId, sessionId!), eq(newsVotes.newsId, newsId));
+
     const [vote] = await db
       .select({ voteType: newsVotes.voteType })
       .from(newsVotes)
-      .where(and(eq(newsVotes.userId, userId), eq(newsVotes.newsId, newsId)));
-    
+      .where(filter);
+
     return vote || null;
   }
 
-  async getUserShare(userId: string, newsId: string): Promise<any> {
-    const [share] = await db
-      .select()
-      .from(newsShares)
-      .where(and(eq(newsShares.userId, userId), eq(newsShares.newsId, newsId)));
-    
+  async getUserShare({ userId, sessionId, newsId }: { userId?: string; sessionId?: string; newsId: string }): Promise<any> {
+    if (!userId && !sessionId) {
+      return null;
+    }
+
+    const filter = userId
+      ? and(eq(newsShares.userId, userId), eq(newsShares.newsId, newsId))
+      : and(eq(newsShares.sessionId, sessionId!), eq(newsShares.newsId, newsId));
+
+    const [share] = await db.select().from(newsShares).where(filter);
     return share || null;
   }
 
-  async shareNews(userId: string, newsId: string, platform?: string): Promise<{ share: NewsShare; isNewShare: boolean }> {
-    // Check if user has already shared this news
-    const existingShare = await db
-      .select()
-      .from(newsShares)
-      .where(and(eq(newsShares.userId, userId), eq(newsShares.newsId, newsId)));
+  async shareNews({ userId, sessionId, newsId, platform }: { userId?: string; sessionId?: string; newsId: string; platform?: string }): Promise<{ share: NewsShare; isNewShare: boolean }> {
+    if (!userId && !sessionId) {
+      throw new Error("User ID or session ID is required to share");
+    }
 
+    const filter = userId
+      ? and(eq(newsShares.userId, userId), eq(newsShares.newsId, newsId))
+      : and(eq(newsShares.sessionId, sessionId!), eq(newsShares.newsId, newsId));
+
+    const existingShare = await db.select().from(newsShares).where(filter);
     if (existingShare.length > 0) {
-      // User has already shared, return existing share
       return { share: existingShare[0], isNewShare: false };
     }
 
     const [newsShare] = await db.insert(newsShares).values({
-      userId,
+      userId: userId || null,
+      sessionId: sessionId || null,
       newsId,
       platform,
     }).returning();
 
-    // Increase share count
     await db
       .update(newsArticles)
       .set({ sharesCount: sql`${newsArticles.sharesCount} + 1` })
@@ -1807,6 +1812,8 @@ export class DatabaseStorage implements IStorage {
         content: comments.content,
         status: comments.status,
         createdAt: comments.createdAt,
+        guestName: comments.guestName,
+        sessionId: comments.sessionId,
         user: {
           id: users.id,
           handle: users.handle,
@@ -1815,23 +1822,24 @@ export class DatabaseStorage implements IStorage {
       })
       .from(comments)
       .leftJoin(users, eq(comments.userId, users.id))
-      .where(
-        and(
-        eq(comments.newsId, newsId), 
-        // eq(comments.status, "APPROVED")
-      ))
+      .where(eq(comments.newsId, newsId))
       .orderBy(desc(comments.createdAt));
   }
 
-  async addNewsComment(userId: string, newsId: string, content: string): Promise<Comment> {
+  async addNewsComment({ userId, sessionId, guestName, newsId, content }: { userId?: string; sessionId?: string; guestName?: string; newsId: string; content: string }): Promise<Comment> {
+    if (!userId && !sessionId) {
+      throw new Error("User ID or session ID is required to comment");
+    }
+
     const [comment] = await db.insert(comments).values({
-      userId,
+      userId: userId || null,
+      sessionId: sessionId || null,
+      guestName: userId ? null : guestName || "Guest",
       newsId,
       content,
       status: "PENDING",
     }).returning();
 
-    // Increase comment count
     await db
       .update(newsArticles)
       .set({ commentsCount: sql`${newsArticles.commentsCount} + 1` })
@@ -3041,51 +3049,68 @@ export class DatabaseStorage implements IStorage {
   }
 
   async submitMissionSwitchLog(
-    userId: string,
+    identity: { userId?: string; sessionId?: string; guestHandle?: string },
     missionId: string,
     switchLogData: any
   ): Promise<any> {
     try {
-      // Check if user has joined this mission
-      console.log(
-        "Checking user mission for userId:",
-        userId,
-        "missionId:",
-        missionId
-      );
-      const userMission = await db
-        .select({ id: userMissions.id, status: userMissions.status })
-        .from(userMissions)
-        .where(
-          and(
-            eq(userMissions.userId, userId),
-            eq(userMissions.missionId, missionId)
-          )
-        )
-        .limit(1);
-
-
-      if (userMission.length === 0) {
-        throw new Error("You must join the mission first");
+      const { userId, sessionId, guestHandle } = identity;
+      if (!userId && !sessionId) {
+        throw new Error("User ID or guest session is required");
       }
 
-      // Allow multiple submissions for a mission regardless of prior outcome
-      // Accept historical records where status may be "SUBMITTED", "COMPLETED" or "FAILED"
-      const allowedStatuses = ["STARTED", "SUBMITTED", "COMPLETED", "FAILED"] as const;
-      if (!allowedStatuses.includes(userMission[0].status as any)) {
-        throw new Error("Mission already completed or failed");
+      const fromBrandId =
+        switchLogData.fromBrandId || switchLogData.targetBrandFrom;
+      const toBrandId =
+        switchLogData.toBrandId || switchLogData.targetBrandTo;
+      if (!fromBrandId || !toBrandId) {
+        throw new Error("Both from and to brands are required");
+      }
+
+      // Check if user has joined this mission
+      if (userId) {
+        const userMission = await db
+          .select({ id: userMissions.id, status: userMissions.status })
+          .from(userMissions)
+          .where(
+            and(
+              eq(userMissions.userId, userId),
+              eq(userMissions.missionId, missionId)
+            )
+          )
+          .limit(1);
+
+        if (userMission.length === 0) {
+          throw new Error("You must join the mission first");
+        }
+
+        const allowedStatuses = [
+          "STARTED",
+          "SUBMITTED",
+          "COMPLETED",
+          "FAILED",
+        ] as const;
+        if (!allowedStatuses.includes(userMission[0].status as any)) {
+          throw new Error("Mission already completed or failed");
+        }
       }
 
       // Create switch log with mission reference
       const switchLog = await this.createSwitchLog({
-        userId,
-        toBrandId: switchLogData.targetBrandFrom,
-        fromBrandId: switchLogData.targetBrandTo,
-        reason: switchLogData.reason,
-        category: switchLogData.category,
-        experience: switchLogData.experience,
+        userId: userId || null,
+        guestSessionId: sessionId || null,
+        guestHandle: userId ? null : guestHandle?.slice(0, 64) || null,
+        fromBrandId,
+        toBrandId,
+        reason: switchLogData.reason || switchLogData.experience || "",
+        category:
+          switchLogData.category ||
+          switchLogData.targetCategory ||
+          "OTHER",
+        experience: switchLogData.experience || switchLogData.reason || "",
         financialImpact: switchLogData.financialImpact,
         evidenceUrl: switchLogData.evidenceUrl,
+        isPublic: Boolean(switchLogData.isPublic),
         missionId,
         status: "PENDING",
       });

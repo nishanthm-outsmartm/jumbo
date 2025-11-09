@@ -103,7 +103,7 @@ function MissionCard({
           "Content-Type": "application/json",
           ...(user && { "x-user-id": user.id }),
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, userId: user?.id }),
       });
       if (!response.ok) throw new Error("Failed to submit switch log");
       return response.json();
@@ -154,15 +154,20 @@ function MissionCard({
   };
 
   const actionButton = () => {
-    if (!user) return (
-      <Button
-        onClick={() => (window.location.href = "/login")}
-        className="flex-1 bg-[#0b2238] hover:bg-[#0b2238]/90 text-white"
-        size="sm"
-      >
-        <Target className="w-4 h-4 mr-2" /> Login to Join
-      </Button>
-    );
+    if (!user) {
+      return (
+        <div className="flex flex-col gap-2">
+          <LogSwitchDialog missionId={mission.id} />
+          <Button
+            onClick={() => (window.location.href = "/login")}
+            className="flex-1 bg-[#0b2238] hover:bg-[#0b2238]/90 text-white"
+            size="sm"
+          >
+            <Target className="w-4 h-4 mr-2" /> Login to earn XP
+          </Button>
+        </div>
+      );
+    }
     if (!userMission) return (
       <Button
         onClick={() => onParticipate(mission.id)}

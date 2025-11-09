@@ -293,6 +293,8 @@ export const switchLogs = pgTable("switch_logs", {
   userId: varchar("user_id").references(() => users.id, {
     onDelete: "cascade",
   }),
+  guestSessionId: varchar("guest_session_id"),
+  guestHandle: varchar("guest_handle"),
   fromBrandId: varchar("from_brand_id").references(() => brands.id),
   toBrandId: varchar("to_brand_id").references(() => brands.id),
   missionId: varchar("mission_id").references(() => missions.id), // For mission-related switch logs
@@ -452,6 +454,8 @@ export const comments = pgTable("comments", {
   userId: varchar("user_id").references(() => users.id, {
     onDelete: "cascade",
   }),
+  sessionId: varchar("session_id"),
+  guestName: varchar("guest_name"),
   postId: varchar("post_id").references(() => posts.id, {
     onDelete: "cascade",
   }),
@@ -640,6 +644,7 @@ export const newsVotes = pgTable("news_votes", {
   userId: varchar("user_id").references(() => users.id, {
     onDelete: "cascade",
   }),
+  sessionId: varchar("session_id"),
   newsId: varchar("news_id").references(() => newsArticles.id, {
     onDelete: "cascade",
   }),
@@ -649,6 +654,7 @@ export const newsVotes = pgTable("news_votes", {
 }, (table) => ({
   // Unique constraint to prevent duplicate votes from same user
   uniqueUserNews: unique("unique_user_news").on(table.userId, table.newsId),
+  uniqueSessionNews: unique("unique_session_news").on(table.sessionId, table.newsId),
 }));
 
 // News shares
@@ -659,12 +665,15 @@ export const newsShares = pgTable("news_shares", {
   userId: varchar("user_id").references(() => users.id, {
     onDelete: "cascade",
   }),
+  sessionId: varchar("session_id"),
   newsId: varchar("news_id").references(() => newsArticles.id, {
     onDelete: "cascade",
   }),
   platform: varchar("platform"), // 'twitter', 'whatsapp', 'facebook', etc.
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  uniqueSessionShare: unique("unique_session_share").on(table.sessionId, table.newsId),
+}));
 
 // Private messages between members and moderators
 export const messages = pgTable("messages", {

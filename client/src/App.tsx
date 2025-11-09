@@ -217,11 +217,7 @@ function AppRouter() {
           </ProtectedRoute>
         </Route>
 
-        <Route path="/missions">
-          <ProtectedRoute>
-            <Missions />
-          </ProtectedRoute>
-        </Route>
+        <Route path="/missions" component={Missions} />
 
         <Route path="/rewards">
           <ProtectedRoute>

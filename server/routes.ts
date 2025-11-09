@@ -1542,22 +1542,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/news/:slug/engagement", async (req, res) => {
     try {
       const { slug } = req.params;
-      const userId = req.headers['x-user-id'] as string;
-      
-      if (!userId) {
-        return res.status(401).json({ error: "User ID required" });
-      }
+      const userId = req.headers["x-user-id"] as string | undefined;
+      const sessionId = req.headers["x-guest-session"] as string | undefined;
 
       const article = await storage.getNewsArticleBySlug(slug);
       if (!article) {
         return res.status(404).json({ error: "News article not found" });
       }
 
-      // Get user's vote status
-      const userVote = await storage.getUserVote(userId, article.id);
-      
-      // Get user's share status
-      const userShared = await storage.getUserShare(userId, article.id);
+      const userVote = await storage.getUserVote({ userId, sessionId, newsId: article.id });
+      const userShared = await storage.getUserShare({ userId, sessionId, newsId: article.id });
 
       res.json({
         upvotesCount: article.upvotesCount || 0,
@@ -1578,45 +1572,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/news/:slug/vote", async (req, res) => {
     try {
       const { slug } = req.params;
-      const { userId, voteType } = req.body;
+      const { userId, guestSessionId, voteType } = req.body;
 
-      if (!userId) {
-        return res.status(400).json({ error: "User ID is required" });
+      if (!userId && !guestSessionId) {
+        return res.status(400).json({ error: "User ID or guest session ID is required" });
       }
 
-      if (!voteType || !['upvote', 'downvote'].includes(voteType)) {
+      if (!voteType || !["upvote", "downvote"].includes(voteType)) {
         return res.status(400).json({ error: "Vote type must be 'upvote' or 'downvote'" });
       }
 
-      // Get article by slug to get the ID
       const article = await storage.getNewsArticleBySlug(slug);
       if (!article) {
         return res.status(404).json({ error: "News article not found" });
       }
 
-      const result = await storage.voteNews(userId, article.id, voteType);
-      
-      // Broadcast real-time update via WebSocket
+      const result = await storage.voteNews({
+        userId,
+        sessionId: guestSessionId,
+        newsId: article.id,
+        voteType,
+      });
+
       if (wss) {
         wss.clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({
-              type: "update",
-              data: {
-                newsId: article.id,
-                slug: slug,
-                type: "vote",
-                voted: result.voted,
-                voteType: result.voteType,
-                upvotesCount: result.upvotesCount,
-                downvotesCount: result.downvotesCount,
-                timestamp: new Date().toISOString(),
-              },
-            }));
+            client.send(
+              JSON.stringify({
+                type: "update",
+                data: {
+                  newsId: article.id,
+                  slug,
+                  type: "vote",
+                  voted: result.voted,
+                  voteType: result.voteType,
+                  upvotesCount: result.upvotesCount,
+                  downvotesCount: result.downvotesCount,
+                  timestamp: new Date().toISOString(),
+                },
+              })
+            );
           }
         });
       }
-      
+
       res.json(result);
     } catch (error) {
       console.error("News vote error:", error);
@@ -1627,43 +1626,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/news/:slug/share", async (req, res) => {
     try {
       const { slug } = req.params;
-      const { userId, platform } = req.body;
+      const { userId, guestSessionId, platform } = req.body;
 
-      if (!userId) {
-        return res.status(400).json({ error: "User ID is required" });
+      if (!userId && !guestSessionId) {
+        return res.status(400).json({ error: "User ID or guest session ID is required" });
       }
 
-      // Get article by slug to get the ID
       const article = await storage.getNewsArticleBySlug(slug);
       if (!article) {
         return res.status(404).json({ error: "News article not found" });
       }
 
-      const { share, isNewShare } = await storage.shareNews(userId, article.id, platform);
-      
-      // Get updated counts for real-time updates
+      const { share, isNewShare } = await storage.shareNews({
+        userId,
+        sessionId: guestSessionId,
+        newsId: article.id,
+        platform,
+      });
+
       const updatedArticle = await storage.getNewsArticleById(article.id);
       const sharesCount = updatedArticle?.sharesCount || 0;
-      
-      // Broadcast real-time update via WebSocket only for new shares
+
       if (wss && isNewShare) {
         wss.clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({
-              type: "update",
-              data: {
-                newsId: article.id,
-                slug: slug,
-                type: "share",
-                share,
-                sharesCount,
-                timestamp: new Date().toISOString(),
-              },
-            }));
+            client.send(
+              JSON.stringify({
+                type: "update",
+                data: {
+                  newsId: article.id,
+                  slug,
+                  type: "share",
+                  share,
+                  sharesCount,
+                  timestamp: new Date().toISOString(),
+                },
+              })
+            );
           }
         });
       }
-      
+
       res.json({ share, isNewShare });
     } catch (error) {
       console.error("News share error:", error);
@@ -1689,25 +1692,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/news/:slug/comments", async (req, res) => {
     try {
       const { slug } = req.params;
-      const { userId, content } = req.body;
+      const { userId, guestSessionId, content, guestName } = req.body;
 
-      if (!userId || !content) {
-        return res.status(400).json({ error: "User ID and content are required" });
+      if ((!userId && !guestSessionId) || !content) {
+        return res.status(400).json({ error: "User ID or guest session ID and content are required" });
       }
 
-      // Get article by slug to get the ID
       const article = await storage.getNewsArticleBySlug(slug);
       if (!article) {
         return res.status(404).json({ error: "News article not found" });
       }
 
-      const comment = await storage.addNewsComment(userId, article.id, content);
-      
-      // Get updated counts for real-time updates
+      const comment = await storage.addNewsComment({
+        userId,
+        sessionId: guestSessionId,
+        guestName,
+        newsId: article.id,
+        content,
+      });
+
       const updatedArticle = await storage.getNewsArticleById(article.id);
       const commentsCount = updatedArticle?.commentsCount || 0;
-      
-      // Broadcast real-time update via WebSocket
+
       if (wss) {
         wss.clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
@@ -1726,7 +1732,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      res.json({ comment });
+      res.json({ comment, commentsCount });
     } catch (error) {
       console.error("News comment error:", error);
       res.status(500).json({ error: "Failed to add comment" });
@@ -1968,14 +1974,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Submit Mission Switch Log API
   app.post("/api/missions/:missionId/submit", async (req, res) => {
     try {
-      // Get user ID from session/auth - simplified for demo
-      const userId = req.body.userId
-
-      if (!userId) throw new Error;
+      const { userId, guestSessionId, guestHandle } = req.body;
+      if (!userId && !guestSessionId) {
+        return res
+          .status(400)
+          .json({ error: "User ID or guest session is required" });
+      }
       const { missionId } = req.params;
 
       const switchLog = await storage.submitMissionSwitchLog(
-        userId,
+        { userId, sessionId: guestSessionId, guestHandle },
         missionId,
         req.body
       );

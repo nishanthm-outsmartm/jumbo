@@ -2,9 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   ThumbsUp,
@@ -13,23 +12,22 @@ import {
   Share2,
   Send,
   Loader2,
-  AlertTriangle,
-  Users,
-  UserCheck,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ShareDialog } from "./ShareDialog";
+import { getOrCreateGuestSessionId } from "@/lib/guestSession";
 
 interface NewsComment {
   id: string;
   content: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
   createdAt: string;
-  user: {
+  guestName?: string | null;
+  user?: {
     id: string;
     handle: string;
     userType: "ANONYMOUS" | "REGISTERED";
-  };
+  } | null;
 }
 
 interface NewsEngagementProps {
@@ -64,17 +62,36 @@ export function NewsEngagement({
   const [userVote, setUserVote] = useState<'upvote' | 'downvote' | null>(null);
   const [userShared, setUserShared] = useState(false);
   const [commentsEnabled, setCommentsEnabled] = useState(true);
+  const [guestSessionId, setGuestSessionId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return getOrCreateGuestSessionId();
+  });
   const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setGuestSessionId((current) => {
+        if (current) return current;
+        if (typeof window === "undefined") return null;
+        return getOrCreateGuestSessionId();
+      });
+    } else {
+      setGuestSessionId(null);
+    }
+  }, [user]);
 
   // Fetch current engagement data
   const fetchEngagementData = async () => {
-    if (!user) return;
-    
     try {
+      const headers: Record<string, string> = {};
+      if (user?.id) {
+        headers["x-user-id"] = user.id;
+      } else if (guestSessionId) {
+        headers["x-guest-session"] = guestSessionId;
+      }
+
       const response = await fetch(`/api/news/${newsSlug}/engagement`, {
-        headers: {
-          'x-user-id': user.id,
-        },
+        headers,
       });
       if (response.ok) {
         const data = await response.json();
@@ -94,7 +111,7 @@ export function NewsEngagement({
   // Fetch engagement data on component mount
   useEffect(() => {
     fetchEngagementData();
-  }, [newsId, user]);
+  }, [newsId, user, guestSessionId]);
 
   // WebSocket connection for real-time updates
   useEffect(() => {
@@ -173,11 +190,22 @@ export function NewsEngagement({
     }
   };
 
+  const getIdentityPayload = () => {
+    if (user?.id) {
+      return { userId: user.id };
+    }
+    if (guestSessionId) {
+      return { guestSessionId };
+    }
+    return null;
+  };
+
   const handleVote = async (voteType: 'upvote' | 'downvote') => {
-    if (!user) {
+    const identity = getIdentityPayload();
+    if (!identity) {
       toast({
-        title: "Please connect your account",
-        description: "You need to connect your account to vote on news articles.",
+        title: "Hold on",
+        description: "We couldn't determine your session. Please refresh and try again.",
         variant: "destructive",
       });
       return;
@@ -188,7 +216,7 @@ export function NewsEngagement({
       const response = await fetch(`/api/news/${newsSlug}/vote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, voteType }),
+        body: JSON.stringify({ ...identity, voteType }),
       });
 
       if (response.ok) {
@@ -210,69 +238,12 @@ export function NewsEngagement({
     }
   };
 
-  const handleShare = async (platform?: string) => {
-    if (!user) {
-      toast({
-        title: "Please connect your account",
-        description: "You need to connect your account to share news articles.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (userShared) {
-      toast({
-        title: "Already shared",
-        description: "You have already shared this article.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/news/${newsSlug}/share`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, platform }),
-      });
-
-      if (response.ok) {
-        setShares((prev) => prev + 1);
-        setUserShared(true);
-        toast({
-          title: "Shared!",
-          description: "Thank you for sharing this article.",
-        });
-      } else {
-        const errorData = await response.json();
-        if (response.status === 409) {
-          setUserShared(true);
-          toast({
-            title: "Already shared",
-            description: "You have already shared this article.",
-            variant: "destructive",
-          });
-        } else {
-          throw new Error(errorData.error || "Failed to share");
-        }
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to share article",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleComment = async () => {
-    if (!user) {
+    const identity = getIdentityPayload();
+    if (!identity) {
       toast({
-        title: "Please connect your account",
-        description: "You need to connect your account to comment on news articles.",
+        title: "Hold on",
+        description: "We couldn't determine your session. Please refresh and try again.",
         variant: "destructive",
       });
       return;
@@ -292,12 +263,13 @@ export function NewsEngagement({
       const response = await fetch(`/api/news/${newsSlug}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, content: newComment.trim() }),
+        body: JSON.stringify({ ...identity, content: newComment.trim() }),
       });
 
       if (response.ok) {
+        const data = await response.json();
         setNewComment("");
-        setComments((prev) => prev + 1);
+        setComments((prev) => (typeof data.commentsCount === "number" ? data.commentsCount : prev + 1));
         toast({
           title: "Comment submitted",
           description: "Your comment is pending moderation.",
@@ -319,50 +291,145 @@ export function NewsEngagement({
     }
   };
 
-  const getUserTypeIcon = (userType: string) => {
-    return userType === "REGISTERED" ? (
-      <UserCheck className="h-3 w-3 text-green-500" />
-    ) : (
-      <Users className="h-3 w-3 text-blue-500" />
-    );
-  };
+  const identityReady = !!user?.id || !!guestSessionId;
 
   return (
     <div className="space-y-4">
-      {/* Engagement Actions */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleVote('upvote')}
-            disabled={loading}
-            className={`flex items-center gap-2 ${
-              userVote === 'upvote' ? "text-green-500" : ""
-            }`}
-          >
-            <ThumbsUp className={`h-4 w-4 ${userVote === 'upvote' ? "fill-current" : ""}`} />
-            {upvotes}
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleVote('downvote')}
-            disabled={loading}
-            className={`flex items-center gap-2 ${
-              userVote === 'downvote' ? "text-red-500" : ""
-            }`}
-          >
-            <ThumbsDown className={`h-4 w-4 ${userVote === 'downvote' ? "fill-current" : ""}`} />
-            {downvotes}
-          </Button>
-        </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleVote("upvote")}
+          disabled={loading || !identityReady}
+          className={`flex items-center gap-2 ${userVote === "upvote" ? "text-green-500" : ""}`}
+        >
+          <ThumbsUp className={`h-4 w-4 ${userVote === "upvote" ? "fill-current" : ""}`} />
+          {upvotes}
+        </Button>
 
-        {/* Comments and Share disabled as requested */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleVote("downvote")}
+          disabled={loading || !identityReady}
+          className={`flex items-center gap-2 ${userVote === "downvote" ? "text-red-500" : ""}`}
+        >
+          <ThumbsDown className={`h-4 w-4 ${userVote === "downvote" ? "fill-current" : ""}`} />
+          {downvotes}
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowComments((prev) => !prev)}
+          className="flex items-center gap-2"
+        >
+          <MessageCircle className="h-4 w-4" />
+          {showComments ? "Hide" : "Comments"} ({comments})
+        </Button>
+
+        <ShareDialog
+          newsId={newsId}
+          newsSlug={newsSlug}
+          title={title}
+          userId={user?.id}
+          guestSessionId={!user ? guestSessionId ?? undefined : undefined}
+          onShare={() => {
+            setUserShared(true);
+            setShares((prev) => prev + 1);
+            toast({
+              title: "Thanks for sharing!",
+              description: "Every share helps more people stay informed.",
+            });
+          }}
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={userShared || !identityReady}
+            className={`flex items-center gap-2 ${userShared ? "text-emerald-500" : ""}`}
+          >
+            <Share2 className="h-4 w-4" />
+            {userShared ? "Shared" : "Share"} ({shares})
+          </Button>
+        </ShareDialog>
       </div>
 
-      {/* Comments section removed */}
+      {showComments && (
+        <Card className="border border-slate-200">
+          <CardContent className="space-y-4">
+            {commentsEnabled ? (
+              <>
+                <Textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Share your perspective..."
+                  className="min-h-[80px]"
+                  disabled={loading || !identityReady}
+                />
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>Comments are reviewed before going live.</span>
+                  <Button
+                    size="sm"
+                    onClick={handleComment}
+                    disabled={
+                      loading ||
+                      !identityReady ||
+                      !newComment.trim()
+                    }
+                  >
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4 mr-1" />
+                    )}
+                    {loading ? "Sending" : "Post comment"}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  Comments are turned off for this article right now.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-3">
+              {commentsLoading ? (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading comments…
+                </div>
+              ) : commentsList.length === 0 ? (
+                <p className="text-sm text-slate-500">Be the first to comment.</p>
+              ) : (
+                commentsList.map((comment) => (
+                  <div key={comment.id} className="rounded-lg border border-slate-100 p-3">
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      <span className="font-medium text-slate-900">
+                        {comment.user?.handle || comment.guestName || "Guest"}
+                      </span>
+                      <Badge variant={comment.user?.userType === "REGISTERED" ? "secondary" : "outline"}>
+                        {comment.user?.userType === "REGISTERED" ? "Member" : "Guest"}
+                      </Badge>
+                      {comment.status !== "APPROVED" && (
+                        <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                          Pending review
+                        </Badge>
+                      )}
+                      <span className="ml-auto text-xs text-slate-400">
+                        {new Date(comment.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-slate-700">{comment.content}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

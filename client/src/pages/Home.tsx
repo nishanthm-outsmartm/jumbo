@@ -89,21 +89,12 @@ export default function Home() {
 
             {/* Actions at right end (from Connect page behavior) */}
             <div className="flex items-center gap-2">
-              {user ? (
-                <Link href="/missions">
-                  <a className="px-4 py-2 rounded-md bg-[#0b2238] text-white hover:bg-[#0d2b4f] font-medium flex items-center gap-2">
-                    <Zap className="h-4 w-4" />
-                    Log New Switch
-                  </a>
-                </Link>
-              ) : (
-                <Link href="/login">
-                  <a className="px-4 py-2 rounded-md bg-[#0b2238] text-white hover:bg-[#0d2b4f] font-medium flex items-center gap-2">
-                    <Zap className="h-4 w-4" />
-                    Log New Switch
-                  </a>
-                </Link>
-              )}
+              <Link href="/missions">
+                <a className="px-4 py-2 rounded-md bg-[#0b2238] text-white hover:bg-[#0d2b4f] font-medium flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  {user ? "Log New Switch" : "Log a Switch (No Login)"}
+                </a>
+              </Link>
               <SuggestIdeaButton />
             </div>
           </div>
@@ -128,7 +119,7 @@ export default function Home() {
 
         {/* Latest News */}
         <SectionTitle title="Latest News" />
-        <LatestNewsHome user={user} />
+        <LatestNewsHome />
 
         {/* Active Missions (from API) */}
         <SectionTitle title="Active Missions" />
@@ -202,7 +193,7 @@ function SectionTitle({ title }: { title: string }) {
 }
 
 // Latest News (first 2) mirroring News page cards, side-by-side
-function LatestNewsHome({ user }: { user: any }) {
+function LatestNewsHome() {
   type NewsArticle = {
     id: string;
     slug: string;
@@ -211,6 +202,8 @@ function LatestNewsHome({ user }: { user: any }) {
     publishedAt: string;
     upvotesCount?: number;
     downvotesCount?: number;
+    sharesCount?: number;
+    commentsCount?: number;
   };
 
   const { data: latestNews = [], isLoading } = useQuery<NewsArticle[]>({
@@ -247,17 +240,17 @@ function LatestNewsHome({ user }: { user: any }) {
                   ? article.description.slice(0, 160) + "..."
                   : article.description}
               </p>
-              {user && (
-                <div className="mt-3">
-                  <NewsEngagement
-                    newsId={article.id}
-                    newsSlug={article.slug}
-                    initialUpvotes={article.upvotesCount || 0}
-                    initialDownvotes={article.downvotesCount || 0}
-                    title={article.title}
-                  />
-                </div>
-              )}
+              <div className="mt-3">
+                <NewsEngagement
+                  newsId={article.id}
+                  newsSlug={article.slug}
+                  initialUpvotes={article.upvotesCount || 0}
+                  initialDownvotes={article.downvotesCount || 0}
+                  initialShares={article.sharesCount || 0}
+                  initialComments={article.commentsCount || 0}
+                  title={article.title}
+                />
+              </div>
             </CardContent>
           </Card>
         ))}

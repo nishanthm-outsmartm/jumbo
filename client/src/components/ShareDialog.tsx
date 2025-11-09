@@ -29,16 +29,59 @@ interface ShareDialogProps {
   children: React.ReactNode;
   onShare?: () => void;
   userId?: string;
+  guestSessionId?: string;
 }
 
-export function ShareDialog({ newsId, newsSlug, title, url, children, onShare, userId }: ShareDialogProps) {
+export function ShareDialog({
+  newsId,
+  newsSlug,
+  title,
+  url,
+  children,
+  onShare,
+  userId,
+  guestSessionId,
+}: ShareDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const canShare = Boolean(userId || guestSessionId);
   
-  const shareUrl = url || `${window.location.origin}/news/${newsSlug}`;
+  const shareUrl =
+    url ||
+    (typeof window !== "undefined"
+      ? `${window.location.origin}/news/${newsSlug}`
+      : `/news/${newsSlug}`);
   const shareText = `Check out this news: ${title}`;
 
+  const recordShare = async (platform: string) => {
+    const response = await fetch(`/api/news/${newsSlug}/share`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, guestSessionId, platform }),
+    });
+    if (response.ok) {
+      const result = await response.json();
+      if (result.share && result.isNewShare !== false) {
+        onShare?.();
+      }
+    }
+  };
+
+  const ensureSession = () => {
+    if (!canShare) {
+      toast({
+        title: "Action unavailable",
+        description: "We couldn't link this share to a session. Please refresh and try again.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  };
+
   const handleCopyUrl = async () => {
+    if (!ensureSession()) return;
+
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
@@ -47,22 +90,9 @@ export function ShareDialog({ newsId, newsSlug, title, url, children, onShare, u
         description: "The link has been copied to your clipboard.",
       });
       setTimeout(() => setCopied(false), 2000);
-      
-      // Record the share in the database
+
       try {
-        const response = await fetch(`/api/news/${newsSlug}/share`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, platform: "copy" }),
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          // Only notify parent if this was a new share (not a duplicate)
-          if (result.share && result.isNewShare !== false) {
-            onShare?.();
-          }
-        }
+        await recordShare("copy");
       } catch (error) {
         console.error("Failed to record share:", error);
       }
@@ -76,44 +106,33 @@ export function ShareDialog({ newsId, newsSlug, title, url, children, onShare, u
   };
 
   const handleSocialShare = async (platform: string) => {
-    let shareUrl = "";
+    if (!ensureSession()) return;
+
+    let targetUrl = "";
     
     switch (platform) {
       case "facebook":
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+        targetUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
         break;
       case "twitter":
-        shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
+        targetUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
         break;
       case "linkedin":
-        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+        targetUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
         break;
       case "email":
-        shareUrl = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(shareText + " " + shareUrl)}`;
+        targetUrl = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(shareText + " " + shareUrl)}`;
         break;
     }
     
-    if (shareUrl) {
-      // Record the share in the database
+    if (targetUrl) {
       try {
-        const response = await fetch(`/api/news/${newsSlug}/share`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, platform }),
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          // Only notify parent if this was a new share (not a duplicate)
-          if (result.share && result.isNewShare !== false) {
-            onShare?.();
-          }
-        }
+        await recordShare(platform);
       } catch (error) {
         console.error("Failed to record share:", error);
       }
       
-      window.open(shareUrl, "_blank", "width=600,height=400");
+      window.open(targetUrl, "_blank", "width=600,height=400");
     }
   };
 

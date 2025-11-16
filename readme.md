@@ -2,6 +2,8 @@
 
 Platform for logging "switch" actions, sharing news, and running missions with gamified rewards. The app supports anonymous or Firebase-backed sign-ins, real-time updates, moderation workflows, and GDPR-friendly privacy controls.
 
+Hosted using plesk in the site "https://thejumbo.org/"
+
 <img width="1917" height="1066" alt="Screenshot 2025-11-16 145712" src="https://github.com/user-attachments/assets/4ee77a3b-feec-4cf4-b54b-91eb9a9fbfaa" />
 
 <img width="1919" height="1072" alt="Screenshot 2025-11-16 145753" src="https://github.com/user-attachments/assets/3fdf9d6d-4b69-42d3-a2ca-49ff3e4f78ee" />
@@ -62,4 +64,5 @@ Platform for logging "switch" actions, sharing news, and running missions with g
 - Email (SMTP) and Firebase projects are expected to be provisioned by the operator; secrets live in `.env`.
 - Uploads target an S3-compatible bucket (MinIO helper provided) for evidence images linked to switch logs.
 - Extra polish: anonymous-to-registered migration, GDPR request logging, moderator/admin panels, and WebSocket echo channel for live UI updates.
+
 

@@ -2,6 +2,16 @@
 
 Platform for logging "switch" actions, sharing news, and running missions with gamified rewards. The app supports anonymous or Firebase-backed sign-ins, real-time updates, moderation workflows, and GDPR-friendly privacy controls.
 
+<img width="1917" height="1066" alt="Screenshot 2025-11-16 145712" src="https://github.com/user-attachments/assets/4ee77a3b-feec-4cf4-b54b-91eb9a9fbfaa" />
+
+<img width="1919" height="1072" alt="Screenshot 2025-11-16 145753" src="https://github.com/user-attachments/assets/3fdf9d6d-4b69-42d3-a2ca-49ff3e4f78ee" />
+
+<img width="1919" height="1060" alt="image" src="https://github.com/user-attachments/assets/30af75cb-9c91-47f4-8ec9-3bbb6c840814" />
+
+<img width="1918" height="1067" alt="image" src="https://github.com/user-attachments/assets/e45d5d87-9181-4946-a72d-0e4474e3dc75" />
+
+<img width="1919" height="1067" alt="image" src="https://github.com/user-attachments/assets/766602e9-6cbf-4c90-8b3a-5becb6e20fb7" />
+
 ## Project layout
 - `client/`: React 18 + TypeScript + Vite front end (Wouter routing, React Query, Tailwind/Radix UI, shadcn-like components).
 - `server/`: Express API with Drizzle ORM on PostgreSQL, WebSocket events, SMTP email, MinIO/S3 uploads, and Firebase Admin helpers.
@@ -52,3 +62,4 @@ Platform for logging "switch" actions, sharing news, and running missions with g
 - Email (SMTP) and Firebase projects are expected to be provisioned by the operator; secrets live in `.env`.
 - Uploads target an S3-compatible bucket (MinIO helper provided) for evidence images linked to switch logs.
 - Extra polish: anonymous-to-registered migration, GDPR request logging, moderator/admin panels, and WebSocket echo channel for live UI updates.
+
